@@ -2,9 +2,9 @@ import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 
-// Заполни своими данными из Supabase Dashboard → Settings → API
-const SUPABASE_URL = 'https://uogzxfkoqyshkyzlzolb.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_oK1yUA7O6kIN_4kxh778XA_oMjudilC';
+// Set in apps/mobile/.env (see .env.example) — Supabase Dashboard → Settings → API
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
