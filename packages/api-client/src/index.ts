@@ -60,16 +60,15 @@ export interface QuizQuestionDTO {
   explanation?: string;
 }
 
-export function createApiClient(config: ApiClientConfig) {
-  const supabase: SupabaseClient = createClient(config.url, config.anonKey, {
-    auth: {
-      storage: config.storage,
-      autoRefreshToken: config.autoRefreshToken ?? true,
-      persistSession: config.persistSession ?? true,
-      detectSessionInUrl: config.detectSessionInUrl ?? false,
-    },
-  });
-
+/**
+ * Wraps an already-constructed SupabaseClient with the auth/profile/theory/
+ * topics/questions namespaces. Use this when the platform needs to build
+ * the client itself (e.g. apps/school-web's @supabase/ssr browser/server
+ * clients, which manage cookie-based storage internally and aren't
+ * compatible with the getItem/setItem AuthStorageAdapter shape below).
+ * apps/mobile uses createApiClient() instead, which builds the client too.
+ */
+export function wrapSupabaseClient(supabase: SupabaseClient) {
   const auth = {
     async signUp(email: string, password: string, name: string) {
       const { data, error } = await supabase.auth.signUp({
@@ -148,6 +147,23 @@ export function createApiClient(config: ApiClientConfig) {
         topic_hearts: row.topic_hearts ?? {},
         daily_steps: row.daily_steps ?? {},
       };
+    },
+
+    /**
+     * Role/school/class for a user, from the schools/classes/roles
+     * migration (supabase/migrations/20260716000010). Kept separate from
+     * load() above so apps/mobile's existing profile load doesn't depend
+     * on that migration having been applied to the live project yet.
+     */
+    async role(userId: string): Promise<{ role: string; school_id: string | null; class_id: string | null } | null> {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('role, school_id, class_id')
+        .eq('id', userId)
+        .single();
+
+      if (error || !data) return null;
+      return data as { role: string; school_id: string | null; class_id: string | null };
     },
 
     async save(
@@ -297,4 +313,22 @@ export function createApiClient(config: ApiClientConfig) {
   return { supabase, auth, profile, theory, topics, questions };
 }
 
-export type ApiClient = ReturnType<typeof createApiClient>;
+/**
+ * Builds a plain @supabase/supabase-js client from a URL/anon key and an
+ * injected getItem/setItem storage adapter (e.g. AsyncStorage on mobile),
+ * then wraps it. For SSR web, build the client with @supabase/ssr instead
+ * and call wrapSupabaseClient() directly.
+ */
+export function createApiClient(config: ApiClientConfig) {
+  const supabase: SupabaseClient = createClient(config.url, config.anonKey, {
+    auth: {
+      storage: config.storage,
+      autoRefreshToken: config.autoRefreshToken ?? true,
+      persistSession: config.persistSession ?? true,
+      detectSessionInUrl: config.detectSessionInUrl ?? false,
+    },
+  });
+  return wrapSupabaseClient(supabase);
+}
+
+export type ApiClient = ReturnType<typeof wrapSupabaseClient>;
