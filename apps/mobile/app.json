@@ -14,9 +14,11 @@
       "backgroundColor": "#05051A"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "kg.qadam.app"
     },
     "android": {
+      "package": "kg.qadam.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#05051A"
