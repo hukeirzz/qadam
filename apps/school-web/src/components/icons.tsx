@@ -174,3 +174,46 @@ export const MoreIcon = (p: IconProps) => (
     <circle cx="19" cy="12" r="1.4" />
   </Svg>
 );
+
+export const TargetIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="12" r="5" />
+    <circle cx="12" cy="12" r="1.4" />
+  </Svg>
+);
+
+export const GraduationIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 4 2 9l10 5 10-5-10-5Z" />
+    <path d="M6 11v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5" />
+  </Svg>
+);
+
+export const BookIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 6C10 4.5 6.5 4.5 4 5v13c2.5-.5 6-.5 8 1 2-1.5 5.5-1.5 8-1V5c-2.5-.5-6-.5-8 1Z" />
+    <path d="M12 6v13" />
+  </Svg>
+);
+
+export const ShieldIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6l-7-3Z" />
+    <path d="m9 12 2 2 4-4" />
+  </Svg>
+);
+
+export const MailIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="m4 7 8 6 8-6" />
+  </Svg>
+);
+
+export const LockIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="5" y="11" width="14" height="10" rx="2" />
+    <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+  </Svg>
+);
