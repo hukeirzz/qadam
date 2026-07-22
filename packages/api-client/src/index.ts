@@ -310,7 +310,25 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
     },
   };
 
-  return { supabase, auth, profile, theory, topics, questions };
+  const schools = {
+    /**
+     * Fetches a single school row. Returns `null` on error / no row (e.g.
+     * the schools/classes/roles migration 20260716000010 not applied yet),
+     * so callers render a fallback rather than crashing.
+     */
+    async fetchById(schoolId: string): Promise<{ id: string; name: string } | null> {
+      const { data, error } = await supabase
+        .from('schools')
+        .select('id, name')
+        .eq('id', schoolId)
+        .single();
+
+      if (error || !data) return null;
+      return data as { id: string; name: string };
+    },
+  };
+
+  return { supabase, auth, profile, theory, topics, questions, schools };
 }
 
 /**

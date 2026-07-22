@@ -1,8 +1,15 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 import { createServerApi } from '@/lib/supabase/server';
+import { Sidebar } from '@/components/sidebar';
 
 const STAFF_ROLES = ['coordinator', 'admin', 'director'];
+
+const ROLE_LABELS: Record<string, string> = {
+  director: 'Директор',
+  coordinator: 'Координатор ОРТ',
+  admin: 'Администрация',
+  student: 'Ученик',
+};
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const api = await createServerApi();
@@ -17,15 +24,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/login?error=not-staff');
   }
 
+  const school = roleInfo.school_id ? await api.schools.fetchById(roleInfo.school_id) : null;
+
   return (
-    <div className="min-h-screen">
-      <nav className="flex gap-4 border-b p-4 text-sm">
-        <Link href="/">Главная</Link>
-        <Link href="/students">Ученики</Link>
-        <Link href="/analytics">Аналитика</Link>
-        <Link href="/tests">Свои тесты</Link>
-      </nav>
-      <main className="p-6">{children}</main>
+    <div className="flex min-h-screen bg-background">
+      <Sidebar
+        schoolName={school?.name ?? 'Моя школа'}
+        roleLabel={ROLE_LABELS[roleInfo.role] ?? 'Сотрудник'}
+      />
+      <main className="flex-1 overflow-x-hidden px-6 py-6 lg:px-8">{children}</main>
     </div>
   );
 }
