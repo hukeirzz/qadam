@@ -14,7 +14,7 @@ import { RootStackParamList } from '../types/navigation';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 
-const APP_ICON = require('../../assets/logo.png');
+const APP_ICON = require('../../assets/icon.jpeg');
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 
