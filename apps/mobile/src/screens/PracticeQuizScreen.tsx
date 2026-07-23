@@ -184,11 +184,11 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
               {OPTION_KEYS.map((key) => {
                 const isSelected = selected === key;
                 const isRight = key === current.correct;
-                let bg = colors.surfaceGlass;
-                let border = colors.borderMuted;
-                let textColor = colors.text;
-                let badgeBg = 'rgba(255,255,255,0.08)';
-                let badgeText = colors.textMuted;
+                let bg: string = colors.surfaceGlass;
+                let border: string = colors.borderMuted;
+                let textColor: string = colors.text;
+                let badgeBg: string = 'rgba(255,255,255,0.08)';
+                let badgeText: string = colors.textMuted;
 
                 if (isAnswered) {
                   if (isRight) {

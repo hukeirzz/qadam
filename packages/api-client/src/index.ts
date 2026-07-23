@@ -12,8 +12,11 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type {
+  Competition,
   OptionRow,
   QuestionWithOptionsRow,
+  Rank,
+  RatingEntry,
   TopicRow,
   TopicTheoryRow,
 } from '@qadam/types';
@@ -164,6 +167,29 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
 
       if (error || !data) return null;
       return data as { role: string; school_id: string | null; class_id: string | null };
+    },
+
+    /**
+     * Registration/onboarding fields (pet name, phone, school/class,
+     * consent) — separate from save() below for the same reason role() is
+     * separate: these columns come from a different, not-yet-applied
+     * migration, and this isn't on the hot path quiz completion calls.
+     */
+    async saveOnboarding(
+      userId: string,
+      updates: {
+        pet_name?: string;
+        phone?: string;
+        nickname?: string;
+        class_label?: string;
+        school_id?: string | null;
+        data_consent?: boolean;
+        show_in_school_rating?: boolean;
+      },
+    ) {
+      const { error } = await supabase.from('user_profiles').update(updates).eq('id', userId);
+      if (error) console.warn('profile.saveOnboarding error:', error.message);
+      return { error };
     },
 
     async save(
@@ -326,9 +352,145 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       if (error || !data) return null;
       return data as { id: string; name: string };
     },
+
+    /** For registration's optional school picker. Empty array, not null, when there are no rows yet. */
+    async list(): Promise<{ id: string; name: string }[]> {
+      const { data, error } = await supabase.from('schools').select('id, name').order('name');
+      if (error || !data) return [];
+      return data as { id: string; name: string }[];
+    },
   };
 
-  return { supabase, auth, profile, theory, topics, questions, schools };
+  const BASE_SUBJECTS = ['math', 'geometry', 'analogies', 'reading', 'grammar'];
+
+  const entranceTest = {
+    /**
+     * Samples questions evenly across the 5 base subjects (not fully
+     * random) so no subject is ever entirely absent by chance, then
+     * shuffles — same shape/shuffle convention as questions.fetchForTopic.
+     * Reuses the existing questions/options content, no dedicated
+     * entrance-test question bank.
+     */
+    async fetchQuestions(count = 20): Promise<QuizQuestionDTO[] | null> {
+      const perSubject = Math.max(1, Math.round(count / BASE_SUBJECTS.length));
+      const results = await Promise.all(
+        BASE_SUBJECTS.map((subjectId) =>
+          supabase
+            .from('questions')
+            .select('id, topic_id, subject_id, text, explanation, xp_reward, options(id, text, is_correct)')
+            .eq('subject_id', subjectId)
+            .limit(perSubject * 2),
+        ),
+      );
+
+      const rows = results.flatMap((r) => (r.data ?? []) as unknown as QuestionWithOptionsRow[]);
+      if (rows.length === 0) return null;
+
+      const shaped: QuizQuestionDTO[] = rows.map((q) => {
+        const correctOpt = q.options.find((o: OptionRow) => o.is_correct);
+        return {
+          id: q.id,
+          topicId: q.topic_id,
+          subjectId: q.subject_id,
+          text: q.text,
+          explanation: q.explanation ?? undefined,
+          options: q.options.map((o: OptionRow) => ({ id: o.id, text: o.text })),
+          correctId: correctOpt?.id ?? q.options[0]?.id ?? '',
+        };
+      });
+
+      for (let i = shaped.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shaped[i], shaped[j]] = [shaped[j], shaped[i]];
+      }
+      return shaped.slice(0, count);
+    },
+
+    async submitResult(userId: string, score: number, total: number, rank: Rank) {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ entrance_test_score: score, entrance_test_total: total, rank })
+        .eq('id', userId);
+      if (error) console.warn('entranceTest.submitResult error:', error.message);
+      return { error };
+    },
+  };
+
+  const competitions = {
+    async list(schoolId: string | null): Promise<Competition[] | null> {
+      let query = supabase.from('competitions').select('*').order('start_at', { ascending: false });
+      query = schoolId
+        ? query.or(`source.eq.platform,school_id.eq.${schoolId}`)
+        : query.eq('source', 'platform');
+      const { data, error } = await query;
+      if (error || !data) return null;
+      return data as Competition[];
+    },
+
+    async fetchById(id: string): Promise<Competition | null> {
+      const { data, error } = await supabase.from('competitions').select('*').eq('id', id).single();
+      if (error || !data) return null;
+      return data as Competition;
+    },
+
+    async join(competitionId: string, userId: string) {
+      const { error } = await supabase
+        .from('competition_participants')
+        .insert({ competition_id: competitionId, user_id: userId });
+      return { error };
+    },
+
+    async leaderboard(competitionId: string): Promise<{ userId: string; displayName: string; xpEarned: number }[] | null> {
+      const { data, error } = await supabase
+        .from('competition_participants')
+        .select('user_id, xp_earned, user_profiles(name, nickname)')
+        .eq('competition_id', competitionId)
+        .order('xp_earned', { ascending: false });
+
+      if (error || !data) return null;
+      return (data as any[]).map((row) => ({
+        userId: row.user_id,
+        displayName: row.user_profiles?.nickname ?? row.user_profiles?.name ?? 'Игрок',
+        xpEarned: row.xp_earned ?? 0,
+      }));
+    },
+  };
+
+  const rating = {
+    async global(limit = 50): Promise<RatingEntry[] | null> {
+      const { data, error } = await supabase
+        .from('public_rating')
+        .select('*')
+        .order('xp', { ascending: false })
+        .limit(limit);
+      if (error || !data) return null;
+      return data as RatingEntry[];
+    },
+
+    async school(schoolId: string, limit = 50): Promise<RatingEntry[] | null> {
+      const { data, error } = await supabase
+        .from('public_rating')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('xp', { ascending: false })
+        .limit(limit);
+      if (error || !data) return null;
+      return data as RatingEntry[];
+    },
+
+    async classRank(classId: string, limit = 50): Promise<RatingEntry[] | null> {
+      const { data, error } = await supabase
+        .from('public_rating')
+        .select('*')
+        .eq('class_id', classId)
+        .order('xp', { ascending: false })
+        .limit(limit);
+      if (error || !data) return null;
+      return data as RatingEntry[];
+    },
+  };
+
+  return { supabase, auth, profile, theory, topics, questions, schools, entranceTest, competitions, rating };
 }
 
 /**

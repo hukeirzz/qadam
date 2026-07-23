@@ -93,3 +93,39 @@ export function getWeekStart(): string {
 export function todayDayIndex(): number {
   return (new Date().getDay() + 6) % 7;
 }
+
+// D/C/B/A/S entrance-test rank — the distinct concept flagged in the note
+// above getRankTitle. Separate scale, separate purpose: this is a one-time
+// placement result, not a running XP status.
+export type Rank = 'D' | 'C' | 'B' | 'A' | 'S';
+
+const RANK_THRESHOLDS: { min: number; rank: Rank }[] = [
+  { min: 90, rank: 'S' },
+  { min: 75, rank: 'A' },
+  { min: 60, rank: 'B' },
+  { min: 40, rank: 'C' },
+  { min: 0, rank: 'D' },
+];
+
+export function calcRank(score: number, total: number): Rank {
+  if (total <= 0) return 'D';
+  const pct = (score / total) * 100;
+  for (const t of RANK_THRESHOLDS) if (pct >= t.min) return t.rank;
+  return 'D';
+}
+
+export type PetMood = 'excited' | 'happy' | 'neutral' | 'sad';
+
+/** Reuses existing streak/last_activity semantics (dateKey format). */
+export function petMoodFromStreak(
+  streak: number,
+  lastActivity: string | null,
+  today: string = dateKey(),
+): PetMood {
+  if (!lastActivity) return 'neutral';
+  const daysSince = Math.round((Date.parse(today) - Date.parse(lastActivity)) / 86_400_000);
+  if (daysSince >= 3) return 'sad';
+  if (daysSince === 0 && streak >= 7) return 'excited';
+  if (daysSince === 0) return 'happy';
+  return 'neutral';
+}

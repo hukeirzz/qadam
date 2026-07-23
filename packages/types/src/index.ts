@@ -23,6 +23,16 @@ export interface UserProfileRow {
   role: Role;
   school_id: string | null;
   class_id: string | null;
+  /** Added by the pet/rank/competitions migration (supabase/migrations) — not on every historical row until that migration is applied live. */
+  pet_name: string | null;
+  phone: string | null;
+  nickname: string | null;
+  rank: Rank | null;
+  entrance_test_score: number | null;
+  entrance_test_total: number | null;
+  show_in_school_rating: boolean;
+  data_consent: boolean;
+  class_label: string | null;
 }
 
 export interface TopicRow {
@@ -72,4 +82,37 @@ export interface SchoolClass {
   id: string;
   school_id: string;
   name: string;
+}
+
+// Entrance-test rank + competitions/rating — see supabase/migrations for the schema.
+export type Rank = 'D' | 'C' | 'B' | 'A' | 'S';
+
+export interface Competition {
+  id: string;
+  title: string;
+  description: string | null;
+  prize: string | null;
+  source: 'school' | 'platform';
+  school_id: string | null;
+  created_by: string | null;
+  start_at: string;
+  end_at: string;
+  created_at: string;
+}
+
+export interface CompetitionParticipant {
+  competition_id: string;
+  user_id: string;
+  xp_earned: number;
+  joined_at: string;
+}
+
+/** Row shape returned by the `public_rating` view (safe columns only). */
+export interface RatingEntry {
+  id: string;
+  display_name: string;
+  xp: number;
+  rank: Rank | null;
+  school_id: string | null;
+  class_id: string | null;
 }
