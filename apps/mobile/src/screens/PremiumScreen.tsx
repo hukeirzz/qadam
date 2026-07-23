@@ -31,8 +31,13 @@ const FEATURES = [
 
 const GEM_COST = 200;
 const TELEGRAM_URL = 'https://t.me/hukeirzz';
-const MBANK_URL = 'https://app.mbank.kg/qr/#00020101021132440012c2c.mbank.kg01020210129965058804441302125204999953034175909DASTAN%20T.63040666';
 const MBANK_PHONE = '+996 505 880 444';
+
+const PRICE_TIERS = [
+  { id: '1m', label: '1 месяц', price: '299 сом', popular: false },
+  { id: '6m', label: '6 месяцев', price: '1490 сом', popular: true },
+  { id: '12m', label: '12 месяцев', price: '2490 сом', popular: false },
+] as const;
 
 export function PremiumScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
@@ -40,6 +45,8 @@ export function PremiumScreen({ navigation }: Props) {
   const gems = useAppStore((s) => s.gems);
   const unlockPremiumWithGems = useAppStore((s) => s.unlockPremiumWithGems);
   const canUnlockWithGems = gems >= GEM_COST;
+  const [tierId, setTierId] = useState<(typeof PRICE_TIERS)[number]['id']>('6m');
+  const tier = PRICE_TIERS.find((t) => t.id === tierId)!;
 
   const handleGemUnlock = () => {
     vibrate();
@@ -65,13 +72,6 @@ export function PremiumScreen({ navigation }: Props) {
     vibrate();
     Linking.openURL(TELEGRAM_URL).catch(() =>
       Alert.alert('Ошибка', 'Не удалось открыть Telegram'),
-    );
-  };
-
-  const openMbank = () => {
-    vibrate();
-    Linking.openURL(MBANK_URL).catch(() =>
-      Alert.alert('Ошибка', 'Не удалось открыть M-Bank'),
     );
   };
 
@@ -125,16 +125,26 @@ export function PremiumScreen({ navigation }: Props) {
               {/* ── Способ 1: оплата ── */}
               <Text style={styles.sectionLabel}>Способ 1 — Оплата M-Bank</Text>
               <View style={styles.card}>
-                <View style={styles.priceRow}>
-                  <Text style={styles.price}>1000 сом</Text>
-                  <Text style={styles.priceNote}>Единоразово · Без подписки</Text>
+                <View style={styles.tierRow}>
+                  {PRICE_TIERS.map((t) => (
+                    <Pressable
+                      key={t.id}
+                      style={[styles.tierTile, tierId === t.id && styles.tierTileActive]}
+                      onPress={() => { vibrate(); setTierId(t.id); }}
+                    >
+                      {t.popular ? (
+                        <View style={styles.tierBadge}>
+                          <Text style={styles.tierBadgeText}>Популярно</Text>
+                        </View>
+                      ) : null}
+                      <Text style={styles.tierLabel}>{t.label}</Text>
+                      <Text style={styles.tierPrice}>{t.price}</Text>
+                    </Pressable>
+                  ))}
                 </View>
                 <View style={styles.divider} />
                 <Text style={styles.instructions}>
-                  {'📱 Способ A — кнопкой:\n'}
-                  {'1. Нажми «Оплатить через M-Bank» ниже\n'}
-                  {'2. Подтверди перевод 1000 сом\n\n'}
-                  {'📞 Способ В — по номеру телефона\n'}
+                  {'📞 Оплата по номеру телефона\n'}
                   {'1. Откройте любой банковский сервис (M-Bank, Optima24, Bakai24, DemirBank и др.).\n'}
                   {'2. В разделе переводов выберите банк M-Bank.\n'}
                   {'3. Введите номер:'}
@@ -147,22 +157,9 @@ export function PremiumScreen({ navigation }: Props) {
                 </Pressable>
 
                 <Text style={styles.instructions}>
-                  {'4. Переведите 1000 сом.\n\n'}
-                  {'✉️ После оплаты отправьте чек и свой email в Telegram — доступ откроется в течение 24ч'}
+                  {`4. Переведите ${tier.price} (тариф «${tier.label}»).\n\n`}
+                  {'✉️ После оплаты отправьте чек, выбранный тариф и свой email в Telegram — доступ откроется в течение 24ч'}
                 </Text>
-
-                {/* Кнопка оплаты через M-Bank */}
-                <Pressable style={styles.telegramBtn} onPress={openMbank}>
-                  <LinearGradient
-                    colors={['#34C759', '#1FA347']}
-                    start={{ x: 0, y: 0.5 }}
-                    end={{ x: 1, y: 0.5 }}
-                    style={styles.telegramGradient}
-                  >
-                    <Ionicons name="card" size={18} color={colors.text} />
-                    <Text style={styles.telegramText}>Оплатить через M-Bank</Text>
-                  </LinearGradient>
-                </Pressable>
 
                 <Pressable style={styles.telegramBtn} onPress={openTelegram}>
                   <LinearGradient
@@ -331,6 +328,30 @@ const styles = StyleSheet.create({
   priceRow: { alignItems: 'center', gap: 4 },
   price: { color: colors.text, fontSize: 32, fontWeight: '800' },
   priceNote: { color: colors.textDim, fontSize: 12 },
+
+  tierRow: { flexDirection: 'row', gap: 8 },
+  tierTile: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 6,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: colors.borderMuted,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  tierTileActive: { borderColor: colors.purple, backgroundColor: 'rgba(144,71,255,0.15)' },
+  tierBadge: {
+    position: 'absolute',
+    top: -10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: colors.purple,
+  },
+  tierBadgeText: { color: '#fff', fontSize: 9, fontWeight: '800' },
+  tierLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '600', marginTop: 4 },
+  tierPrice: { color: colors.text, fontSize: 15, fontWeight: '800', marginTop: 4 },
 
   instructions: { color: colors.textMuted, fontSize: 13, lineHeight: 22 },
 

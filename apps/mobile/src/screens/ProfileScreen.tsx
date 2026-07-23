@@ -12,6 +12,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
+import { RankBadge } from '../components/ui/RankBadge';
 import { ProfileStackParamList } from '../navigation/ProfileStack';
 import { useAppStore, calcLevel, getRankTitle, xpToReachLevel } from '../store/useAppStore';
 import { signOut, deleteAccount } from '../services/authService';
@@ -37,6 +38,7 @@ export function ProfileScreen({ navigation }: Props) {
   const xp = useAppStore((s) => s.xp);
   const streak = useAppStore((s) => s.streak);
   const gems = useAppStore((s) => s.gems);
+  const rank = useAppStore((s) => s.rank);
   const logout = useAppStore((s) => s.logout);
 
   const handleLogout = () => {
@@ -91,7 +93,10 @@ export function ProfileScreen({ navigation }: Props) {
         </View>
 
         <Text style={styles.name}>{userName}</Text>
-        <Text style={styles.rank}>{rankTitle}</Text>
+        <View style={styles.rankRow}>
+          <Text style={styles.rank}>{rankTitle}</Text>
+          {rank ? <RankBadge rank={rank} size="sm" /> : null}
+        </View>
 
         {/* Level + XP badge */}
         <View style={styles.levelRow}>
@@ -208,9 +213,14 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginTop: 14,
   },
+  rankRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
   rank: {
     color: colors.textMuted,
-    marginTop: 4,
     fontSize: 14,
   },
   levelRow: {
