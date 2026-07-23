@@ -29,6 +29,9 @@ export type HomeStackParamList = {
     earnedXp: number;
     livesRemaining: number;
   };
+  Competitions: undefined;
+  CompetitionDetail: { competitionId: string };
+  Rating: undefined;
 };
 
 export type ExerciseStackParamList = {

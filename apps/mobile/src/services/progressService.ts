@@ -5,5 +5,5 @@ export type { UserProfile };
 
 export const loadUserProfile = profile.load;
 export const saveProfileProgress = profile.save;
-export const loadPetAndRank = profile.petAndRank;
+export const loadOnboardingInfo = profile.onboardingInfo;
 export const saveOnboarding = profile.saveOnboarding;

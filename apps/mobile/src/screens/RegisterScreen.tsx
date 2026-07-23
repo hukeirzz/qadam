@@ -17,8 +17,9 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { QadamLogo } from '../components/ui/QadamLogo';
 import { signIn, signUp } from '../services/authService';
-import { saveOnboarding } from '../services/progressService';
+import { loadUserProfile, saveOnboarding } from '../services/progressService';
 import { listSchools } from '../services/schoolsService';
+import { useAppStore } from '../store/useAppStore';
 import { RootStackParamList } from '../types/navigation';
 import { colors } from '../theme/colors';
 
@@ -37,6 +38,9 @@ export function RegisterScreen({ navigation }: Props) {
   const [showInRating, setShowInRating] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const loadProfile = useAppStore((s) => s.loadProfile);
+  const setOnboardingInfo = useAppStore((s) => s.setOnboardingInfo);
 
   useEffect(() => {
     listSchools().then(setSchoolsList).catch(() => {});
@@ -65,13 +69,25 @@ export function RegisterScreen({ navigation }: Props) {
       const { data: loginData, error: loginErr } = await signIn(email.trim(), password);
       if (loginErr || !loginData.user) { setError('Аккаунт создан — войди с паролем'); return; }
 
-      await saveOnboarding(loginData.user.id, {
+      const userId = loginData.user.id;
+      const profile = await loadUserProfile(userId);
+      loadProfile(
+        profile ?? {
+          id: userId, name: name.trim(),
+          xp: 0, gems: 0, streak: 0,
+          premium_unlocked: false, last_activity: null,
+          completed_topics: [], weekly_steps: [0, 0, 0, 0, 0, 0, 0], week_start: null,
+        },
+      );
+
+      await saveOnboarding(userId, {
         phone: phone.trim() || undefined,
         class_label: classLabel.trim() || undefined,
         school_id: schoolId,
         data_consent: dataConsent,
         show_in_school_rating: showInRating,
       });
+      setOnboardingInfo({ pet_name: null, rank: null, school_id: schoolId, class_id: null });
 
       navigation.replace('PetName');
     } finally {

@@ -4,7 +4,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { HeaderBar } from '../components/home/HeaderBar';
+import { PetCard } from '../components/home/PetCard';
 import { ProgressSummary } from '../components/home/ProgressSummary';
+import { CompetitionsBanner } from '../components/home/CompetitionsBanner';
 import { IslandGrid } from '../components/home/IslandGrid';
 import { PremiumIslandSection } from '../components/home/PremiumIslandSection';
 import { HomeStackParamList } from '../types/navigation';
@@ -41,7 +43,12 @@ export function HomeScreen({ navigation }: Props) {
             { paddingBottom: insets.bottom + 96 },
           ]}
         >
+          <PetCard />
           <ProgressSummary />
+          <CompetitionsBanner
+            onCompetitionsPress={() => { playSound('tap'); navigation.navigate('Competitions'); }}
+            onRatingPress={() => { playSound('tap'); navigation.navigate('Rating'); }}
+          />
           <IslandGrid onIslandPress={openIsland} />
           <PremiumIslandSection
             unlocked={premiumUnlocked}

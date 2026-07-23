@@ -29,6 +29,8 @@ interface AppState {
   hasOnboarded: boolean;
   petName: string | null;
   rank: Rank | null;
+  schoolId: string | null;
+  classId: string | null;
 
   xp: number;
   gems: number;
@@ -60,10 +62,16 @@ interface AppState {
     rank?: Rank | null;
   }) => void;
   /**
-   * Merges pet name / rank fetched separately (see progressService.loadPetAndRank)
-   * so a failed/not-yet-applied migration doesn't block the main profile load.
+   * Merges pet name / rank / school+class fetched separately (see
+   * progressService.loadOnboardingInfo) so a failed/not-yet-applied
+   * migration doesn't block the main profile load.
    */
-  setPetAndRank: (petName: string | null, rank: Rank | null) => void;
+  setOnboardingInfo: (info: {
+    pet_name: string | null;
+    rank: Rank | null;
+    school_id: string | null;
+    class_id: string | null;
+  }) => void;
 
   /** xpReward already accounts for accuracy + hearts (+ differential for replays) */
   completeQuiz: (
@@ -87,10 +95,10 @@ interface AppState {
 }
 
 const FRESH: Omit<AppState,
-  'loadProfile' | 'setPetAndRank' | 'completeQuiz' | 'unlockPremiumWithGems' | 'setRemoteTopics' | 'setOnboarded' | 'setAuthenticated' | 'setPremium' | 'logout'
+  'loadProfile' | 'setOnboardingInfo' | 'completeQuiz' | 'unlockPremiumWithGems' | 'setRemoteTopics' | 'setOnboarded' | 'setAuthenticated' | 'setPremium' | 'logout'
 > = {
   userId: null, userName: '', isAuthenticated: false, hasOnboarded: false,
-  petName: null, rank: null,
+  petName: null, rank: null, schoolId: null, classId: null,
   xp: 0, gems: 0, streak: 0, lastActivity: null,
   completedTopics: [], topicHearts: {},
   completedSteps: 0, totalSteps: TOTAL_STEPS, overallProgress: 0,
@@ -108,7 +116,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   setOnboarded: (v) => set({ hasOnboarded: v }),
   setAuthenticated: (v) => set({ isAuthenticated: v }),
   setPremium: (v) => set({ premiumUnlocked: v }),
-  setPetAndRank: (petName, rank) => set({ petName, rank }),
+  setOnboardingInfo: (info) => set({
+    petName: info.pet_name, rank: info.rank,
+    schoolId: info.school_id, classId: info.class_id,
+  }),
 
   setRemoteTopics: (subjectTopicIds) => set((s) => {
     const totalSteps = Object.values(subjectTopicIds).reduce((sum, ids) => sum + ids.length, 0);

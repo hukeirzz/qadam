@@ -29,8 +29,10 @@ export function PetNameScreen({ navigation }: Props) {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const userId = useAppStore((s) => s.userId);
-  const setPetAndRank = useAppStore((s) => s.setPetAndRank);
+  const setOnboardingInfo = useAppStore((s) => s.setOnboardingInfo);
   const rank = useAppStore((s) => s.rank);
+  const schoolId = useAppStore((s) => s.schoolId);
+  const classId = useAppStore((s) => s.classId);
 
   const handleContinue = async () => {
     const trimmed = name.trim() || 'Барсик';
@@ -38,7 +40,7 @@ export function PetNameScreen({ navigation }: Props) {
     try {
       if (userId) {
         await saveOnboarding(userId, { pet_name: trimmed });
-        setPetAndRank(trimmed, rank);
+        setOnboardingInfo({ pet_name: trimmed, rank, school_id: schoolId, class_id: classId });
       }
       navigation.replace('EntranceTest');
     } finally {

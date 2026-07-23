@@ -17,7 +17,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { QadamLogo } from '../components/ui/QadamLogo';
 import { signIn } from '../services/authService';
-import { loadUserProfile, loadPetAndRank } from '../services/progressService';
+import { loadUserProfile, loadOnboardingInfo } from '../services/progressService';
 import { loadAllTopicsToCache, getCachedSubjectTopicIds } from '../services/topicsService';
 import { useAppStore } from '../store/useAppStore';
 import { RootStackParamList } from '../types/navigation';
@@ -34,7 +34,7 @@ export function LoginScreen({ navigation }: Props) {
 
   const loadProfile = useAppStore((s) => s.loadProfile);
   const setRemoteTopics = useAppStore((s) => s.setRemoteTopics);
-  const setPetAndRank = useAppStore((s) => s.setPetAndRank);
+  const setOnboardingInfo = useAppStore((s) => s.setOnboardingInfo);
 
   const handleSubmit = async () => {
     setError('');
@@ -83,10 +83,11 @@ export function LoginScreen({ navigation }: Props) {
       const ids = getCachedSubjectTopicIds();
       if (Object.keys(ids).length > 0) setRemoteTopics(ids);
     });
-    // Best-effort — pet/rank columns may not exist yet if the migration
-    // hasn't been applied live; a failure here shouldn't block login.
-    loadPetAndRank(userId).then((pr) => {
-      if (pr) setPetAndRank(pr.pet_name, pr.rank);
+    // Best-effort — pet/rank/school columns may not exist yet if the
+    // migrations haven't been applied live; a failure here shouldn't
+    // block login.
+    loadOnboardingInfo(userId).then((info) => {
+      if (info) setOnboardingInfo(info);
     }).catch(() => {});
     navigation.replace('Main');
   };

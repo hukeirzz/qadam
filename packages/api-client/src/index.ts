@@ -170,22 +170,28 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
     },
 
     /**
-     * Pet name + entrance-test rank, from the pet/rank/competitions
-     * migration (supabase/migrations/20260722000001). Kept separate from
-     * load() above for the same reason role() is — apps/mobile's existing
-     * profile load doesn't depend on that migration having been applied
-     * to the live project yet, so returning users' load() still works
-     * even before it lands.
+     * Pet name, entrance-test rank, and school/class linkage, from the
+     * pet/rank/competitions migration (supabase/migrations/20260722000001)
+     * and the schools/classes/roles one. Kept separate from load() above
+     * for the same reason role() is — apps/mobile's existing profile load
+     * doesn't depend on either migration having been applied to the live
+     * project yet, so returning users' load() still works even before
+     * they land.
      */
-    async petAndRank(userId: string): Promise<{ pet_name: string | null; rank: Rank | null } | null> {
+    async onboardingInfo(userId: string): Promise<{
+      pet_name: string | null;
+      rank: Rank | null;
+      school_id: string | null;
+      class_id: string | null;
+    } | null> {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('pet_name, rank')
+        .select('pet_name, rank, school_id, class_id')
         .eq('id', userId)
         .single();
 
       if (error || !data) return null;
-      return data as { pet_name: string | null; rank: Rank | null };
+      return data as { pet_name: string | null; rank: Rank | null; school_id: string | null; class_id: string | null };
     },
 
     /**

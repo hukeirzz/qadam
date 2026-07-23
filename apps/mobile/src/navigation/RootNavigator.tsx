@@ -14,7 +14,7 @@ import { MainTabs } from './MainTabs';
 import { RootStackParamList } from '../types/navigation';
 import { colors } from '../theme/colors';
 import { supabase } from '../lib/supabase';
-import { loadUserProfile, loadPetAndRank } from '../services/progressService';
+import { loadUserProfile, loadOnboardingInfo } from '../services/progressService';
 import { loadAllTopicsToCache, getCachedSubjectTopicIds } from '../services/topicsService';
 import { useAppStore } from '../store/useAppStore';
 
@@ -68,7 +68,7 @@ export function RootNavigator() {
   const [checking, setChecking] = useState(true);
   const loadProfile = useAppStore((s) => s.loadProfile);
   const setRemoteTopics = useAppStore((s) => s.setRemoteTopics);
-  const setPetAndRank = useAppStore((s) => s.setPetAndRank);
+  const setOnboardingInfo = useAppStore((s) => s.setOnboardingInfo);
   const logout = useAppStore((s) => s.logout);
   const navRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
 
@@ -103,13 +103,14 @@ export function RootNavigator() {
           const ids = getCachedSubjectTopicIds();
           if (Object.keys(ids).length > 0) setRemoteTopics(ids);
         });
-        // Best-effort — pet/rank columns may not exist yet if the migration
-        // hasn't been applied live; a failure here shouldn't block startup.
-        // Returning sessions always land on Main regardless of rank — the
-        // onboarding stack (Register→PetName→EntranceTest) only runs for
-        // a freshly-completed registration in this same app session.
-        loadPetAndRank(session.user.id).then((pr) => {
-          if (pr) setPetAndRank(pr.pet_name, pr.rank);
+        // Best-effort — pet/rank/school columns may not exist yet if the
+        // migrations haven't been applied live; a failure here shouldn't
+        // block startup. Returning sessions always land on Main regardless
+        // of rank — the onboarding stack (Register→PetName→EntranceTest)
+        // only runs for a freshly-completed registration in this same app
+        // session.
+        loadOnboardingInfo(session.user.id).then((info) => {
+          if (info) setOnboardingInfo(info);
         }).catch(() => {});
         setInitialRoute('Main');
       } else {

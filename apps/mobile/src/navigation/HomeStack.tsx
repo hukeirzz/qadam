@@ -6,6 +6,9 @@ import { IslandPathScreen } from '../screens/IslandPathScreen';
 import { TheoryScreen } from '../screens/TheoryScreen';
 import { QuizScreen } from '../screens/QuizScreen';
 import { CorrectAnswerScreen } from '../screens/CorrectAnswerScreen';
+import { CompetitionsScreen } from '../screens/CompetitionsScreen';
+import { CompetitionDetailScreen } from '../screens/CompetitionDetailScreen';
+import { RatingScreen } from '../screens/RatingScreen';
 import { HomeStackParamList } from '../types/navigation';
 import { colors } from '../theme/colors';
 
@@ -30,6 +33,9 @@ export function HomeStack() {
         component={CorrectAnswerScreen}
         options={{ animation: 'fade' }}
       />
+      <Stack.Screen name="Competitions" component={CompetitionsScreen} />
+      <Stack.Screen name="CompetitionDetail" component={CompetitionDetailScreen} />
+      <Stack.Screen name="Rating" component={RatingScreen} />
     </Stack.Navigator>
   );
 }
