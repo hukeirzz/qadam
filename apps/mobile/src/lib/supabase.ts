@@ -9,4 +9,4 @@ const apiClient = createApiClient({
   storage: AsyncStorage,
 });
 
-export const { supabase, auth, profile, theory, topics, questions } = apiClient;
+export const { supabase, auth, profile, theory, topics, questions, schools, entranceTest, competitions, rating } = apiClient;

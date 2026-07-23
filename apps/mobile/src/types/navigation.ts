@@ -1,11 +1,16 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps } from '@react-navigation/native';
+import type { Rank } from '@qadam/business-logic';
 import type { SubjectId } from './subject';
 
 export type RootStackParamList = {
   Splash: undefined;
-  Login: { mode?: 'login' | 'register' } | undefined;
+  Login: undefined;
+  Register: undefined;
+  PetName: undefined;
+  EntranceTest: undefined;
+  EntranceTestResult: { score: number; total: number; rank: Rank };
   Main: undefined;
   ResetPassword: { email?: string } | undefined;
 };

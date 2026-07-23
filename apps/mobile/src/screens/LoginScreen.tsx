@@ -16,21 +16,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { QadamLogo } from '../components/ui/QadamLogo';
-import { signIn, signUp } from '../services/authService';
-import { loadUserProfile } from '../services/progressService';
+import { signIn } from '../services/authService';
+import { loadUserProfile, loadPetAndRank } from '../services/progressService';
 import { loadAllTopicsToCache, getCachedSubjectTopicIds } from '../services/topicsService';
 import { useAppStore } from '../store/useAppStore';
 import { RootStackParamList } from '../types/navigation';
 import { colors } from '../theme/colors';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
-type Mode = 'login' | 'register';
 
-export function LoginScreen({ navigation, route }: Props) {
-  const initialMode: Mode = (route.params as any)?.mode ?? 'login';
-  const [mode, setMode] = useState<Mode>(initialMode);
-
-  const [name, setName] = useState('');
+export function LoginScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -39,15 +34,12 @@ export function LoginScreen({ navigation, route }: Props) {
 
   const loadProfile = useAppStore((s) => s.loadProfile);
   const setRemoteTopics = useAppStore((s) => s.setRemoteTopics);
+  const setPetAndRank = useAppStore((s) => s.setPetAndRank);
 
   const handleSubmit = async () => {
     setError('');
     if (!email.trim() || !password.trim()) {
       setError('Заполни все поля');
-      return;
-    }
-    if (mode === 'register' && !name.trim()) {
-      setError('Введи имя');
       return;
     }
     if (password.length < 6) {
@@ -57,19 +49,10 @@ export function LoginScreen({ navigation, route }: Props) {
 
     setLoading(true);
     try {
-      if (mode === 'register') {
-        const { data, error: err } = await signUp(email.trim(), password, name.trim());
-        if (err) { setError(translateError(err.message)); return; }
-        // Supabase может отправить письмо — сразу пробуем войти
-        const { data: loginData, error: loginErr } = await signIn(email.trim(), password);
-        if (loginErr || !loginData.user) { setError('Аккаунт создан — войди с паролем'); return; }
-        await afterLogin(loginData.user.id, name.trim());
-      } else {
-        const { data, error: err } = await signIn(email.trim(), password);
-        if (err || !data.user) { setError(translateError(err?.message ?? '')); return; }
-        const displayName = data.user.user_metadata?.name ?? email.split('@')[0];
-        await afterLogin(data.user.id, displayName);
-      }
+      const { data, error: err } = await signIn(email.trim(), password);
+      if (err || !data.user) { setError(translateError(err?.message ?? '')); return; }
+      const displayName = data.user.user_metadata?.name ?? email.split('@')[0];
+      await afterLogin(data.user.id, displayName);
     } finally {
       setLoading(false);
     }
@@ -100,6 +83,11 @@ export function LoginScreen({ navigation, route }: Props) {
       const ids = getCachedSubjectTopicIds();
       if (Object.keys(ids).length > 0) setRemoteTopics(ids);
     });
+    // Best-effort — pet/rank columns may not exist yet if the migration
+    // hasn't been applied live; a failure here shouldn't block login.
+    loadPetAndRank(userId).then((pr) => {
+      if (pr) setPetAndRank(pr.pet_name, pr.rank);
+    }).catch(() => {});
     navigation.replace('Main');
   };
 
@@ -118,41 +106,7 @@ export function LoginScreen({ navigation, route }: Props) {
             <QadamLogo size="lg" />
           </View>
 
-          {/* Mode tabs */}
-          <View style={styles.tabs}>
-            {(['login', 'register'] as Mode[]).map((m) => (
-              <Pressable
-                key={m}
-                style={[styles.tab, mode === m && styles.tabActive]}
-                onPress={() => { setMode(m); setError(''); }}
-              >
-                <Text style={[styles.tabText, mode === m && styles.tabTextActive]}>
-                  {m === 'login' ? 'Войти' : 'Регистрация'}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          <Text style={styles.subtitle}>
-            {mode === 'login'
-              ? 'Продолжи свой путь'
-              : 'Создай аккаунт и начни путь к ОРТ'}
-          </Text>
-
-          {/* Name field — only for register */}
-          {mode === 'register' && (
-            <View style={styles.inputWrap}>
-              <Ionicons name="person-outline" size={18} color={colors.textDim} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Твоё имя"
-                placeholderTextColor={colors.textDim}
-                value={name}
-                onChangeText={setName}
-                autoCapitalize="words"
-              />
-            </View>
-          )}
+          <Text style={styles.subtitle}>Продолжи свой путь</Text>
 
           <View style={styles.inputWrap}>
             <Ionicons name="mail-outline" size={18} color={colors.textDim} style={styles.inputIcon} />
@@ -186,11 +140,9 @@ export function LoginScreen({ navigation, route }: Props) {
             </Pressable>
           </View>
 
-          {mode === 'login' && (
-            <Pressable onPress={handleForgotPassword} style={styles.forgot} hitSlop={6}>
-              <Text style={styles.forgotText}>Забыли пароль?</Text>
-            </Pressable>
-          )}
+          <Pressable onPress={handleForgotPassword} style={styles.forgot} hitSlop={6}>
+            <Text style={styles.forgotText}>Забыли пароль?</Text>
+          </Pressable>
 
           {error ? (
             <View style={styles.errorBox}>
@@ -211,24 +163,14 @@ export function LoginScreen({ navigation, route }: Props) {
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.btnText}>
-                  {mode === 'login' ? 'Войти' : 'Создать аккаунт'}
-                </Text>
+                <Text style={styles.btnText}>Войти</Text>
               )}
             </LinearGradient>
           </TouchableOpacity>
 
-          <Pressable
-            style={styles.switchMode}
-            onPress={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
-          >
+          <Pressable style={styles.switchMode} onPress={() => navigation.replace('Register')}>
             <Text style={styles.switchText}>
-              {mode === 'login'
-                ? 'Нет аккаунта? '
-                : 'Уже есть аккаунт? '}
-              <Text style={styles.switchLink}>
-                {mode === 'login' ? 'Зарегистрируйся' : 'Войти'}
-              </Text>
+              Нет аккаунта? <Text style={styles.switchLink}>Зарегистрируйся</Text>
             </Text>
           </Pressable>
         </ScrollView>

@@ -95,7 +95,7 @@ export function ResetPasswordScreen({ navigation, route }: Props) {
         {
           text: 'OK',
           onPress: () =>
-            navigation.reset({ index: 0, routes: [{ name: 'Login', params: { mode: 'login' } }] }),
+            navigation.reset({ index: 0, routes: [{ name: 'Login' }] }),
         },
       ]);
     } catch {

@@ -52,7 +52,7 @@ export function SplashScreen({ navigation }: Props) {
         <View style={styles.actions}>
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() => navigation.replace('Login', { mode: 'register' })}
+            onPress={() => navigation.replace('Register')}
           >
             <LinearGradient
               colors={[colors.purple, '#6B2FD4']}

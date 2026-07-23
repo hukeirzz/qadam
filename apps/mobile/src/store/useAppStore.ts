@@ -4,6 +4,7 @@ import {
   dateKey,
   getWeekStart,
   todayDayIndex,
+  type Rank,
 } from '@qadam/business-logic';
 import { getTopicIds } from '../data/subjects';
 import { playSound } from '../services/soundService';
@@ -26,6 +27,8 @@ interface AppState {
   userName: string;
   isAuthenticated: boolean;
   hasOnboarded: boolean;
+  petName: string | null;
+  rank: Rank | null;
 
   xp: number;
   gems: number;
@@ -53,7 +56,14 @@ interface AppState {
     completed_topics: string[]; weekly_steps: number[]; week_start: string | null;
     topic_hearts?: Record<string, number>;
     daily_steps?: Record<string, number>;
+    pet_name?: string | null;
+    rank?: Rank | null;
   }) => void;
+  /**
+   * Merges pet name / rank fetched separately (see progressService.loadPetAndRank)
+   * so a failed/not-yet-applied migration doesn't block the main profile load.
+   */
+  setPetAndRank: (petName: string | null, rank: Rank | null) => void;
 
   /** xpReward already accounts for accuracy + hearts (+ differential for replays) */
   completeQuiz: (
@@ -77,9 +87,10 @@ interface AppState {
 }
 
 const FRESH: Omit<AppState,
-  'loadProfile' | 'completeQuiz' | 'unlockPremiumWithGems' | 'setRemoteTopics' | 'setOnboarded' | 'setAuthenticated' | 'setPremium' | 'logout'
+  'loadProfile' | 'setPetAndRank' | 'completeQuiz' | 'unlockPremiumWithGems' | 'setRemoteTopics' | 'setOnboarded' | 'setAuthenticated' | 'setPremium' | 'logout'
 > = {
   userId: null, userName: '', isAuthenticated: false, hasOnboarded: false,
+  petName: null, rank: null,
   xp: 0, gems: 0, streak: 0, lastActivity: null,
   completedTopics: [], topicHearts: {},
   completedSteps: 0, totalSteps: TOTAL_STEPS, overallProgress: 0,
@@ -97,6 +108,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setOnboarded: (v) => set({ hasOnboarded: v }),
   setAuthenticated: (v) => set({ isAuthenticated: v }),
   setPremium: (v) => set({ premiumUnlocked: v }),
+  setPetAndRank: (petName, rank) => set({ petName, rank }),
 
   setRemoteTopics: (subjectTopicIds) => set((s) => {
     const totalSteps = Object.values(subjectTopicIds).reduce((sum, ids) => sum + ids.length, 0);
@@ -125,6 +137,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     set({
       userId: p.id, userName: p.name, isAuthenticated: true,
+      petName: p.pet_name ?? null, rank: p.rank ?? null,
       xp: p.xp, gems: p.gems, streak: p.streak,
       lastActivity: p.last_activity, premiumUnlocked: p.premium_unlocked,
       completedTopics, completedSteps, totalSteps: TOTAL_STEPS, overallProgress,

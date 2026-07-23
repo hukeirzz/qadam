@@ -5,12 +5,16 @@ import { View } from 'react-native';
 import * as Linking from 'expo-linking';
 import { SplashScreen } from '../screens/SplashScreen';
 import { LoginScreen } from '../screens/LoginScreen';
+import { RegisterScreen } from '../screens/RegisterScreen';
+import { PetNameScreen } from '../screens/PetNameScreen';
+import { EntranceTestScreen } from '../screens/EntranceTestScreen';
+import { EntranceTestResultScreen } from '../screens/EntranceTestResultScreen';
 import { ResetPasswordScreen } from '../screens/ResetPasswordScreen';
 import { MainTabs } from './MainTabs';
 import { RootStackParamList } from '../types/navigation';
 import { colors } from '../theme/colors';
 import { supabase } from '../lib/supabase';
-import { loadUserProfile } from '../services/progressService';
+import { loadUserProfile, loadPetAndRank } from '../services/progressService';
 import { loadAllTopicsToCache, getCachedSubjectTopicIds } from '../services/topicsService';
 import { useAppStore } from '../store/useAppStore';
 
@@ -64,6 +68,7 @@ export function RootNavigator() {
   const [checking, setChecking] = useState(true);
   const loadProfile = useAppStore((s) => s.loadProfile);
   const setRemoteTopics = useAppStore((s) => s.setRemoteTopics);
+  const setPetAndRank = useAppStore((s) => s.setPetAndRank);
   const logout = useAppStore((s) => s.logout);
   const navRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
 
@@ -98,6 +103,14 @@ export function RootNavigator() {
           const ids = getCachedSubjectTopicIds();
           if (Object.keys(ids).length > 0) setRemoteTopics(ids);
         });
+        // Best-effort — pet/rank columns may not exist yet if the migration
+        // hasn't been applied live; a failure here shouldn't block startup.
+        // Returning sessions always land on Main regardless of rank — the
+        // onboarding stack (Register→PetName→EntranceTest) only runs for
+        // a freshly-completed registration in this same app session.
+        loadPetAndRank(session.user.id).then((pr) => {
+          if (pr) setPetAndRank(pr.pet_name, pr.rank);
+        }).catch(() => {});
         setInitialRoute('Main');
       } else {
         setInitialRoute('Splash');
@@ -143,6 +156,10 @@ export function RootNavigator() {
       >
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen name="PetName" component={PetNameScreen} />
+        <Stack.Screen name="EntranceTest" component={EntranceTestScreen} />
+        <Stack.Screen name="EntranceTestResult" component={EntranceTestResultScreen} />
         <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
       </Stack.Navigator>
