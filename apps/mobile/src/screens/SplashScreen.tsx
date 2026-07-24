@@ -7,6 +7,7 @@ import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 
 const WELCOME = require('../../assets/welcome.png');
+const LOGO1 = require('../../assets/logo1.png');
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 
@@ -16,13 +17,16 @@ export function SplashScreen({ navigation }: Props) {
       <Image source={WELCOME} style={styles.background} resizeMode="cover" />
 
       <LinearGradient
-        colors={['transparent', 'rgba(10,8,24,0.55)', 'rgba(6,4,16,0.96)']}
-        locations={[0, 0.55, 1]}
+        colors={['transparent', 'rgba(10,8,24,0.2)', 'rgba(6,4,16,0.7)']}
+        locations={[0, 0.65, 1]}
         style={styles.scrim}
       />
 
       <View style={styles.content}>
-        <Text style={styles.brand}>ОРТ</Text>
+        <View style={styles.brandRow}>
+          <Image source={LOGO1} style={styles.brandLogo} resizeMode="contain" />
+          <Text style={styles.brand}>Qadam</Text>
+        </View>
 
         <Text style={styles.tagline}>Путь к высоким баллам начинается здесь!</Text>
 
@@ -62,13 +66,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xl + 24,
   },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  brandLogo: {
+    width: 40,
+    height: 40,
+  },
   brand: {
     color: colors.text,
     fontSize: 40,
     fontWeight: '800',
     letterSpacing: 1,
     textAlign: 'center',
-    marginBottom: 10,
     textShadowColor: colors.purpleGlow,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 18,
