@@ -2,7 +2,6 @@ import React from 'react';
 import { Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { RootStackParamList } from '../types/navigation';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
@@ -13,46 +12,55 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 
 export function SplashScreen({ navigation }: Props) {
   return (
-    <ScreenBackground accentColor={colors.purple}>
-      <View style={styles.root}>
-        <Image source={WELCOME} style={styles.hero} resizeMode="cover" />
+    <View style={styles.root}>
+      <Image source={WELCOME} style={styles.background} resizeMode="cover" />
 
-        <View style={styles.content}>
-          <Text style={styles.brand}>ОРТ</Text>
+      <LinearGradient
+        colors={['transparent', 'rgba(10,8,24,0.55)', 'rgba(6,4,16,0.96)']}
+        locations={[0, 0.55, 1]}
+        style={styles.scrim}
+      />
 
-          <Text style={styles.tagline}>Путь к высоким баллам начинается здесь!</Text>
+      <View style={styles.content}>
+        <Text style={styles.brand}>ОРТ</Text>
 
-          <View style={styles.actions}>
-            <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.replace('Register')}>
-              <LinearGradient colors={[colors.purple, '#6B2FD4']} style={styles.primaryBtn}>
-                <Text style={styles.primaryText}>Начать</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
+        <Text style={styles.tagline}>Путь к высоким баллам начинается здесь!</Text>
 
-          <Pressable style={styles.loginLink} onPress={() => navigation.replace('Login')} hitSlop={8}>
-            <Text style={styles.loginLinkText}>У меня уже есть аккаунт</Text>
-          </Pressable>
+        <View style={styles.actions}>
+          <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.replace('Register')}>
+            <LinearGradient colors={[colors.purple, '#6B2FD4']} style={styles.primaryBtn}>
+              <Text style={styles.primaryText}>Начать</Text>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
+
+        <Pressable style={styles.loginLink} onPress={() => navigation.replace('Login')} hitSlop={8}>
+          <Text style={styles.loginLinkText}>У меня уже есть аккаунт</Text>
+        </Pressable>
       </View>
-    </ScreenBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    backgroundColor: colors.background,
   },
-  hero: {
+  background: {
+    ...StyleSheet.absoluteFillObject,
     width: '100%',
-    aspectRatio: 945 / 1656,
+    height: '100%',
+  },
+  scrim: {
+    ...StyleSheet.absoluteFillObject,
   },
   content: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.xl + 24,
   },
   brand: {
     color: colors.text,
