@@ -105,14 +105,16 @@ export function RootNavigator() {
         });
         // Best-effort — pet/rank/school columns may not exist yet if the
         // migrations haven't been applied live; a failure here shouldn't
-        // block startup. Returning sessions always land on Main regardless
-        // of rank — the onboarding stack (Register→PetName→EntranceTest)
-        // only runs for a freshly-completed registration in this same app
-        // session.
-        loadOnboardingInfo(session.user.id).then((info) => {
-          if (info) setOnboardingInfo(info);
-        }).catch(() => {});
-        setInitialRoute('Main');
+        // block startup. If we do get a result and the user never finished
+        // choosing a pet (e.g. the app was killed between confirming their
+        // email and reaching PetNameScreen), send them there instead of
+        // Main so onboarding actually completes.
+        let onboardingInfo: Awaited<ReturnType<typeof loadOnboardingInfo>> = null;
+        try {
+          onboardingInfo = await loadOnboardingInfo(session.user.id);
+        } catch {}
+        if (onboardingInfo) setOnboardingInfo(onboardingInfo);
+        setInitialRoute(onboardingInfo && !onboardingInfo.pet_name ? 'PetName' : 'Main');
       } else {
         setInitialRoute('Splash');
       }

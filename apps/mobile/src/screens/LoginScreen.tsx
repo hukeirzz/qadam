@@ -85,11 +85,21 @@ export function LoginScreen({ navigation }: Props) {
     });
     // Best-effort — pet/rank/school columns may not exist yet if the
     // migrations haven't been applied live; a failure here shouldn't
-    // block login.
-    loadOnboardingInfo(userId).then((info) => {
-      if (info) setOnboardingInfo(info);
-    }).catch(() => {});
-    navigation.replace('Main');
+    // block login. If we do get a result and the user never finished
+    // choosing a pet (e.g. they had to confirm their email before their
+    // first sign-in and never reached PetNameScreen during registration),
+    // send them there instead of Main so onboarding actually completes.
+    let info: Awaited<ReturnType<typeof loadOnboardingInfo>> = null;
+    try {
+      info = await loadOnboardingInfo(userId);
+    } catch {}
+    if (info) setOnboardingInfo(info);
+
+    if (info && !info.pet_name) {
+      navigation.replace('PetName');
+    } else {
+      navigation.replace('Main');
+    }
   };
 
   return (

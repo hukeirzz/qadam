@@ -63,7 +63,7 @@ export function PetNameScreen({ navigation }: Props) {
     <ScreenBackground accentColor={colors.purple}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
         <View style={styles.content}>
-          <Text style={styles.title}>Выбери своего снежного барса</Text>
+          <Text style={styles.title}>Выберите своего питомца</Text>
 
           <View style={styles.carousel}>
             <Pressable
