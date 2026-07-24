@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { petMoodFromStreak, type PetMood } from '@qadam/business-logic';
+import type { PetType } from '@qadam/types';
 import { useAppStore } from '../../store/useAppStore';
 import { colors } from '../../theme/colors';
 
@@ -19,18 +20,32 @@ const MOOD_EMOJI: Record<PetMood, string> = {
   sad: '😢',
 };
 
+const PET_IMAGES: Record<PetType, any> = {
+  bars: require('../../../assets/bars.png'),
+  cat: require('../../../assets/cat.png'),
+  dog: require('../../../assets/dog.png'),
+  eagle: require('../../../assets/eagle.png'),
+  penguin: require('../../../assets/penguin.png'),
+};
+
 export function PetCard() {
   const petName = useAppStore((s) => s.petName);
+  const petType = useAppStore((s) => s.petType);
   const streak = useAppStore((s) => s.streak);
   const lastActivity = useAppStore((s) => s.lastActivity);
 
   if (!petName) return null;
 
   const mood = petMoodFromStreak(streak, lastActivity);
+  const image = petType ? PET_IMAGES[petType] : null;
 
   return (
     <View style={styles.card}>
-      <Text style={styles.emoji}>🐆</Text>
+      {image ? (
+        <Image source={image} style={styles.avatar} resizeMode="cover" />
+      ) : (
+        <Text style={styles.emoji}>🐆</Text>
+      )}
       <View style={styles.info}>
         <Text style={styles.name}>{petName}</Text>
         <Text style={styles.mood}>{MOOD_EMOJI[mood]} {MOOD_LABEL[mood]}</Text>
@@ -58,6 +73,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   emoji: { fontSize: 36 },
+  avatar: { width: 44, height: 44, borderRadius: 12 },
   info: { flex: 1 },
   name: { color: colors.text, fontSize: 15, fontWeight: '800' },
   mood: { color: colors.textMuted, fontSize: 12, marginTop: 2 },

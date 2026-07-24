@@ -14,6 +14,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { PetType } from '@qadam/types';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { saveOnboarding } from '../services/progressService';
 import { useAppStore } from '../store/useAppStore';
@@ -23,17 +24,17 @@ import { spacing } from '../theme/spacing';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PetName'>;
 
-const MASCOT = require('../../assets/mascot.png');
-
-// Only one mascot illustration exists — there's no real distinct artwork
-// for different "appearances" to page through. The arrows still work and
-// cycle a color accent (glow tint) as a stand-in for outfit variants,
-// rather than faking art that doesn't exist.
-const VARIANT_TINTS = [colors.purple, '#3B8BFF', '#FF8C3B', '#2EE59D'];
+const PET_OPTIONS: { type: PetType; label: string; image: any; defaultName: string }[] = [
+  { type: 'bars', label: 'Снежный барс', image: require('../../assets/bars.png'), defaultName: 'Барсик' },
+  { type: 'cat', label: 'Кот', image: require('../../assets/cat.png'), defaultName: 'Барсик' },
+  { type: 'dog', label: 'Пёс', image: require('../../assets/dog.png'), defaultName: 'Барсик' },
+  { type: 'eagle', label: 'Орёл', image: require('../../assets/eagle.png'), defaultName: 'Барсик' },
+  { type: 'penguin', label: 'Пингвин', image: require('../../assets/penguin.png'), defaultName: 'Барсик' },
+];
 
 export function PetNameScreen({ navigation }: Props) {
+  const [index, setIndex] = useState(0);
   const [name, setName] = useState('');
-  const [variant, setVariant] = useState(0);
   const [loading, setLoading] = useState(false);
   const userId = useAppStore((s) => s.userId);
   const setOnboardingInfo = useAppStore((s) => s.setOnboardingInfo);
@@ -42,15 +43,18 @@ export function PetNameScreen({ navigation }: Props) {
   const schoolId = useAppStore((s) => s.schoolId);
   const classId = useAppStore((s) => s.classId);
 
-  const tint = VARIANT_TINTS[variant];
+  const selected = PET_OPTIONS[index];
 
   const handleContinue = async () => {
-    const trimmed = name.trim() || 'Барсик';
+    const trimmed = name.trim() || selected.defaultName;
     setLoading(true);
     try {
       if (userId) {
-        await saveOnboarding(userId, { pet_name: trimmed });
-        setOnboardingInfo({ pet_name: trimmed, rank, school_id: schoolId, class_id: classId });
+        await saveOnboarding(userId, { pet_name: trimmed, pet_type: selected.type });
+        setOnboardingInfo({
+          pet_name: trimmed, pet_type: selected.type, rank,
+          school_id: schoolId, class_id: classId,
+        });
       }
       setOnboarded(true);
       navigation.replace('Main');
@@ -68,31 +72,33 @@ export function PetNameScreen({ navigation }: Props) {
           <View style={styles.carousel}>
             <Pressable
               style={styles.arrowBtn}
-              onPress={() => setVariant((v) => (v - 1 + VARIANT_TINTS.length) % VARIANT_TINTS.length)}
+              onPress={() => setIndex((v) => (v - 1 + PET_OPTIONS.length) % PET_OPTIONS.length)}
               hitSlop={10}
             >
               <Ionicons name="chevron-back" size={26} color={colors.text} />
             </Pressable>
 
             <View style={styles.mascotWrap}>
-              <View style={[styles.mascotGlow, { backgroundColor: tint, shadowColor: tint }]} />
-              <Image source={MASCOT} style={styles.mascot} resizeMode="contain" />
+              <View style={styles.mascotGlow} />
+              <Image source={selected.image} style={styles.mascot} resizeMode="cover" />
             </View>
 
             <Pressable
               style={styles.arrowBtn}
-              onPress={() => setVariant((v) => (v + 1) % VARIANT_TINTS.length)}
+              onPress={() => setIndex((v) => (v + 1) % PET_OPTIONS.length)}
               hitSlop={10}
             >
               <Ionicons name="chevron-forward" size={26} color={colors.text} />
             </Pressable>
           </View>
 
-          <Text style={styles.subtitle}>Как назвать твоего барса?</Text>
+          <Text style={styles.petLabel}>{selected.label}</Text>
+
+          <Text style={styles.subtitle}>Как назвать твоего питомца?</Text>
 
           <TextInput
             style={styles.input}
-            placeholder="Барсик"
+            placeholder={selected.defaultName}
             placeholderTextColor={colors.textDim}
             value={name}
             onChangeText={setName}
@@ -115,20 +121,30 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl },
   title: { color: colors.text, fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 20 },
-  carousel: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 20 },
+  carousel: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12 },
   arrowBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  mascotWrap: { width: 160, height: 190, alignItems: 'center', justifyContent: 'center' },
+  mascotWrap: {
+    width: 160,
+    height: 160,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
   mascotGlow: {
     position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: colors.purple,
     opacity: 0.35,
+    shadowColor: colors.purple,
     shadowOpacity: 0.9,
     shadowRadius: 40,
     shadowOffset: { width: 0, height: 0 },
   },
-  mascot: { width: 160, height: 190 },
+  mascot: { width: 160, height: 160, borderRadius: 24 },
+  petLabel: { color: colors.textMuted, fontSize: 13, fontWeight: '600', marginBottom: 20 },
   subtitle: { color: colors.textMuted, fontSize: 14, textAlign: 'center', marginBottom: 24 },
   input: {
     width: '100%',

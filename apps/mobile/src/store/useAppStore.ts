@@ -6,6 +6,7 @@ import {
   todayDayIndex,
   type Rank,
 } from '@qadam/business-logic';
+import type { PetType } from '@qadam/types';
 import { getTopicIds } from '../data/subjects';
 import { playSound } from '../services/soundService';
 
@@ -28,6 +29,7 @@ interface AppState {
   isAuthenticated: boolean;
   hasOnboarded: boolean;
   petName: string | null;
+  petType: PetType | null;
   rank: Rank | null;
   schoolId: string | null;
   classId: string | null;
@@ -68,6 +70,7 @@ interface AppState {
    */
   setOnboardingInfo: (info: {
     pet_name: string | null;
+    pet_type?: PetType | null;
     rank: Rank | null;
     school_id: string | null;
     class_id: string | null;
@@ -98,7 +101,7 @@ const FRESH: Omit<AppState,
   'loadProfile' | 'setOnboardingInfo' | 'completeQuiz' | 'unlockPremiumWithGems' | 'setRemoteTopics' | 'setOnboarded' | 'setAuthenticated' | 'setPremium' | 'logout'
 > = {
   userId: null, userName: '', isAuthenticated: false, hasOnboarded: false,
-  petName: null, rank: null, schoolId: null, classId: null,
+  petName: null, petType: null, rank: null, schoolId: null, classId: null,
   xp: 0, gems: 0, streak: 0, lastActivity: null,
   completedTopics: [], topicHearts: {},
   completedSteps: 0, totalSteps: TOTAL_STEPS, overallProgress: 0,
@@ -117,7 +120,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAuthenticated: (v) => set({ isAuthenticated: v }),
   setPremium: (v) => set({ premiumUnlocked: v }),
   setOnboardingInfo: (info) => set({
-    petName: info.pet_name, rank: info.rank,
+    petName: info.pet_name, petType: info.pet_type ?? null, rank: info.rank,
     schoolId: info.school_id, classId: info.class_id,
   }),
 

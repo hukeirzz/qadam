@@ -5,6 +5,7 @@
 // local to whichever app renders them, since those are UI-layer concerns.
 
 export type Role = 'student' | 'coordinator' | 'admin' | 'director';
+export type PetType = 'bars' | 'cat' | 'dog' | 'eagle' | 'penguin';
 
 export interface UserProfileRow {
   id: string;
@@ -25,6 +26,8 @@ export interface UserProfileRow {
   class_id: string | null;
   /** Added by the pet/rank/competitions migration (supabase/migrations) — not on every historical row until that migration is applied live. */
   pet_name: string | null;
+  /** Added by the pet_type migration (supabase/migrations) — not on every historical row until that migration is applied live. */
+  pet_type: PetType | null;
   phone: string | null;
   nickname: string | null;
   rank: Rank | null;

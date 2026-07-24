@@ -14,6 +14,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type {
   Competition,
   OptionRow,
+  PetType,
   QuestionWithOptionsRow,
   Rank,
   RatingEntry,
@@ -180,22 +181,29 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
      */
     async onboardingInfo(userId: string): Promise<{
       pet_name: string | null;
+      pet_type: PetType | null;
       rank: Rank | null;
       school_id: string | null;
       class_id: string | null;
     } | null> {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('pet_name, rank, school_id, class_id')
+        .select('pet_name, pet_type, rank, school_id, class_id')
         .eq('id', userId)
         .single();
 
       if (error || !data) return null;
-      return data as { pet_name: string | null; rank: Rank | null; school_id: string | null; class_id: string | null };
+      return data as {
+        pet_name: string | null;
+        pet_type: PetType | null;
+        rank: Rank | null;
+        school_id: string | null;
+        class_id: string | null;
+      };
     },
 
     /**
-     * Registration/onboarding fields (pet name, phone, school/class,
+     * Registration/onboarding fields (pet name/type, phone, school/class,
      * consent) — separate from save() below for the same reason role() is
      * separate: these columns come from a different, not-yet-applied
      * migration, and this isn't on the hot path quiz completion calls.
@@ -204,6 +212,7 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       userId: string,
       updates: {
         pet_name?: string;
+        pet_type?: PetType;
         phone?: string;
         nickname?: string;
         class_label?: string;
