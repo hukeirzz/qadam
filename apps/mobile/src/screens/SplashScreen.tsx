@@ -7,7 +7,6 @@ import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 
 const WELCOME = require('../../assets/welcome.png');
-const LOGO1 = require('../../assets/logo1.png');
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 
@@ -17,10 +16,7 @@ export function SplashScreen({ navigation }: Props) {
       <Image source={WELCOME} style={styles.background} resizeMode="cover" />
 
       <View style={styles.content}>
-        <View style={styles.brandStack}>
-          <Image source={LOGO1} style={styles.brandLogo} resizeMode="contain" />
-          <Text style={styles.brand}>Qadam</Text>
-        </View>
+        <Text style={styles.brand}>Qadam</Text>
 
         <Text style={styles.tagline}>Путь к высоким баллам начинается здесь!</Text>
 
@@ -57,25 +53,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xl + 24,
   },
-  brandStack: {
-    width: 220,
-    height: 147,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginBottom: 10,
-  },
-  brandLogo: {
-    ...StyleSheet.absoluteFillObject,
-    width: '100%',
-    height: '100%',
-  },
   brand: {
     color: colors.text,
     fontSize: 40,
     fontWeight: '800',
     letterSpacing: 1,
     textAlign: 'center',
-    paddingBottom: 8,
+    marginBottom: 10,
     textShadowColor: colors.purpleGlow,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 18,
