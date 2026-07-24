@@ -64,13 +64,26 @@ export function RegisterScreen({ navigation }: Props) {
 
     setLoading(true);
     try {
-      const { error: signUpErr } = await signUp(email.trim(), password, fullName);
+      const { data: signUpData, error: signUpErr } = await signUp(email.trim(), password, fullName);
       if (signUpErr) { setError(translateError(signUpErr.message)); return; }
 
-      const { data: loginData, error: loginErr } = await signIn(email.trim(), password);
-      if (loginErr || !loginData.user) { setError('Аккаунт создан — войди с паролем'); return; }
-
-      const userId = loginData.user.id;
+      // signUp already returns a live session when email confirmation isn't
+      // required — no need for a separate signIn round trip in that case.
+      // If there's no session, the Supabase project has "Confirm email"
+      // turned on (Dashboard → Authentication → Sign In / Providers →
+      // Email), which blocks sign-in until the link is clicked — that's a
+      // project setting, not something this screen can bypass. Still try a
+      // normal sign-in as a fallback in case it isn't actually required.
+      let userId = signUpData.user?.id;
+      if (!signUpData.session) {
+        const { data: loginData, error: loginErr } = await signIn(email.trim(), password);
+        if (loginErr || !loginData.user) {
+          setError('Подтверди email по ссылке из письма, затем войди — после этого сможешь продолжить регистрацию');
+          return;
+        }
+        userId = loginData.user.id;
+      }
+      if (!userId) { setError('Что-то пошло не так'); return; }
       const profile = await loadUserProfile(userId);
       loadProfile(
         profile ?? {
