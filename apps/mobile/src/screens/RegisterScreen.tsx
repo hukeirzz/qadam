@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -18,38 +19,36 @@ import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { QadamLogo } from '../components/ui/QadamLogo';
 import { signIn, signUp } from '../services/authService';
 import { loadUserProfile, saveOnboarding } from '../services/progressService';
-import { listSchools } from '../services/schoolsService';
+import { findSchoolByCode } from '../services/schoolsService';
 import { useAppStore } from '../store/useAppStore';
 import { RootStackParamList } from '../types/navigation';
 import { colors } from '../theme/colors';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
+const CLASS_OPTIONS = ['8 класс', '9 класс', '10 класс', '11 класс'];
+
 export function RegisterScreen({ navigation }: Props) {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
-  const [classLabel, setClassLabel] = useState('');
-  const [schools, setSchoolsList] = useState<{ id: string; name: string }[]>([]);
-  const [schoolId, setSchoolId] = useState<string | null>(null);
+  const [schoolCode, setSchoolCode] = useState('');
+  const [classLabel, setClassLabel] = useState<string | null>(null);
+  const [classPickerOpen, setClassPickerOpen] = useState(false);
   const [dataConsent, setDataConsent] = useState(false);
-  const [showInRating, setShowInRating] = useState(true);
+  const [showInRating, setShowInRating] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const loadProfile = useAppStore((s) => s.loadProfile);
   const setOnboardingInfo = useAppStore((s) => s.setOnboardingInfo);
 
-  useEffect(() => {
-    listSchools().then(setSchoolsList).catch(() => {});
-  }, []);
-
   const handleSubmit = async () => {
     setError('');
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      setError('Заполни имя, email и пароль');
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) {
+      setError('Заполни имя, фамилию, email и пароль');
       return;
     }
     if (password.length < 6) {
@@ -61,9 +60,11 @@ export function RegisterScreen({ navigation }: Props) {
       return;
     }
 
+    const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+
     setLoading(true);
     try {
-      const { error: signUpErr } = await signUp(email.trim(), password, name.trim());
+      const { error: signUpErr } = await signUp(email.trim(), password, fullName);
       if (signUpErr) { setError(translateError(signUpErr.message)); return; }
 
       const { data: loginData, error: loginErr } = await signIn(email.trim(), password);
@@ -73,21 +74,23 @@ export function RegisterScreen({ navigation }: Props) {
       const profile = await loadUserProfile(userId);
       loadProfile(
         profile ?? {
-          id: userId, name: name.trim(),
+          id: userId, name: fullName,
           xp: 0, gems: 0, streak: 0,
           premium_unlocked: false, last_activity: null,
           completed_topics: [], weekly_steps: [0, 0, 0, 0, 0, 0, 0], week_start: null,
         },
       );
 
+      // Код школы необязателен — если введён, но не найден, просто не привязываем школу.
+      const school = schoolCode.trim() ? await findSchoolByCode(schoolCode.trim()) : null;
+
       await saveOnboarding(userId, {
-        phone: phone.trim() || undefined,
-        class_label: classLabel.trim() || undefined,
-        school_id: schoolId,
+        class_label: classLabel ?? undefined,
+        school_id: school?.id ?? null,
         data_consent: dataConsent,
         show_in_school_rating: showInRating,
       });
-      setOnboardingInfo({ pet_name: null, rank: null, school_id: schoolId, class_id: null });
+      setOnboardingInfo({ pet_name: null, rank: null, school_id: school?.id ?? null, class_id: null });
 
       navigation.replace('PetName');
     } finally {
@@ -108,10 +111,9 @@ export function RegisterScreen({ navigation }: Props) {
           </View>
 
           <Text style={styles.title}>Создай аккаунт</Text>
-          <Text style={styles.subtitle}>Путь к высоким баллам начинается здесь</Text>
 
-          <Field icon="person-outline" placeholder="Имя" value={name} onChangeText={setName} autoCapitalize="words" />
-          <Field icon="call-outline" placeholder="Телефон / Email" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+          <Field icon="person-outline" placeholder="Имя" value={firstName} onChangeText={setFirstName} autoCapitalize="words" />
+          <Field icon="person-outline" placeholder="Фамилия" value={lastName} onChangeText={setLastName} autoCapitalize="words" />
           <Field icon="mail-outline" placeholder="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
 
           <View style={styles.inputWrap}>
@@ -129,40 +131,20 @@ export function RegisterScreen({ navigation }: Props) {
             </Pressable>
           </View>
 
-          <Field icon="school-outline" placeholder="Класс (например 9-А)" value={classLabel} onChangeText={setClassLabel} />
+          <Field icon="key-outline" placeholder="Код школы" value={schoolCode} onChangeText={setSchoolCode} autoCapitalize="characters" />
+          <Text style={styles.hint}>Необязательно, если ты не ученик партнёрской школы</Text>
 
-          {schools.length > 0 && (
-            <View style={styles.schoolSection}>
-              <Text style={styles.schoolLabel}>Школа (необязательно)</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.schoolChips}>
-                <Pressable
-                  style={[styles.chip, schoolId === null && styles.chipActive]}
-                  onPress={() => setSchoolId(null)}
-                >
-                  <Text style={[styles.chipText, schoolId === null && styles.chipTextActive]}>Без школы</Text>
-                </Pressable>
-                {schools.map((s) => (
-                  <Pressable
-                    key={s.id}
-                    style={[styles.chip, schoolId === s.id && styles.chipActive]}
-                    onPress={() => setSchoolId(s.id)}
-                  >
-                    <Text style={[styles.chipText, schoolId === s.id && styles.chipTextActive]}>{s.name}</Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            </View>
-          )}
+          <Pressable style={styles.inputWrap} onPress={() => setClassPickerOpen(true)}>
+            <Ionicons name="school-outline" size={18} color={colors.textDim} style={styles.inputIcon} />
+            <Text style={[styles.input, !classLabel && styles.placeholder]}>{classLabel ?? 'Класс'}</Text>
+            <Ionicons name="chevron-down" size={18} color={colors.textDim} />
+          </Pressable>
 
-          <Consent
-            checked={dataConsent}
-            onToggle={() => setDataConsent((v) => !v)}
-            label="Согласен на обработку персональных данных"
-          />
+          <Consent checked={dataConsent} onToggle={() => setDataConsent((v) => !v)} label="Согласие на обработку данных" />
           <Consent
             checked={showInRating}
             onToggle={() => setShowInRating((v) => !v)}
-            label="Участвовать в школьном рейтинге"
+            label="Участвовать в школьном рейтинге (опционально)"
           />
 
           {error ? (
@@ -185,6 +167,22 @@ export function RegisterScreen({ navigation }: Props) {
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal visible={classPickerOpen} transparent animationType="fade" onRequestClose={() => setClassPickerOpen(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setClassPickerOpen(false)}>
+          <View style={styles.modalCard}>
+            {CLASS_OPTIONS.map((opt) => (
+              <Pressable
+                key={opt}
+                style={styles.modalOption}
+                onPress={() => { setClassLabel(opt); setClassPickerOpen(false); }}
+              >
+                <Text style={styles.modalOptionText}>{opt}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
     </ScreenBackground>
   );
 }
@@ -195,7 +193,7 @@ function Field(props: {
   value: string;
   onChangeText: (v: string) => void;
   keyboardType?: 'default' | 'email-address' | 'phone-pad';
-  autoCapitalize?: 'none' | 'words';
+  autoCapitalize?: 'none' | 'words' | 'characters';
 }) {
   return (
     <View style={styles.inputWrap}>
@@ -236,8 +234,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 48, paddingBottom: 40 },
   logoWrap: { alignItems: 'center', marginBottom: 20 },
-  title: { color: colors.text, fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 4 },
-  subtitle: { color: colors.textMuted, fontSize: 14, marginBottom: 20, textAlign: 'center' },
+  title: { color: colors.text, fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 20 },
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -250,22 +247,10 @@ const styles = StyleSheet.create({
   },
   inputIcon: { marginRight: 10 },
   input: { flex: 1, paddingVertical: 15, color: colors.text, fontSize: 15 },
+  placeholder: { color: colors.textDim },
   inputPass: { paddingRight: 0 },
   eyeBtn: { padding: 8 },
-  schoolSection: { marginBottom: 12 },
-  schoolLabel: { color: colors.textMuted, fontSize: 13, marginBottom: 8 },
-  schoolChips: { gap: 8, paddingRight: 8 },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  chipActive: { backgroundColor: colors.purple, borderColor: colors.purple },
-  chipText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
-  chipTextActive: { color: colors.text },
+  hint: { color: colors.textDim, fontSize: 12, marginTop: -6, marginBottom: 12, marginLeft: 4 },
   consentRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   checkbox: {
     width: 20,
@@ -295,4 +280,26 @@ const styles = StyleSheet.create({
   switchMode: { marginTop: 20, alignItems: 'center' },
   switchText: { color: colors.textMuted, fontSize: 14 },
   switchLink: { color: colors.purpleGlow, fontWeight: '700' },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+  },
+  modalCard: {
+    width: '100%',
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  modalOption: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalOptionText: { color: colors.text, fontSize: 15, fontWeight: '600', textAlign: 'center' },
 });

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   Easing,
@@ -14,7 +14,7 @@ import { RootStackParamList } from '../types/navigation';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 
-const APP_ICON = require('../../assets/icon.jpeg');
+const MASCOT = require('../../assets/mascot.png');
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 
@@ -23,45 +23,39 @@ export function SplashScreen({ navigation }: Props) {
 
   useEffect(() => {
     scale.value = withRepeat(
-      withTiming(1.06, { duration: 2400, easing: Easing.inOut(Easing.sin) }),
+      withTiming(1.04, { duration: 2400, easing: Easing.inOut(Easing.sin) }),
       -1,
       true,
     );
   }, [scale]);
 
-  const portalStyle = useAnimatedStyle(() => ({
+  const mascotStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
   return (
     <ScreenBackground accentColor={colors.purple}>
       <View style={styles.content}>
-        <Animated.View style={[styles.portal, portalStyle]}>
-          <LinearGradient
-            colors={['#6B2FD4', '#9047FF', '#3D1A7A']}
-            style={styles.portalInner}
-          >
-            <Image source={APP_ICON} style={styles.portalLogo} resizeMode="contain" />
-          </LinearGradient>
+        <Animated.View style={[styles.mascotWrap, mascotStyle]}>
+          <View style={styles.mascotGlow} />
+          <Image source={MASCOT} style={styles.mascot} resizeMode="contain" />
         </Animated.View>
 
-        <Text style={styles.brand}>Qadam</Text>
+        <Text style={styles.brand}>ОРТ</Text>
 
-        <Text style={styles.tagline}>Делай шаги к знаниям каждый день</Text>
+        <Text style={styles.tagline}>Путь к высоким баллам начинается здесь!</Text>
 
         <View style={styles.actions}>
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={() => navigation.replace('Register')}
-          >
-            <LinearGradient
-              colors={[colors.purple, '#6B2FD4']}
-              style={styles.primaryBtn}
-            >
-              <Text style={styles.primaryText}>Начать путь</Text>
+          <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.replace('Register')}>
+            <LinearGradient colors={[colors.purple, '#6B2FD4']} style={styles.primaryBtn}>
+              <Text style={styles.primaryText}>Начать</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
+
+        <Pressable style={styles.loginLink} onPress={() => navigation.replace('Login')} hitSlop={8}>
+          <Text style={styles.loginLinkText}>У меня уже есть аккаунт</Text>
+        </Pressable>
       </View>
     </ScreenBackground>
   );
@@ -74,24 +68,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
   },
-  portal: {
-    marginBottom: 40,
-  },
-  portalInner: {
-    width: 140,
-    height: 140,
-    borderRadius: 32,
+  mascotWrap: {
+    width: 220,
+    height: 260,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.purple,
-    shadowOpacity: 0.8,
-    shadowRadius: 30,
-    shadowOffset: { width: 0, height: 0 },
+    marginBottom: 24,
   },
-  portalLogo: {
+  mascotGlow: {
+    position: 'absolute',
     width: 200,
     height: 200,
-    borderRadius: 20,
+    borderRadius: 100,
+    backgroundColor: colors.purple,
+    opacity: 0.35,
+    shadowColor: colors.purple,
+    shadowOpacity: 0.9,
+    shadowRadius: 40,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  mascot: {
+    width: 220,
+    height: 260,
   },
   brand: {
     color: colors.text,
@@ -124,5 +122,14 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 16,
     fontWeight: '700',
+  },
+  loginLink: {
+    marginTop: 20,
+    padding: 8,
+  },
+  loginLinkText: {
+    color: colors.purpleGlow,
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

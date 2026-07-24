@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -10,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { saveOnboarding } from '../services/progressService';
@@ -20,19 +23,26 @@ import { spacing } from '../theme/spacing';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PetName'>;
 
-// No dedicated mascot illustration exists yet — following the same
-// emoji-placeholder convention already used elsewhere in this app
-// (e.g. PracticeScreen.tsx's 💬) rather than inventing a fake asset.
-const PET_EMOJI = '🐆';
+const MASCOT = require('../../assets/mascot.png');
+
+// Only one mascot illustration exists — there's no real distinct artwork
+// for different "appearances" to page through. The arrows still work and
+// cycle a color accent (glow tint) as a stand-in for outfit variants,
+// rather than faking art that doesn't exist.
+const VARIANT_TINTS = [colors.purple, '#3B8BFF', '#FF8C3B', '#2EE59D'];
 
 export function PetNameScreen({ navigation }: Props) {
   const [name, setName] = useState('');
+  const [variant, setVariant] = useState(0);
   const [loading, setLoading] = useState(false);
   const userId = useAppStore((s) => s.userId);
   const setOnboardingInfo = useAppStore((s) => s.setOnboardingInfo);
+  const setOnboarded = useAppStore((s) => s.setOnboarded);
   const rank = useAppStore((s) => s.rank);
   const schoolId = useAppStore((s) => s.schoolId);
   const classId = useAppStore((s) => s.classId);
+
+  const tint = VARIANT_TINTS[variant];
 
   const handleContinue = async () => {
     const trimmed = name.trim() || 'Барсик';
@@ -42,7 +52,8 @@ export function PetNameScreen({ navigation }: Props) {
         await saveOnboarding(userId, { pet_name: trimmed });
         setOnboardingInfo({ pet_name: trimmed, rank, school_id: schoolId, class_id: classId });
       }
-      navigation.replace('EntranceTest');
+      setOnboarded(true);
+      navigation.replace('Main');
     } finally {
       setLoading(false);
     }
@@ -52,13 +63,31 @@ export function PetNameScreen({ navigation }: Props) {
     <ScreenBackground accentColor={colors.purple}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
         <View style={styles.content}>
-          <View style={styles.portal}>
-            <LinearGradient colors={['#6B2FD4', '#9047FF', '#3D1A7A']} style={styles.portalInner}>
-              <Text style={styles.petEmoji}>{PET_EMOJI}</Text>
-            </LinearGradient>
+          <Text style={styles.title}>Выбери своего снежного барса</Text>
+
+          <View style={styles.carousel}>
+            <Pressable
+              style={styles.arrowBtn}
+              onPress={() => setVariant((v) => (v - 1 + VARIANT_TINTS.length) % VARIANT_TINTS.length)}
+              hitSlop={10}
+            >
+              <Ionicons name="chevron-back" size={26} color={colors.text} />
+            </Pressable>
+
+            <View style={styles.mascotWrap}>
+              <View style={[styles.mascotGlow, { backgroundColor: tint, shadowColor: tint }]} />
+              <Image source={MASCOT} style={styles.mascot} resizeMode="contain" />
+            </View>
+
+            <Pressable
+              style={styles.arrowBtn}
+              onPress={() => setVariant((v) => (v + 1) % VARIANT_TINTS.length)}
+              hitSlop={10}
+            >
+              <Ionicons name="chevron-forward" size={26} color={colors.text} />
+            </Pressable>
           </View>
 
-          <Text style={styles.title}>Выбери своего снежного барса</Text>
           <Text style={styles.subtitle}>Как назвать твоего барса?</Text>
 
           <TextInput
@@ -85,20 +114,21 @@ export function PetNameScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl },
-  portal: { marginBottom: 32 },
-  portalInner: {
+  title: { color: colors.text, fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 20 },
+  carousel: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 20 },
+  arrowBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  mascotWrap: { width: 160, height: 190, alignItems: 'center', justifyContent: 'center' },
+  mascotGlow: {
+    position: 'absolute',
     width: 140,
     height: 140,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.purple,
-    shadowOpacity: 0.8,
-    shadowRadius: 30,
+    borderRadius: 70,
+    opacity: 0.35,
+    shadowOpacity: 0.9,
+    shadowRadius: 40,
     shadowOffset: { width: 0, height: 0 },
   },
-  petEmoji: { fontSize: 72 },
-  title: { color: colors.text, fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
+  mascot: { width: 160, height: 190 },
   subtitle: { color: colors.textMuted, fontSize: 14, textAlign: 'center', marginBottom: 24 },
   input: {
     width: '100%',

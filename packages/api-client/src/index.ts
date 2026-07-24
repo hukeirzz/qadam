@@ -384,6 +384,23 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       if (error || !data) return [];
       return data as { id: string; name: string }[];
     },
+
+    /**
+     * Looks up a school by its short join code (from the school_code
+     * migration, supabase/migrations/20260724000001). Case-insensitive.
+     * Returns null on no match/error so registration can proceed without
+     * a school link rather than blocking on a typo.
+     */
+    async findByCode(code: string): Promise<{ id: string; name: string } | null> {
+      const { data, error } = await supabase
+        .from('schools')
+        .select('id, name')
+        .ilike('code', code.trim())
+        .maybeSingle();
+
+      if (error || !data) return null;
+      return data as { id: string; name: string };
+    },
   };
 
   const BASE_SUBJECTS = ['math', 'geometry', 'analogies', 'reading', 'grammar'];
