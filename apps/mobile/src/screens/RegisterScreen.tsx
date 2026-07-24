@@ -108,6 +108,9 @@ export function RegisterScreen({ navigation }: Props) {
       setOnboardingInfo({ pet_name: null, rank: null, school_id: school?.id ?? null, class_id: null });
 
       navigation.replace('PetName');
+    } catch (e) {
+      console.warn('RegisterScreen submit error:', e);
+      setError('Что-то пошло не так. Проверь соединение и попробуй ещё раз.');
     } finally {
       setLoading(false);
     }

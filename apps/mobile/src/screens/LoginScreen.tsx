@@ -53,6 +53,9 @@ export function LoginScreen({ navigation }: Props) {
       if (err || !data.user) { setError(translateError(err?.message ?? '')); return; }
       const displayName = data.user.user_metadata?.name ?? email.split('@')[0];
       await afterLogin(data.user.id, displayName);
+    } catch (e) {
+      console.warn('LoginScreen submit error:', e);
+      setError('Что-то пошло не так. Проверь соединение и попробуй ещё раз.');
     } finally {
       setLoading(false);
     }
