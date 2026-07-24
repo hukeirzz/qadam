@@ -17,8 +17,8 @@ export function SplashScreen({ navigation }: Props) {
       <Image source={WELCOME} style={styles.background} resizeMode="cover" />
 
       <LinearGradient
-        colors={['transparent', 'rgba(10,8,24,0.08)', 'rgba(6,4,16,0.45)']}
-        locations={[0, 0.75, 1]}
+        colors={['transparent', 'rgba(10,8,24,0.03)', 'rgba(6,4,16,0.3)']}
+        locations={[0, 0.82, 1]}
         style={styles.scrim}
       />
 
@@ -74,8 +74,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   brandLogo: {
-    width: 52,
-    height: 52,
+    width: 68,
+    height: 68,
   },
   brand: {
     color: colors.text,
