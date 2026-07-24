@@ -45,6 +45,8 @@ export function RegisterScreen({ navigation }: Props) {
   const loadProfile = useAppStore((s) => s.loadProfile);
   const setOnboardingInfo = useAppStore((s) => s.setOnboardingInfo);
 
+  const consentsGiven = dataConsent && showInRating;
+
   const handleSubmit = async () => {
     setError('');
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) {
@@ -55,8 +57,8 @@ export function RegisterScreen({ navigation }: Props) {
       setError('Пароль минимум 6 символов');
       return;
     }
-    if (!dataConsent) {
-      setError('Нужно согласие на обработку данных');
+    if (!consentsGiven) {
+      setError('Нужно отметить оба согласия');
       return;
     }
 
@@ -157,7 +159,7 @@ export function RegisterScreen({ navigation }: Props) {
           <Consent
             checked={showInRating}
             onToggle={() => setShowInRating((v) => !v)}
-            label="Участвовать в школьном рейтинге (опционально)"
+            label="Участвовать в школьном рейтинге"
           />
 
           {error ? (
@@ -167,9 +169,16 @@ export function RegisterScreen({ navigation }: Props) {
             </View>
           ) : null}
 
-          <TouchableOpacity activeOpacity={0.85} onPress={handleSubmit} disabled={loading}>
-            <LinearGradient colors={[colors.purple, '#6B2FD4']} style={styles.btn}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Зарегистрироваться</Text>}
+          <TouchableOpacity activeOpacity={0.85} onPress={handleSubmit} disabled={loading || !consentsGiven}>
+            <LinearGradient
+              colors={consentsGiven ? [colors.purple, '#6B2FD4'] : [colors.surface, colors.surface]}
+              style={[styles.btn, !consentsGiven && styles.btnDisabled]}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={[styles.btnText, !consentsGiven && styles.btnTextDisabled]}>Зарегистрироваться</Text>
+              )}
             </LinearGradient>
           </TouchableOpacity>
 
@@ -289,7 +298,9 @@ const styles = StyleSheet.create({
   },
   errorText: { color: '#FF3B5C', fontSize: 13, flex: 1 },
   btn: { marginTop: 4, paddingVertical: 16, borderRadius: 16, alignItems: 'center' },
+  btnDisabled: { borderWidth: 1, borderColor: colors.border },
   btnText: { color: colors.text, fontWeight: '700', fontSize: 16 },
+  btnTextDisabled: { color: colors.textDim },
   switchMode: { marginTop: 20, alignItems: 'center' },
   switchText: { color: colors.textMuted, fontSize: 14 },
   switchLink: { color: colors.purpleGlow, fontWeight: '700' },
