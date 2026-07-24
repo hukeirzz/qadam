@@ -211,6 +211,13 @@ export const MailIcon = (p: IconProps) => (
   </Svg>
 );
 
+export const WarningIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 3 2 20h20L12 3Z" />
+    <path d="M12 10v4M12 17.2v.3" />
+  </Svg>
+);
+
 export const LockIcon = (p: IconProps) => (
   <Svg {...p}>
     <rect x="5" y="11" width="14" height="10" rx="2" />
