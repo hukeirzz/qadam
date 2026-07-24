@@ -16,14 +16,8 @@ export function SplashScreen({ navigation }: Props) {
     <View style={styles.root}>
       <Image source={WELCOME} style={styles.background} resizeMode="cover" />
 
-      <LinearGradient
-        colors={['transparent', 'rgba(10,8,24,0.03)', 'rgba(6,4,16,0.3)']}
-        locations={[0, 0.82, 1]}
-        style={styles.scrim}
-      />
-
       <View style={styles.content}>
-        <View style={styles.brandRow}>
+        <View style={styles.brandStack}>
           <Image source={LOGO1} style={styles.brandLogo} resizeMode="contain" />
           <Text style={styles.brand}>Qadam</Text>
         </View>
@@ -56,9 +50,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  scrim: {
-    ...StyleSheet.absoluteFillObject,
-  },
   content: {
     flex: 1,
     alignItems: 'center',
@@ -66,16 +57,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xl + 24,
   },
-  brandRow: {
-    flexDirection: 'row',
+  brandStack: {
+    width: 220,
+    height: 147,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
+    justifyContent: 'flex-end',
     marginBottom: 10,
   },
   brandLogo: {
-    width: 68,
-    height: 68,
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
   },
   brand: {
     color: colors.text,
@@ -83,6 +75,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 1,
     textAlign: 'center',
+    paddingBottom: 8,
     textShadowColor: colors.purpleGlow,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 18,
