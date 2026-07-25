@@ -4,11 +4,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { createBrowserApi } from '@/lib/supabase/client';
-import { HomeIcon, AnalyticsIcon, StudentsIcon, TestsIcon, LogoutIcon } from './icons';
+import { HomeIcon, AnalyticsIcon, StudentsIcon, TestsIcon, TableIcon, LogoutIcon } from './icons';
 
 const NAV = [
   { href: '/', label: 'Главная', Icon: HomeIcon },
   { href: '/analytics', label: 'Аналитика', Icon: AnalyticsIcon },
+  { href: '/results', label: 'Добавить результаты', Icon: TableIcon },
   { href: '/students', label: 'Ученики', Icon: StudentsIcon },
   { href: '/tests', label: 'Свои тесты', Icon: TestsIcon },
 ];
