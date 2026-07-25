@@ -4,7 +4,7 @@ import { Card, FakeSelect, SearchBox, Avatar, RankBadge, ProgressBar } from '@/c
 import { UserPlusIcon, MoreIcon } from '@/components/icons';
 
 // NOTE: Stage-1 roster — placeholder data shaped to the design. Wire to
-// Supabase (user_profiles filtered by school_id, grouped by class) later.
+// Supabase (students filtered by school_id, grouped by class) later.
 
 const CLASSES = [
   { cls: '9-А', students: 28, rank: 'B', progress: 68 },
