@@ -211,6 +211,13 @@ export const MailIcon = (p: IconProps) => (
   </Svg>
 );
 
+export const SparkleIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 3l1.7 4.6L18 9l-4.3 1.4L12 15l-1.7-4.6L6 9l4.3-1.4L12 3Z" />
+    <path d="M18.5 14l.9 2.3 2.1.7-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.7.9-2.3Z" />
+  </Svg>
+);
+
 export const TableIcon = (p: IconProps) => (
   <Svg {...p}>
     <rect x="3" y="4" width="18" height="16" rx="2" />

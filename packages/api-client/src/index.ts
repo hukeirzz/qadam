@@ -408,10 +408,10 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
     async topicStats(schoolId: string) {
       const { data } = await supabase
         .from('student_topic_stats')
-        .select('student_id, subject_id, correct_first, answered, students!inner(school_id)')
+        .select('student_id, topic_id, subject_id, correct_first, answered, students!inner(school_id)')
         .eq('students.school_id', schoolId);
       return (data ?? []) as unknown as {
-        student_id: string; subject_id: string; correct_first: number; answered: number;
+        student_id: string; topic_id: string; subject_id: string; correct_first: number; answered: number;
       }[];
     },
 

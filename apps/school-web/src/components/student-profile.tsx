@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui';
 import { RadarChart, LineChart } from '@/components/charts';
-import { ArrowRightIcon } from '@/components/icons';
+import { ArrowRightIcon, ShieldIcon } from '@/components/icons';
 import { accColor, SUBJECT_AXIS } from '@/lib/aggregate';
 
 const RANK_TEXT: Record<string, string> = {
@@ -30,11 +30,11 @@ export function StudentProfile({
   const withData = sectionAcc.filter((s) => s.answered > 0);
   const weakest = [...withData].sort((a, b) => a.acc - b.acc)[0];
 
-  const stat = (label: string, value: ReactNode, sub?: string) => (
-    <div className="min-w-[60px]">
+  const stat = (label: string, value: ReactNode, sub?: string, center = false) => (
+    <div className={`min-w-[58px] ${center ? 'text-center' : ''}`}>
       <p className="text-xs text-slate-400">{label}</p>
-      <p className="mt-1 text-2xl font-bold leading-none text-slate-800">{value}</p>
-      <p className="mt-1 h-3.5 text-[11px] leading-none text-slate-400">{sub ?? ''}</p>
+      <p className="mt-1.5 text-3xl font-bold leading-none text-slate-800">{value}</p>
+      <p className="mt-1.5 h-3.5 text-[11px] leading-none text-slate-400">{sub ?? ''}</p>
     </div>
   );
 
@@ -45,21 +45,33 @@ export function StudentProfile({
       </Link>
 
       {/* Header */}
-      <Card>
-        <div className="flex flex-wrap items-center gap-x-8 gap-y-5">
-          <div className="flex items-center gap-4">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-lg font-bold text-violet-700">{initials(student.name)}</span>
+      <Card className="!p-0">
+        <div className="flex flex-col sm:flex-row sm:items-center">
+          <div className="flex items-center gap-4 p-6 sm:pr-8">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-500 text-lg font-bold text-white">{initials(student.name)}</span>
             <div className="leading-tight">
               <h1 className="text-xl font-bold tracking-tight text-slate-800">{student.name}</h1>
-              <span className="mt-1 inline-block rounded-md bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">{className}</span>
+              <span className="mt-1.5 inline-block rounded-md bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">{className}</span>
             </div>
           </div>
-          <div className="flex flex-wrap items-start gap-x-8 gap-y-4">
-            {stat('Ранг', <span className={`font-extrabold ${RANK_TEXT[student.rank] ?? 'text-slate-600'}`}>{student.rank}</span>)}
+
+          <div className="hidden w-px self-stretch bg-slate-200 sm:block" />
+
+          <div className="flex flex-wrap items-start gap-x-16 gap-y-4 p-6 sm:pl-8 sm:pt-10">
+            <div className="min-w-[58px]">
+              <p className="text-xs text-slate-400">Ранг</p>
+              <p className={`mt-1.5 text-4xl font-extrabold leading-none ${RANK_TEXT[student.rank] ?? 'text-slate-600'}`}>{student.rank}</p>
+              <p className="mt-1.5 h-3.5" />
+            </div>
             {stat('XP', String(student.xp))}
-            {stat('Серия', `🔥 ${student.streak}`, `макс. ${student.max_streak}`)}
+            {stat('Серия', `🔥 ${student.streak}`, `макс. ${student.max_streak}`, true)}
             {stat('Ср. балл ОРТ', mockAvg != null ? String(mockAvg) : '—', 'из 245')}
-            {stat('Пробных', String(mockHistory.length))}
+            {stat('Пробных', (
+              <span className="inline-flex items-center gap-1.5">
+                <ShieldIcon className="h-5 w-5 text-violet-300" />
+                {mockHistory.length}
+              </span>
+            ))}
           </div>
         </div>
       </Card>
