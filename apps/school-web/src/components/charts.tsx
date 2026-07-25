@@ -176,9 +176,10 @@ export function RadarChart({
     cy + frac * r * Math.sin(ang(i)),
   ];
   const rings = [0.25, 0.5, 0.75, 1];
+  const P = 52; // room for full axis labels
 
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[280px]" role="img" aria-label="Радар сравнения классов">
+    <svg viewBox={`${-P} ${-20} ${size + 2 * P} ${size + 40}`} className="w-full max-w-[340px]" role="img" aria-label="Радар точности по разделам">
       {rings.map((f) => (
         <polygon key={f} points={axes.map((_, i) => pt(i, f).join(',')).join(' ')} fill="none" stroke="#e5e7eb" strokeWidth="1" />
       ))}
@@ -198,10 +199,10 @@ export function RadarChart({
         />
       ))}
       {axes.map((a, i) => {
-        const [x, y] = pt(i, 1.18);
+        const [x, y] = pt(i, 1.14);
         const anchor = Math.abs(x - cx) < 8 ? 'middle' : x > cx ? 'start' : 'end';
         return (
-          <text key={a} x={x} y={y + 3} textAnchor={anchor} fontSize="11" fill="#64748b">
+          <text key={a} x={x} y={y + 3} textAnchor={anchor} fontSize="12" fill="#64748b">
             {a}
           </text>
         );

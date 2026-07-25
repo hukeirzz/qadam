@@ -342,13 +342,48 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
     async students(schoolId: string) {
       const { data } = await supabase
         .from('students')
-        .select('id, name, class_id, xp, rank, premium_source, last_activity')
+        .select('id, name, class_id, xp, rank, premium_source, streak, max_streak, last_activity')
         .eq('school_id', schoolId)
         .order('xp', { ascending: false });
       return (data ?? []) as {
         id: string; name: string; class_id: string | null; xp: number;
-        rank: string; premium_source: string; last_activity: string | null;
+        rank: string; premium_source: string; streak: number; max_streak: number; last_activity: string | null;
       }[];
+    },
+
+    async student(id: string) {
+      const { data } = await supabase
+        .from('students')
+        .select('id, name, class_id, xp, rank, premium_source, premium_unlocked, streak, max_streak, last_activity, school_id')
+        .eq('id', id).single();
+      return data as {
+        id: string; name: string; class_id: string | null; xp: number; rank: string;
+        premium_source: string; premium_unlocked: boolean; streak: number; max_streak: number;
+        last_activity: string | null; school_id: string | null;
+      } | null;
+    },
+
+    async studentTopicStats(studentId: string) {
+      const { data } = await supabase
+        .from('student_topic_stats')
+        .select('topic_id, subject_id, correct_first, answered')
+        .eq('student_id', studentId);
+      return (data ?? []) as { topic_id: string; subject_id: string; correct_first: number; answered: number }[];
+    },
+
+    async studentMockResults(studentId: string) {
+      const { data } = await supabase
+        .from('mock_results')
+        .select('exam_id, total, mock_exams!inner(name, exam_date)')
+        .eq('student_id', studentId);
+      return (data ?? []) as unknown as {
+        exam_id: string; total: number; mock_exams: { name: string; exam_date: string | null };
+      }[];
+    },
+
+    async topics() {
+      const { data } = await supabase.from('topics').select('id, subject_id, title, order_num').order('order_num');
+      return (data ?? []) as { id: string; subject_id: string; title: string; order_num: number }[];
     },
 
     async mockExams(schoolId: string) {

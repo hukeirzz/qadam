@@ -195,7 +195,7 @@ export function AnalyticsView({
               {shownRadar.length === 0 ? (
                 <div className="flex h-[280px] w-full max-w-[280px] items-center justify-center text-center text-sm text-slate-400">Выберите класс справа</div>
               ) : (
-                <RadarChart axes={accuracy.cols} series={shownRadar} max={100} size={280} />
+                <RadarChart axes={agg.SUBJECTS.map((s) => agg.SUBJECT_AXIS[s.id])} series={shownRadar} max={100} size={280} />
               )}
               <div className="flex flex-col gap-2">
                 {radarSeries.map((s) => {

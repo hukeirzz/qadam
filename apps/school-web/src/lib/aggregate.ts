@@ -3,8 +3,21 @@
 
 export type Student = {
   id: string; name: string; class_id: string | null; xp: number;
-  rank: string; premium_source: string; last_activity: string | null;
+  rank: string; premium_source: string; streak: number; max_streak: number; last_activity: string | null;
 };
+
+/** "Сегодня" / "Вчера" / "N дней назад" from an ISO date (yyyy-mm-dd). */
+export function relDay(iso: string | null): string {
+  if (!iso) return 'нет данных';
+  const d = new Date(iso + 'T00:00:00');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const days = Math.round((today.getTime() - d.getTime()) / 86400000);
+  if (days <= 0) return 'Сегодня';
+  if (days === 1) return 'Вчера';
+  if (days < 5) return `${days} дня назад`;
+  return `${days} дней назад`;
+}
 export type ClassRow = { id: string; name: string };
 export type Exam = { id: string; name: string; exam_date: string | null };
 export type Result = { exam_id: string; student_id: string; total: number };
@@ -112,6 +125,59 @@ export function accuracyByClassSubject(students: Student[], classes: ClassRow[],
     }),
   }));
   return { cols: SUBJECTS.map((s) => s.label), rows };
+}
+
+export const SUBJECT_LABELS: Record<string, string> = {
+  math: 'Математика', geometry: 'Геометрия', grammar: 'Грамматика',
+  analogies: 'Аналогии', reading: 'Чтение и понимание',
+};
+
+// Compact-but-full labels for radar axes (no awkward "Анал" 😅).
+export const SUBJECT_AXIS: Record<string, string> = {
+  math: 'Математика', geometry: 'Геометрия', grammar: 'Грамматика',
+  analogies: 'Аналогии', reading: 'Чтение',
+};
+
+export type TopicStat = { topic_id: string; subject_id: string; correct_first: number; answered: number };
+export type Topic = { id: string; subject_id: string; title: string; order_num: number };
+
+/** Per-section first-try accuracy for one student (pooled over topics). */
+export function sectionAccuracy(stats: TopicStat[]) {
+  const acc = new Map<string, { c: number; a: number }>();
+  for (const st of stats) {
+    const cur = acc.get(st.subject_id) ?? { c: 0, a: 0 };
+    cur.c += st.correct_first; cur.a += st.answered; acc.set(st.subject_id, cur);
+  }
+  return SUBJECTS.map((s) => {
+    const v = acc.get(s.id);
+    return { id: s.id, label: s.label, acc: v && v.a ? Math.round((100 * v.c) / v.a) : 0, answered: v?.a ?? 0 };
+  });
+}
+
+/** Topic-level accuracy grouped by section, for the profile heatmap. */
+export function topicAccuracyBySubject(stats: TopicStat[], topics: Topic[]) {
+  const meta = new Map(topics.map((t) => [t.id, t]));
+  const by = new Map<string, { title: string; order: number; acc: number; answered: number }[]>();
+  for (const st of stats) {
+    const t = meta.get(st.topic_id);
+    if (!t) continue;
+    const acc = st.answered ? Math.round((100 * st.correct_first) / st.answered) : 0;
+    if (!by.has(st.subject_id)) by.set(st.subject_id, []);
+    by.get(st.subject_id)!.push({ title: t.title, order: t.order_num, acc, answered: st.answered });
+  }
+  return SUBJECTS.map((s) => ({
+    id: s.id, label: SUBJECT_LABELS[s.id],
+    topics: (by.get(s.id) ?? []).sort((a, b) => a.order - b.order),
+  })).filter((g) => g.topics.length > 0);
+}
+
+/** Diverging color 0=red · 50=white · 100=green. */
+export function accColor(v: number) {
+  const lerp = (a: number, b: number, t: number) => Math.round(a + (b - a) * t);
+  let r: number, g: number, b: number;
+  if (v <= 50) { const t = v / 50; r = lerp(239, 255, t); g = lerp(68, 255, t); b = lerp(68, 255, t); }
+  else { const t = (v - 50) / 50; r = lerp(255, 34, t); g = lerp(255, 197, t); b = lerp(255, 94, t); }
+  return { backgroundColor: `rgb(${r}, ${g}, ${b})`, color: v <= 22 || v >= 82 ? '#fff' : '#334155' };
 }
 
 export function topByXp(students: Student[], n: number, classId?: string) {
