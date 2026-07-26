@@ -1,8 +1,9 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import type { Rank } from '@qadam/business-logic';
 import { colors } from '../../theme/colors';
+import { rankImages } from '../../assets/rankImages';
 
 interface Props {
   rank: Rank | null;
@@ -11,16 +12,7 @@ interface Props {
   onPressCta?: () => void;
 }
 
-const RANK_COLORS: Record<Rank, [string, string]> = {
-  D: ['#7D75A8', '#655B96'],
-  C: ['#3B8BFF', '#1E5FCC'],
-  B: ['#9047FF', '#6B2FD4'],
-  A: ['#FF8C3B', '#CC6A1E'],
-  S: ['#FFD166', '#E8A93B'],
-};
-
 const SIZES = { sm: 36, md: 56, lg: 96 };
-const FONT_SIZES = { sm: 15, md: 22, lg: 40 };
 
 export function RankBadge({ rank, size = 'md', onPressCta }: Props) {
   const dim = SIZES[size];
@@ -34,25 +26,26 @@ export function RankBadge({ rank, size = 'md', onPressCta }: Props) {
     );
   }
 
+  const radius = dim * 0.22;
+
   return (
-    <LinearGradient
-      colors={RANK_COLORS[rank]}
-      style={[styles.badge, { width: dim, height: dim, borderRadius: dim * 0.28 }]}
-    >
-      <Text style={[styles.rankText, { fontSize: FONT_SIZES[size] }]}>{rank}</Text>
-    </LinearGradient>
+    <View style={[styles.badge, { width: dim, height: dim, borderRadius: radius }]}>
+      <Image
+        source={rankImages[rank]}
+        style={styles.image}
+        resizeMode="cover"
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   badge: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    transform: [{ rotate: '0deg' }],
+    overflow: 'hidden',
   },
-  rankText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
+  image: {
+    width: '100%',
+    height: '100%',
   },
   cta: {
     paddingHorizontal: 12,

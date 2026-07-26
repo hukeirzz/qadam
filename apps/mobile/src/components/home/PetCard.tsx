@@ -1,10 +1,11 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
+import { Text } from '../ui/Text';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { petMoodFromStreak, type PetMood } from '@qadam/business-logic';
-import type { PetType } from '@qadam/types';
 import { useAppStore } from '../../store/useAppStore';
 import { colors } from '../../theme/colors';
+import { petImages } from '../../assets/petImages';
 
 const MOOD_LABEL: Record<PetMood, string> = {
   excited: 'В восторге!',
@@ -20,14 +21,6 @@ const MOOD_EMOJI: Record<PetMood, string> = {
   sad: '😢',
 };
 
-const PET_IMAGES: Record<PetType, any> = {
-  bars: require('../../../assets/bars.png'),
-  cat: require('../../../assets/cat.png'),
-  dog: require('../../../assets/dog.png'),
-  eagle: require('../../../assets/eagle.png'),
-  penguin: require('../../../assets/penguin.png'),
-};
-
 export function PetCard() {
   const petName = useAppStore((s) => s.petName);
   const petType = useAppStore((s) => s.petType);
@@ -37,7 +30,7 @@ export function PetCard() {
   if (!petName) return null;
 
   const mood = petMoodFromStreak(streak, lastActivity);
-  const image = petType ? PET_IMAGES[petType] : null;
+  const image = petType ? petImages[petType] : null;
 
   return (
     <View style={styles.card}>

@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { colors } from '../theme/colors';

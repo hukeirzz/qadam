@@ -1,13 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  Alert,
-} from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, View, Alert } from 'react-native';
+import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';

@@ -1,13 +1,6 @@
 import React, { useEffect } from 'react';
-import {
-  Image,
-  ImageSourcePropType,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  ViewStyle,
-} from 'react-native';
+import { Image, ImageSourcePropType, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
+import { Text } from '../ui/Text';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -16,6 +9,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+import { colors } from '../../theme/colors';
 
 const FLOAT_DISTANCE = 16;
 const FLOAT_DURATION = 2600;
@@ -92,6 +86,9 @@ export function IslandCard({
       disabled={!onPress}
     >
       <Animated.View style={[styles.visual, floatStyle]}>
+        <View
+          style={[styles.glowBlob, { backgroundColor: progressColor, shadowColor: progressColor }]}
+        />
         <Image
           source={imageSrc}
           style={[
@@ -141,6 +138,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 4,
   },
+  glowBlob: {
+    position: 'absolute',
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    opacity: 0.22,
+    shadowOpacity: 1,
+    shadowRadius: 40,
+    shadowOffset: { width: 0, height: 0 },
+  },
   image: {
     width: '170%',
     height: 220,
@@ -151,7 +158,7 @@ const styles = StyleSheet.create({
   title: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
     textAlign: 'center',
     lineHeight: 18,
     marginBottom: 8,
@@ -166,9 +173,9 @@ const styles = StyleSheet.create({
   },
   track: {
     flex: 1,
-    height: 4,
+    height: 5,
     borderRadius: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     overflow: 'hidden',
   },
   fill: {
@@ -176,9 +183,9 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   steps: {
-    color: '#9CA3AF',
+    color: colors.textMuted,
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
     minWidth: 36,
     textAlign: 'right',
   },

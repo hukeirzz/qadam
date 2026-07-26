@@ -1,12 +1,15 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../ui/Text';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useAppStore } from '../../store/useAppStore';
 import { HomeStackParamList, MainTabParamList } from '../../types/navigation';
 import { vibrate } from '../../services/soundService';
+import { cardTheme, glow } from '../../theme/colors';
 
 export function HeaderBar() {
   const streak = useAppStore((s) => s.streak);
@@ -30,29 +33,36 @@ export function HeaderBar() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.streak}>
-        <MaterialCommunityIcons name="fire" size={22} color="#FF8C3B" />
-        <Text style={styles.streakText}>{streak}</Text>
+      <View style={[styles.chip, { shadowColor: glow.gold }]}>
+        <MaterialCommunityIcons name="fire" size={20} color="#FFA75E" />
+        <Text style={styles.chipText}>{streak}</Text>
       </View>
 
       <View style={styles.right}>
         <Pressable
-          style={styles.balance}
+          style={[styles.chip, { shadowColor: glow.cyan }]}
           onPress={openPremium}
           hitSlop={8}
         >
-          <Ionicons name="diamond" size={18} color="#5B9DFF" />
-          <Text style={styles.balanceText}>{gems}</Text>
+          <Ionicons name="diamond" size={16} color="#63B4FF" />
+          <Text style={styles.chipText}>{gems}</Text>
         </Pressable>
 
         <Pressable
-          style={styles.avatarRing}
+          style={[styles.avatarShadow, { shadowColor: glow.purple }]}
           onPress={() => { vibrate(); tabNav.navigate('ProfileTab'); }}
           hitSlop={8}
         >
-          <View style={styles.avatarInner}>
-            <Text style={styles.avatarText}>{initial}</Text>
-          </View>
+          <LinearGradient
+            colors={['#B490FF', '#7C3AED']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.avatarRing}
+          >
+            <View style={styles.avatarInner}>
+              <Text style={styles.avatarText}>{initial}</Text>
+            </View>
+          </LinearGradient>
         </Pressable>
       </View>
     </View>
@@ -68,43 +78,48 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 4,
   },
-  streak: {
+  chip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: cardTheme.fill,
+    borderWidth: 1,
+    borderColor: cardTheme.borderSoft,
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
-  streakText: {
+  chipText: {
     color: '#FFFFFF',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '800',
   },
   right: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
-  balance: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  balanceText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '800',
+  avatarShadow: {
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+    borderRadius: 21,
   },
   avatarRing: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#A855F7',
-    padding: 2,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    padding: 2.5,
   },
   avatarInner: {
     flex: 1,
-    borderRadius: 16,
-    backgroundColor: '#5B21B6',
+    borderRadius: 17,
+    backgroundColor: '#2A1866',
     alignItems: 'center',
     justifyContent: 'center',
   },

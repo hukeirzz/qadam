@@ -17,6 +17,31 @@ export const colors = {
   success: '#2EE59D',
 } as const;
 
+// Доп. токены для карточек главного экрана — та же полупрозрачная заливка,
+// что и на остальных экранах приложения (colors.surfaceGlass/borderMuted),
+// чтобы стиль карточек был единым по всему приложению.
+export const cardTheme = {
+  fill: colors.surfaceGlass,
+  border: colors.borderMuted,
+  borderSoft: colors.borderMuted,
+} as const;
+
+// Мягкие ambient-свечения под карточками/бейджами (для shadowColor).
+export const glow = {
+  purple: 'rgba(139, 92, 246, 0.5)',
+  gold: 'rgba(255, 209, 102, 0.5)',
+  cyan: 'rgba(34, 211, 238, 0.45)',
+  success: 'rgba(46, 229, 157, 0.45)',
+  rose: 'rgba(251, 123, 176, 0.45)',
+} as const;
+
+// Двухцветные градиенты для акцентных заливок (кольцо прогресса и т.п.).
+export const gradients = {
+  aurora: ['#8B5CF6', '#EC4899'] as const,
+  auroraCool: ['#8B5CF6', '#22D3EE'] as const,
+  gold: ['#FFD87A', '#E8A93B'] as const,
+} as const;
+
 const baseSubjectColors = {
   math: {
     primary: '#FF3B5C',

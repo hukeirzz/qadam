@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../components/ui/Text';
 import { createBottomTabNavigator, BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { HomeStack } from './HomeStack';
@@ -8,7 +9,7 @@ import { PracticeScreen } from '../screens/PracticeScreen';
 import { StatsScreen } from '../screens/StatsScreen';
 import { ProfileStack } from './ProfileStack';
 import { MainTabParamList } from '../types/navigation';
-import { colors } from '../theme/colors';
+import { colors, glow } from '../theme/colors';
 import { vibrate } from '../services/soundService';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -31,41 +32,43 @@ const TAB_LABELS: Record<string, string> = {
 
 function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   return (
-    <View style={styles.tabBar}>
-      {state.routes.map((route, index) => {
-        const focused = state.index === index;
-        const icons = TAB_ICONS[route.name];
+    <View style={[styles.tabBarShadow, { shadowColor: glow.purple }]}>
+      <View style={styles.tabBar}>
+        {state.routes.map((route, index) => {
+          const focused = state.index === index;
+          const icons = TAB_ICONS[route.name];
 
-        const onPress = () => {
-          vibrate();
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
-          if (!focused && !event.defaultPrevented) {
-            navigation.navigate(route.name);
-          }
-        };
+          const onPress = () => {
+            vibrate();
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!focused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
 
-        return (
-          <Pressable key={route.key} style={styles.tabItem} onPress={onPress}>
-            <View style={styles.iconWrap}>
-              <Ionicons
-                name={focused ? icons.active : icons.inactive}
-                size={focused ? 30 : 27}
-                color={focused ? colors.purpleGlow : colors.tabInactive}
-              />
-            </View>
-            <Text
-              style={[styles.label, focused ? styles.labelActive : styles.labelInactive]}
-              numberOfLines={1}
-            >
-              {TAB_LABELS[route.name]}
-            </Text>
-          </Pressable>
-        );
-      })}
+          return (
+            <Pressable key={route.key} style={styles.tabItem} onPress={onPress}>
+              <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
+                <Ionicons
+                  name={focused ? icons.active : icons.inactive}
+                  size={focused ? 24 : 23}
+                  color={focused ? colors.purpleGlow : colors.tabInactive}
+                />
+              </View>
+              <Text
+                style={[styles.label, focused ? styles.labelActive : styles.labelInactive]}
+                numberOfLines={1}
+              >
+                {TAB_LABELS[route.name]}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -100,24 +103,27 @@ export function MainTabs() {
 }
 
 const styles = StyleSheet.create({
-  tabBar: {
+  tabBarShadow: {
     position: 'absolute',
     left: 10,
     right: 10,
     bottom: 18,
     height: 82,
+    borderRadius: 30,
+    elevation: 14,
+    shadowOpacity: 0.55,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+  },
+  tabBar: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(14, 9, 34, 0.94)',
+    backgroundColor: '#130B35',
     borderRadius: 30,
     borderWidth: 1,
-    borderColor: 'rgba(144, 71, 255, 0.18)',
+    borderColor: 'rgba(180, 144, 255, 0.2)',
     paddingHorizontal: 6,
-    elevation: 14,
-    shadowColor: '#000',
-    shadowOpacity: 0.45,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
   },
   tabItem: {
     flex: 1,
@@ -127,12 +133,15 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   iconWrap: {
-    width: 46,
-    height: 46,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
   },
-
+  iconWrapActive: {
+    backgroundColor: 'rgba(180, 144, 255, 0.16)',
+  },
   label: {
     fontSize: 11.5,
     textAlign: 'center',

@@ -1,12 +1,6 @@
 import React from 'react';
-import {
-  Image,
-  ImageSourcePropType,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Image, ImageSourcePropType, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../ui/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { Topic } from '../../types/subject';
 import { colors, subjectColors } from '../../theme/colors';

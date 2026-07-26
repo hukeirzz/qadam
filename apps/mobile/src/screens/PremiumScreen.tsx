@@ -1,13 +1,6 @@
 import React, { useState } from 'react';
-import {
-  Alert,
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';

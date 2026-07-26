@@ -1,13 +1,15 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
+import { Image, StyleSheet, View } from 'react-native';
+import { Text } from '../ui/Text';
+import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { useAppStore } from '../../store/useAppStore';
 import { homeIslands, premiumIslands } from '../../data/homeIslands';
 import { getTopicIds } from '../../data/subjects';
-import { colors } from '../../theme/colors';
+import { cardTheme, colors, glow, gradients } from '../../theme/colors';
+import { petImages } from '../../assets/petImages';
 
-const SIZE = 76;
-const STROKE = 6;
+const SIZE = 78;
+const STROKE = 7;
 const R = (SIZE - STROKE) / 2;
 const CIRC = 2 * Math.PI * R;
 
@@ -18,17 +20,23 @@ function CircularProgress({ percent }: { percent: number }) {
   return (
     <View style={styles.ringWrap}>
       <Svg width={SIZE} height={SIZE}>
+        <Defs>
+          <SvgGradient id="progressGrad" x1="0" y1="0" x2="1" y2="1">
+            <Stop offset="0" stopColor={gradients.auroraCool[0]} />
+            <Stop offset="1" stopColor={gradients.auroraCool[1]} />
+          </SvgGradient>
+        </Defs>
         {/* Track */}
         <Circle
           cx={SIZE / 2} cy={SIZE / 2} r={R}
-          stroke="rgba(255,255,255,0.08)"
+          stroke="rgba(255,255,255,0.1)"
           strokeWidth={STROKE}
           fill="none"
         />
         {/* Progress */}
         <Circle
           cx={SIZE / 2} cy={SIZE / 2} r={R}
-          stroke={colors.purple}
+          stroke="url(#progressGrad)"
           strokeWidth={STROKE}
           fill="none"
           strokeDasharray={`${dash} ${CIRC}`}
@@ -47,6 +55,8 @@ function CircularProgress({ percent }: { percent: number }) {
 export function ProgressSummary() {
   const completedTopics = useAppStore((s) => s.completedTopics);
   const remoteTopicIds = useAppStore((s) => s.remoteTopicIds);
+  const petType = useAppStore((s) => s.petType);
+  const petImage = petImages[petType ?? 'bars'];
 
   // Пройденные шаги берём из реально сохранённого прогресса (completedTopics),
   // а не из пересечения с темами — иначе при входе, пока remoteTopicIds ещё не
@@ -74,35 +84,75 @@ export function ProgressSummary() {
     : 0;
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.label}>Твой прогресс</Text>
-      <View style={styles.row}>
-        <CircularProgress percent={overallProgress} />
-        <View style={styles.stats}>
-          <Text style={styles.statsLabel}>Всего пройдено</Text>
-          <Text style={styles.statsValue}>
-            {completedSteps}/{totalSteps} шагов
-          </Text>
+    <View style={[styles.shadowWrap, { shadowColor: glow.purple }]}>
+      <View style={styles.card}>
+        <View style={styles.content}>
+          <Text style={styles.label}>ТВОЙ ПРОГРЕСС</Text>
+          <View style={styles.row}>
+            <CircularProgress percent={overallProgress} />
+            <View style={styles.stats}>
+              <Text style={styles.statsLabel}>Всего пройдено</Text>
+              <Text style={styles.statsValue}>
+                {completedSteps}/{totalSteps} шагов
+              </Text>
+            </View>
+          </View>
         </View>
       </View>
+
+      <View style={styles.petGlow} pointerEvents="none" />
+      <Image source={petImage} style={styles.pet} resizeMode="contain" />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
+  shadowWrap: {
     marginHorizontal: 16,
-    marginTop: 20,
+    marginTop: 30,
+    borderRadius: 22,
+    shadowOpacity: 1,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 6,
+  },
+  card: {
     padding: 18,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingRight: 96,
+    borderRadius: 22,
+    backgroundColor: cardTheme.fill,
     borderWidth: 1,
-    borderColor: 'rgba(168,85,247,0.28)',
+    borderColor: cardTheme.border,
+    overflow: 'hidden',
+  },
+  content: {
+    flex: 1,
+  },
+  petGlow: {
+    position: 'absolute',
+    right: 6,
+    top: -14,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(180,144,255,0.35)',
+    shadowColor: glow.purple,
+    shadowOpacity: 1,
+    shadowRadius: 26,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  pet: {
+    position: 'absolute',
+    right: 4,
+    top: -26,
+    width: 108,
+    height: 128,
   },
   label: {
     color: colors.textMuted,
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.8,
     marginBottom: 14,
   },
   row: {
@@ -132,12 +182,13 @@ const styles = StyleSheet.create({
   statsLabel: {
     color: colors.textMuted,
     fontSize: 13,
+    fontWeight: '500',
     marginBottom: 4,
   },
   statsValue: {
     color: colors.text,
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: '800',
-    lineHeight: 26,
+    lineHeight: 27,
   },
 });

@@ -4,21 +4,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { HeaderBar } from '../components/home/HeaderBar';
-import { PetCard } from '../components/home/PetCard';
 import { ProgressSummary } from '../components/home/ProgressSummary';
-import { CompetitionsBanner } from '../components/home/CompetitionsBanner';
-import { IslandGrid } from '../components/home/IslandGrid';
-import { PremiumIslandSection } from '../components/home/PremiumIslandSection';
+import { RankIslandMap } from '../components/home/RankIslandMap';
 import { HomeStackParamList } from '../types/navigation';
 import { SubjectId } from '../types/subject';
-import { useAppStore } from '../store/useAppStore';
 import { playSound } from '../services/soundService';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'Home'>;
 
 export function HomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const premiumUnlocked = useAppStore((s) => s.premiumUnlocked);
 
   const openIsland = (subjectId: SubjectId) => {
     playSound('tap');
@@ -43,18 +38,8 @@ export function HomeScreen({ navigation }: Props) {
             { paddingBottom: insets.bottom + 96 },
           ]}
         >
-          <PetCard />
           <ProgressSummary />
-          <CompetitionsBanner
-            onCompetitionsPress={() => { playSound('tap'); navigation.navigate('Competitions'); }}
-            onRatingPress={() => { playSound('tap'); navigation.navigate('Rating'); }}
-          />
-          <IslandGrid onIslandPress={openIsland} />
-          <PremiumIslandSection
-            unlocked={premiumUnlocked}
-            onUnlockPress={openPremium}
-            onIslandPress={openIsland}
-          />
+          <RankIslandMap onIslandPress={openIsland} onPremiumPress={openPremium} />
         </ScrollView>
       </View>
     </ScreenBackground>

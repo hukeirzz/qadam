@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Text } from '../components/ui/Text';
 import Svg, { Circle, Line as SvgLine, Polyline } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dateKey, useAppStore } from '../store/useAppStore';

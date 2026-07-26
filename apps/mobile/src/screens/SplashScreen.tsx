@@ -1,5 +1,6 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
