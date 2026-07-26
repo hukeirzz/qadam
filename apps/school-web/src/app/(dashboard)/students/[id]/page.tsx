@@ -1,7 +1,41 @@
+import { redirect, notFound } from 'next/navigation';
+import { createServerApi } from '@/lib/supabase/server';
 import { StudentProfile } from '@/components/student-profile';
+import * as agg from '@/lib/aggregate';
 
-// The mock profile ignores the id for now; it's here so the route and links
-// (/students/[id]) are real ahead of wiring Supabase per-student data.
-export default function StudentProfilePage() {
-  return <StudentProfile />;
+export default async function StudentProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const api = await createServerApi();
+  const session = await api.auth.getSession();
+  if (!session) redirect('/login');
+  const roleInfo = await api.profile.role(session.user.id);
+  if (!roleInfo?.school_id) redirect('/login?error=not-staff');
+
+  const student = await api.staffData.student(id);
+  if (!student) notFound();
+
+  const [classes, stats, mocks, topics] = await Promise.all([
+    api.staffData.classes(roleInfo.school_id),
+    api.staffData.studentTopicStats(id),
+    api.staffData.studentMockResults(id),
+    api.staffData.topics(),
+  ]);
+
+  const className = classes.find((c) => c.id === student.class_id)?.name ?? '—';
+  const mockHistory = [...mocks]
+    .sort((a, b) => (a.mock_exams.exam_date ?? '').localeCompare(b.mock_exams.exam_date ?? ''))
+    .map((m) => ({ name: m.mock_exams.name, total: m.total }));
+
+  return (
+    <StudentProfile
+      student={{
+        name: student.name, rank: student.rank, xp: student.xp,
+        streak: student.streak, max_streak: student.max_streak, premium_source: student.premium_source,
+      }}
+      className={className}
+      sectionAcc={agg.sectionAccuracy(stats)}
+      topicGroups={agg.topicAccuracyBySubject(stats, topics)}
+      mockHistory={mockHistory}
+    />
+  );
 }

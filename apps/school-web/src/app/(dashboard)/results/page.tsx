@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 import { createServerApi } from '@/lib/supabase/server';
-import { TestBuilder } from '@/components/test-builder';
+import { ResultsEditor } from '@/components/results-editor';
 
-export default async function TestsPage() {
+export default async function ResultsPage() {
   const api = await createServerApi();
   const session = await api.auth.getSession();
   if (!session) redirect('/login');
@@ -11,12 +11,20 @@ export default async function TestsPage() {
   if (!roleInfo?.school_id) redirect('/login?error=not-staff');
   const schoolId = roleInfo.school_id;
 
-  const [classes, students, topics, topicStats] = await Promise.all([
+  const [classes, students, exams, results] = await Promise.all([
     api.staffData.classes(schoolId),
     api.staffData.students(schoolId),
-    api.staffData.topics(),
-    api.staffData.topicStats(schoolId),
+    api.staffData.mockExams(schoolId),
+    api.staffData.mockResults(schoolId),
   ]);
 
-  return <TestBuilder classes={classes} students={students} topics={topics} topicStats={topicStats} />;
+  return (
+    <ResultsEditor
+      schoolId={schoolId}
+      classes={classes}
+      students={students}
+      exams={exams}
+      results={results}
+    />
+  );
 }

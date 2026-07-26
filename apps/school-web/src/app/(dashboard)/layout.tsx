@@ -24,14 +24,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/login?error=not-staff');
   }
 
-  const school = roleInfo.school_id ? await api.schools.fetchById(roleInfo.school_id) : null;
+  const userName =
+    (session.user.user_metadata?.name as string | undefined) ||
+    session.user.email?.split('@')[0] ||
+    'Пользователь';
 
   return (
     <div className="flex min-h-screen bg-background">
-      <Sidebar
-        schoolName={school?.name ?? 'Моя школа'}
-        roleLabel={ROLE_LABELS[roleInfo.role] ?? 'Сотрудник'}
-      />
+      <Sidebar userName={userName} roleLabel={ROLE_LABELS[roleInfo.role] ?? 'Сотрудник'} />
       <main className="flex-1 overflow-x-hidden px-6 py-6 lg:px-8">{children}</main>
     </div>
   );

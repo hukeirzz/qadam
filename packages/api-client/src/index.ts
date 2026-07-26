@@ -127,7 +127,7 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
   const profile = {
     async load(userId: string): Promise<UserProfile | null> {
       const { data, error } = await supabase
-        .from('user_profiles')
+        .from('students')
         .select(
           'id, name, streak, gems, xp, premium_unlocked, last_activity, completed_topics, weekly_steps, week_start, topic_hearts, daily_steps',
         )
@@ -154,20 +154,22 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
     },
 
     /**
-     * Role/school/class for a user, from the schools/classes/roles
-     * migration (supabase/migrations/20260716000010). Kept separate from
-     * load() above so apps/mobile's existing profile load doesn't depend
-     * on that migration having been applied to the live project yet.
+     * Staff role/school for a platform (web) user. Reads the `staff` table —
+     * students live in `students` and never have a staff role. Returns null
+     * for non-staff (e.g. a student who somehow reaches the web). `class_id`
+     * is always null (staff aren't tied to a class) — kept for call-site
+     * compatibility.
      */
     async role(userId: string): Promise<{ role: string; school_id: string | null; class_id: string | null } | null> {
       const { data, error } = await supabase
-        .from('user_profiles')
-        .select('role, school_id, class_id')
+        .from('staff')
+        .select('role, school_id')
         .eq('id', userId)
         .single();
 
       if (error || !data) return null;
-      return data as { role: string; school_id: string | null; class_id: string | null };
+      const row = data as { role: string; school_id: string | null };
+      return { role: row.role, school_id: row.school_id, class_id: null };
     },
 
     /**
@@ -245,16 +247,16 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       const { topic_hearts, daily_steps, ...mainUpdates } = updates;
 
       if (Object.keys(mainUpdates).length > 0) {
-        const { error } = await supabase.from('user_profiles').update(mainUpdates).eq('id', userId);
+        const { error } = await supabase.from('students').update(mainUpdates).eq('id', userId);
         if (error) console.warn('profile.save error:', error.message);
       }
 
       if (topic_hearts !== undefined) {
-        await supabase.from('user_profiles').update({ topic_hearts }).eq('id', userId);
+        await supabase.from('students').update({ topic_hearts }).eq('id', userId);
       }
 
       if (daily_steps !== undefined) {
-        await supabase.from('user_profiles').update({ daily_steps }).eq('id', userId);
+        await supabase.from('students').update({ daily_steps }).eq('id', userId);
       }
     },
   };
@@ -541,7 +543,119 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
     },
   };
 
-  return { supabase, auth, profile, theory, topics, questions, schools, entranceTest, competitions, rating };
+  // Staff-facing reads/writes over a school's roster and mock exams.
+  // RLS scopes everything to the caller's own school.
+  const staffData = {
+    async classes(schoolId: string) {
+      const { data } = await supabase
+        .from('classes').select('id, name').eq('school_id', schoolId).order('name');
+      return (data ?? []) as { id: string; name: string }[];
+    },
+
+    async students(schoolId: string) {
+      const { data } = await supabase
+        .from('students')
+        .select('id, name, class_id, xp, rank, premium_source, streak, max_streak, last_activity')
+        .eq('school_id', schoolId)
+        .order('xp', { ascending: false });
+      return (data ?? []) as {
+        id: string; name: string; class_id: string | null; xp: number;
+        rank: string; premium_source: string; streak: number; max_streak: number; last_activity: string | null;
+      }[];
+    },
+
+    async student(id: string) {
+      const { data } = await supabase
+        .from('students')
+        .select('id, name, class_id, xp, rank, premium_source, premium_unlocked, streak, max_streak, last_activity, school_id')
+        .eq('id', id).single();
+      return data as {
+        id: string; name: string; class_id: string | null; xp: number; rank: string;
+        premium_source: string; premium_unlocked: boolean; streak: number; max_streak: number;
+        last_activity: string | null; school_id: string | null;
+      } | null;
+    },
+
+    async studentTopicStats(studentId: string) {
+      const { data } = await supabase
+        .from('student_topic_stats')
+        .select('topic_id, subject_id, correct_first, answered')
+        .eq('student_id', studentId);
+      return (data ?? []) as { topic_id: string; subject_id: string; correct_first: number; answered: number }[];
+    },
+
+    async studentMockResults(studentId: string) {
+      const { data } = await supabase
+        .from('mock_results')
+        .select('exam_id, total, mock_exams!inner(name, exam_date)')
+        .eq('student_id', studentId);
+      return (data ?? []) as unknown as {
+        exam_id: string; total: number; mock_exams: { name: string; exam_date: string | null };
+      }[];
+    },
+
+    async topics() {
+      const { data } = await supabase.from('topics').select('id, subject_id, title, order_num').order('order_num');
+      return (data ?? []) as { id: string; subject_id: string; title: string; order_num: number }[];
+    },
+
+    async mockExams(schoolId: string) {
+      const { data } = await supabase
+        .from('mock_exams').select('id, name, exam_date')
+        .eq('school_id', schoolId).order('exam_date', { ascending: true });
+      return (data ?? []) as { id: string; name: string; exam_date: string | null }[];
+    },
+
+    async mockResults(schoolId: string) {
+      const { data } = await supabase
+        .from('mock_results')
+        .select('exam_id, student_id, total, math, geometry, grammar, analogies, reading, mock_exams!inner(school_id)')
+        .eq('mock_exams.school_id', schoolId);
+      return (data ?? []) as unknown as {
+        exam_id: string; student_id: string; total: number;
+        math: number | null; geometry: number | null; grammar: number | null;
+        analogies: number | null; reading: number | null;
+      }[];
+    },
+
+    async topicStats(schoolId: string) {
+      const { data } = await supabase
+        .from('student_topic_stats')
+        .select('student_id, topic_id, subject_id, correct_first, answered, students!inner(school_id)')
+        .eq('students.school_id', schoolId);
+      return (data ?? []) as unknown as {
+        student_id: string; topic_id: string; subject_id: string; correct_first: number; answered: number;
+      }[];
+    },
+
+    async createMockExam(schoolId: string, name: string, examDate: string | null, createdBy: string) {
+      const { data, error } = await supabase
+        .from('mock_exams')
+        .insert({ school_id: schoolId, name, exam_date: examDate, created_by: createdBy })
+        .select('id').single();
+      return { id: (data as { id: string } | null)?.id ?? null, error };
+    },
+
+    async saveMockResults(
+      examId: string,
+      rows: {
+        student_id: string; total: number;
+        math?: number | null; geometry?: number | null; grammar?: number | null;
+        analogies?: number | null; reading?: number | null;
+      }[],
+    ) {
+      const payload = rows.map((r) => ({ exam_id: examId, ...r }));
+      const { error } = await supabase
+        .from('mock_results')
+        .upsert(payload, { onConflict: 'exam_id,student_id' });
+      return { error };
+    },
+  };
+
+  return {
+    supabase, auth, profile, theory, topics, questions, schools,
+    entranceTest, competitions, rating, staffData,
+  };
 }
 
 /**
