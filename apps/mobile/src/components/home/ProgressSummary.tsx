@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
   petGlow: {
     position: 'absolute',
     right: 6,
-    top: -14,
+    top: 24,
     width: 100,
     height: 100,
     borderRadius: 50,
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   pet: {
     position: 'absolute',
     right: 4,
-    top: -26,
+    top: 10,
     width: 108,
     height: 128,
   },

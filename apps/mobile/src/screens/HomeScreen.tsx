@@ -2,6 +2,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { Rank } from '@qadam/business-logic';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { HeaderBar } from '../components/home/HeaderBar';
 import { ProgressSummary } from '../components/home/ProgressSummary';
@@ -15,9 +16,9 @@ type Props = NativeStackScreenProps<HomeStackParamList, 'Home'>;
 export function HomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
 
-  const openIsland = (subjectId: SubjectId) => {
+  const openIsland = (subjectId: SubjectId, rank: Rank) => {
     playSound('tap');
-    navigation.navigate('IslandPath', { subjectId });
+    navigation.navigate('IslandPath', { subjectId, rank });
   };
 
   const openPremium = () => {
@@ -35,7 +36,7 @@ export function HomeScreen({ navigation }: Props) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
             styles.scroll,
-            { paddingBottom: insets.bottom + 96 },
+            { paddingBottom: insets.bottom + 140 },
           ]}
         >
           <ProgressSummary />

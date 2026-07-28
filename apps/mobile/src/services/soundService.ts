@@ -1,8 +1,5 @@
-import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setAudioModeAsync } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
-
-const SOUND_KEY = 'qadam_sound_enabled';
 
 const SOURCES = {
   /** Правильный ответ в квизе */
@@ -27,27 +24,8 @@ const SOURCES = {
 
 export type SoundName = keyof typeof SOURCES;
 
-// Клики — едва слышные, звуки обратной связи (ответы/результаты) — заметные
-const VOLUMES: Record<SoundName, number> = {
-  correct: 0.5,
-  wrong: 0.5,
-  complete: 0.55,
-  fail: 0.5,
-  tap: 0.1,
-  gem: 0.5,
-  level_up: 0.55,
-  streak: 0.5,
-  unlock: 0.55,
-};
-
-let soundEnabled = true;
-
 /** Вызывается один раз при старте приложения. */
 export async function initSounds() {
-  try {
-    const s = await AsyncStorage.getItem(SOUND_KEY);
-    soundEnabled = s !== 'false';
-  } catch {}
   try {
     // Играть даже при беззвучном режиме iOS
     await setAudioModeAsync({ playsInSilentMode: true });
@@ -56,39 +34,17 @@ export async function initSounds() {
   }
 }
 
-export function isSoundEnabled() {
-  return soundEnabled;
-}
-
-export function setSoundEnabled(v: boolean) {
-  soundEnabled = v;
-  AsyncStorage.setItem(SOUND_KEY, String(v)).catch(() => {});
-}
-
 /** Лёгкая вибрация — обратная связь на нажатие кнопки. */
 export function vibrate() {
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 }
 
 /**
- * Проиграть эффект (+ вибрация, если не отключена вторым аргументом).
- * На каждый вызов создаётся одноразовый плеер — это надёжнее, чем
- * перезапуск общего (у expo-audio повторный play после окончания капризный).
+ * Звуки отключены по просьбе — сама функция и все ~15 вызовов по
+ * приложению оставлены нетронутыми (меняется только SoundName), но
+ * аудио больше нигде не проигрывается — остаётся только вибрация,
+ * если она включена вторым аргументом.
  */
-export function playSound(name: SoundName, withVibration = true) {
+export function playSound(_name: SoundName, withVibration = true) {
   if (withVibration) vibrate();
-  if (!soundEnabled) return;
-  try {
-    const player = createAudioPlayer(SOURCES[name]);
-    player.volume = VOLUMES[name];
-    player.play();
-    // Освобождаем нативный плеер после проигрывания (звуки короче 2 сек)
-    setTimeout(() => {
-      try {
-        player.remove();
-      } catch {}
-    }, 4000);
-  } catch (e) {
-    console.warn('playSound failed', e);
-  }
 }

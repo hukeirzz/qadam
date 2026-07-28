@@ -8,5 +8,3 @@ export const rankImages: Record<Rank, ImageSourcePropType> = {
   A: require('../../assets/arankicon.png'),
   S: require('../../assets/srankicon.png'),
 };
-
-export const lockCloudImage: ImageSourcePropType = require('../../assets/lockcloude.png');

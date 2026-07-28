@@ -8,7 +8,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { QadamLogo } from '../components/ui/QadamLogo';
 import { signIn, signUp } from '../services/authService';
-import { loadUserProfile, saveOnboarding } from '../services/progressService';
+import { loadUserProfile, saveOnboarding, saveProfileProgress } from '../services/progressService';
 import { findSchoolByCode } from '../services/schoolsService';
 import { useAppStore } from '../store/useAppStore';
 import { RootStackParamList } from '../types/navigation';
@@ -28,14 +28,12 @@ export function RegisterScreen({ navigation }: Props) {
   const [classLabel, setClassLabel] = useState<string | null>(null);
   const [classPickerOpen, setClassPickerOpen] = useState(false);
   const [dataConsent, setDataConsent] = useState(false);
-  const [showInRating, setShowInRating] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const loadProfile = useAppStore((s) => s.loadProfile);
   const setOnboardingInfo = useAppStore((s) => s.setOnboardingInfo);
-
-  const consentsGiven = dataConsent && showInRating;
+  const setPremium = useAppStore((s) => s.setPremium);
 
   const handleSubmit = async () => {
     setError('');
@@ -47,8 +45,8 @@ export function RegisterScreen({ navigation }: Props) {
       setError('Пароль минимум 6 символов');
       return;
     }
-    if (!consentsGiven) {
-      setError('Нужно отметить оба согласия');
+    if (!dataConsent) {
+      setError('Нужно дать согласие на обработку данных');
       return;
     }
 
@@ -90,12 +88,20 @@ export function RegisterScreen({ navigation }: Props) {
       const school = schoolCode.trim() ? await findSchoolByCode(schoolCode.trim()) : null;
 
       await saveOnboarding(userId, {
-        class_label: classLabel ?? undefined,
         school_id: school?.id ?? null,
+        class_label: classLabel ?? undefined,
         data_consent: dataConsent,
-        show_in_school_rating: showInRating,
       });
-      setOnboardingInfo({ pet_name: null, rank: null, school_id: school?.id ?? null, class_id: null });
+      setOnboardingInfo({
+        pet_name: null, rank: null, school_id: school?.id ?? null, class_id: null,
+        class_label: classLabel,
+      });
+
+      // Партнёрская школа — все ранги и премиум-контент открываются автоматически.
+      if (school) {
+        setPremium(true);
+        await saveProfileProgress(userId, { premium_unlocked: true });
+      }
 
       navigation.replace('PetName');
     } catch (e) {
@@ -149,11 +155,6 @@ export function RegisterScreen({ navigation }: Props) {
           </Pressable>
 
           <Consent checked={dataConsent} onToggle={() => setDataConsent((v) => !v)} label="Согласие на обработку данных" />
-          <Consent
-            checked={showInRating}
-            onToggle={() => setShowInRating((v) => !v)}
-            label="Участвовать в школьном рейтинге"
-          />
 
           {error ? (
             <View style={styles.errorBox}>
@@ -162,15 +163,15 @@ export function RegisterScreen({ navigation }: Props) {
             </View>
           ) : null}
 
-          <TouchableOpacity activeOpacity={0.85} onPress={handleSubmit} disabled={loading || !consentsGiven}>
+          <TouchableOpacity activeOpacity={0.85} onPress={handleSubmit} disabled={loading || !dataConsent}>
             <LinearGradient
-              colors={consentsGiven ? [colors.purple, '#6B2FD4'] : [colors.surface, colors.surface]}
-              style={[styles.btn, !consentsGiven && styles.btnDisabled]}
+              colors={dataConsent ? [colors.purple, '#6B2FD4'] : [colors.surface, colors.surface]}
+              style={[styles.btn, !dataConsent && styles.btnDisabled]}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={[styles.btnText, !consentsGiven && styles.btnTextDisabled]}>Зарегистрироваться</Text>
+                <Text style={[styles.btnText, !dataConsent && styles.btnTextDisabled]}>Зарегистрироваться</Text>
               )}
             </LinearGradient>
           </TouchableOpacity>

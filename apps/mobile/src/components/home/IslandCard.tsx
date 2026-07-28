@@ -86,9 +86,6 @@ export function IslandCard({
       disabled={!onPress}
     >
       <Animated.View style={[styles.visual, floatStyle]}>
-        <View
-          style={[styles.glowBlob, { backgroundColor: progressColor, shadowColor: progressColor }]}
-        />
         <Image
           source={imageSrc}
           style={[
@@ -133,24 +130,14 @@ const styles = StyleSheet.create({
   },
   visual: {
     width: '100%',
-    height: 228,
+    height: 160,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
   },
-  glowBlob: {
-    position: 'absolute',
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    opacity: 0.22,
-    shadowOpacity: 1,
-    shadowRadius: 40,
-    shadowOffset: { width: 0, height: 0 },
-  },
   image: {
-    width: '170%',
-    height: 220,
+    width: '130%',
+    height: 150,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 50,

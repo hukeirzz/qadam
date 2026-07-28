@@ -11,7 +11,7 @@ import { AnswerCard } from '../components/quiz/AnswerCard';
 import { fetchQuizQuestions } from '../services/questionsService';
 import { getSubjectById } from '../data/subjects';
 import { HomeStackParamList } from '../types/navigation';
-import { AnswerState, QuizQuestion } from '../types/quiz';
+import { AnswerState, QuizQuestion, WrongAnswer } from '../types/quiz';
 import { subjectColors, colors } from '../theme/colors';
 import { useAppStore } from '../store/useAppStore';
 import { playSound, vibrate } from '../services/soundService';
@@ -46,6 +46,7 @@ export function QuizScreen({ navigation, route }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [answerState, setAnswerState] = useState<AnswerState>('idle');
   const [lives, setLives] = useState(3);
+  const [wrongAnswers, setWrongAnswers] = useState<WrongAnswer[]>([]);
 
   const parseQuestion = (text: string) => {
     const idx = text.indexOf('\n[img:');
@@ -67,8 +68,12 @@ export function QuizScreen({ navigation, route }: Props) {
     setSelectedId(optionId);
     setAnswerState(isCorrect ? 'correct' : 'wrong');
     playSound(isCorrect ? 'correct' : 'wrong', false);
-    if (isCorrect) setCorrectCount((c) => c + 1);
-    else setLives((l) => Math.max(0, l - 1));
+    if (isCorrect) {
+      setCorrectCount((c) => c + 1);
+    } else {
+      setLives((l) => Math.max(0, l - 1));
+      setWrongAnswers((w) => [...w, { question, chosenId: optionId }]);
+    }
   };
 
   const handleNext = () => {
@@ -95,6 +100,7 @@ export function QuizScreen({ navigation, route }: Props) {
         total,
         earnedXp,
         livesRemaining: lives,
+        mistakes: wrongAnswers,
       });
       return;
     }

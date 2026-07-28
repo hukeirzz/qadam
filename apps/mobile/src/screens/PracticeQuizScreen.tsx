@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Animated, ImageBackground, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/ui/Text';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -10,6 +11,8 @@ import { ExerciseStackParamList } from '../types/navigation';
 import { getQuestionsForTopic } from '../data/practiceQuestions';
 import { PracticeQuestion, OptionKey } from '../data/practiceQuestions/types';
 import { savePracticeResult } from '../utils/practiceStorage';
+import { testSuccessBackgrounds, testFailBackgrounds } from '../assets/testResultBackgrounds';
+import { useAppStore } from '../store/useAppStore';
 import { playSound, vibrate } from '../services/soundService';
 
 type Props = NativeStackScreenProps<ExerciseStackParamList, 'PracticeQuiz'>;
@@ -26,16 +29,10 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-function grade(pct: number): { label: string; icon: string; color: string } {
-  if (pct >= 90) return { label: 'Отлично', icon: '🏆', color: '#FFD166' };
-  if (pct >= 70) return { label: 'Хорошо', icon: '⭐', color: '#4ADE80' };
-  if (pct >= 50) return { label: 'Неплохо', icon: '💪', color: '#5B9DFF' };
-  return { label: 'Нужно повторить', icon: '📚', color: colors.textMuted };
-}
-
 export function PracticeQuizScreen({ route, navigation }: Props) {
   const { topicId, topicTitle, subjectId } = route.params;
   const insets = useSafeAreaInsets();
+  const petType = useAppStore((s) => s.petType);
 
   const [questions, setQuestions] = useState<PracticeQuestion[]>([]);
   const [index, setIndex] = useState(0);
@@ -96,46 +93,50 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
   if (phase === 'result') {
     const total = questions.length;
     const pct = Math.round((correctCount / total) * 100);
-    const g = grade(pct);
+    const isGreat = pct >= 60;
+    const background = (isGreat ? testSuccessBackgrounds : testFailBackgrounds)[petType ?? 'bars'];
+
     return (
-      <ScreenBackground accentColor={colors.purple}>
-        <View style={[styles.flex, { paddingTop: insets.top }]}>
-          <View style={styles.header}>
-            <Pressable style={styles.backBtn} onPress={() => { vibrate(); navigation.goBack(); }}>
-              <Ionicons name="chevron-back" size={26} color={colors.text} />
-            </Pressable>
-            <Text style={styles.headerTitle}>{topicTitle}</Text>
-            <View style={styles.backBtn} />
+      <ImageBackground source={background} style={styles.resultRoot} resizeMode="cover">
+        <LinearGradient
+          pointerEvents="none"
+          colors={['rgba(4,2,14,0)', 'rgba(4,2,14,0.12)', 'rgba(4,2,14,0.45)']}
+          locations={[0, 0.55, 1]}
+          style={StyleSheet.absoluteFillObject}
+        />
+
+        <Pressable
+          style={[styles.resultBackBtn, { top: insets.top + 8 }]}
+          onPress={() => { vibrate(); navigation.goBack(); }}
+        >
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
+        </Pressable>
+
+        <View style={[styles.resultContent, { paddingBottom: insets.bottom + 20 }]}>
+          <Text style={styles.resultTitle}>{isGreat ? 'Отличная работа!' : 'Есть куда расти!'}</Text>
+          <Text style={styles.resultPct}>{pct}%</Text>
+
+          <View style={styles.resultStatsRow}>
+            <View style={styles.resultStat}>
+              <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+              <Text style={styles.resultStatText}>Правильных {correctCount}</Text>
+            </View>
+            <View style={styles.resultStat}>
+              <Ionicons name="close-circle" size={20} color="#FF6B6B" />
+              <Text style={styles.resultStatText}>Ошибок {total - correctCount}</Text>
+            </View>
           </View>
 
-          <ScrollView contentContainerStyle={[styles.resultScroll, { paddingBottom: insets.bottom + 130 }]}>
-            <View style={styles.resultHero}>
-              <Text style={styles.resultGradeIcon}>{g.icon}</Text>
-              <Text style={[styles.resultGradeLabel, { color: g.color }]}>{g.label}</Text>
-            </View>
+          <Pressable style={styles.btnPrimary} onPress={handleRestart}>
+            <Ionicons name="refresh" size={18} color="#fff" />
+            <Text style={styles.btnPrimaryText}>Пройти снова</Text>
+          </Pressable>
 
-            <View style={styles.resultCard}>
-              <Text style={styles.resultScoreSmall}>Правильных ответов</Text>
-              <Text style={styles.resultScore}>
-                {correctCount} <Text style={styles.resultScoreTotal}>из {total}</Text>
-              </Text>
-              <View style={styles.pctBarTrack}>
-                <View style={[styles.pctBarFill, { width: `${pct}%`, backgroundColor: g.color }]} />
-              </View>
-              <Text style={[styles.pctText, { color: g.color }]}>{pct}%</Text>
-            </View>
-
-            <Pressable style={styles.btnPrimary} onPress={handleRestart}>
-              <Ionicons name="refresh" size={18} color="#fff" />
-              <Text style={styles.btnPrimaryText}>Пройти снова</Text>
-            </Pressable>
-
-            <Pressable style={styles.btnSecondary} onPress={() => { vibrate(); navigation.goBack(); }}>
-              <Text style={styles.btnSecondaryText}>Вернуться к темам</Text>
-            </Pressable>
-          </ScrollView>
+          <Pressable style={styles.btnSecondary} onPress={() => { vibrate(); navigation.goBack(); }}>
+            <Text style={styles.btnSecondaryText}>Вернуться к темам</Text>
+          </Pressable>
         </View>
-      </ScreenBackground>
+      </ImageBackground>
     );
   }
 
@@ -334,28 +335,27 @@ const styles = StyleSheet.create({
   nextBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
   // Result screen styles
-  resultScroll: { paddingHorizontal: 20, paddingTop: 24, alignItems: 'center' },
-  resultHero: { alignItems: 'center', marginBottom: 28 },
-  resultGradeIcon: { fontSize: 64, marginBottom: 10 },
-  resultGradeLabel: { fontSize: 24, fontWeight: '800' },
-
-  resultCard: {
-    width: '100%',
-    backgroundColor: colors.surfaceGlass,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: colors.borderMuted,
-    padding: 24,
+  resultRoot: { flex: 1, backgroundColor: '#0A0620' },
+  resultBackBtn: {
+    position: 'absolute',
+    left: 8,
+    width: 44,
+    height: 44,
     alignItems: 'center',
-    marginBottom: 24,
-    gap: 12,
+    justifyContent: 'center',
+    zIndex: 1,
   },
-  resultScoreSmall: { color: colors.textMuted, fontSize: 14, fontWeight: '600' },
-  resultScore: { color: colors.text, fontSize: 52, fontWeight: '900' },
-  resultScoreTotal: { fontSize: 28, color: colors.textMuted, fontWeight: '600' },
-  pctBarTrack: { width: '100%', height: 8, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 4, overflow: 'hidden' },
-  pctBarFill: { height: '100%', borderRadius: 4 },
-  pctText: { fontSize: 22, fontWeight: '800' },
+  resultContent: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 28,
+    gap: 10,
+  },
+  resultTitle: { color: colors.text, fontSize: 26, fontWeight: '800', textAlign: 'center' },
+  resultPct: { color: '#FFD166', fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 6 },
+  resultStatsRow: { flexDirection: 'row', justifyContent: 'center', gap: 20, marginBottom: 18 },
+  resultStat: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  resultStatText: { color: colors.text, fontSize: 14, fontWeight: '700' },
 
   btnPrimary: {
     width: '100%',

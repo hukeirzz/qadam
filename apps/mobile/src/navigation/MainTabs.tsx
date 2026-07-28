@@ -1,7 +1,8 @@
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { createBottomTabNavigator, BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { HomeStack } from './HomeStack';
 import { ExerciseStack } from './ExerciseStack';
@@ -11,6 +12,8 @@ import { ProfileStack } from './ProfileStack';
 import { MainTabParamList } from '../types/navigation';
 import { colors, glow } from '../theme/colors';
 import { vibrate } from '../services/soundService';
+import { useAppStore } from '../store/useAppStore';
+import { petImages } from '../assets/petImages';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -30,7 +33,22 @@ const TAB_LABELS: Record<string, string> = {
   ProfileTab: 'Профиль',
 };
 
-function CustomTabBar({ state, navigation }: BottomTabBarProps) {
+// Полноэкранные экраны результата (фото на весь экран) сами занимают
+// нижнюю часть — плавающий navbar на них скрываем, чтобы не перекрывал
+// кнопки.
+const HIDDEN_TABBAR_ROUTES: Record<string, string> = {
+  PathTab: 'CorrectAnswer',
+  ExerciseTab: 'PracticeQuiz',
+};
+
+function CustomTabBar({ state, navigation, descriptors }: BottomTabBarProps) {
+  const petType = useAppStore((s) => s.petType);
+  const focusedRoute = state.routes[state.index];
+  const focusedOptions = descriptors[focusedRoute.key].options;
+  if ((focusedOptions.tabBarStyle as { display?: string } | undefined)?.display === 'none') {
+    return null;
+  }
+
   return (
     <View style={[styles.tabBarShadow, { shadowColor: glow.purple }]}>
       <View style={styles.tabBar}>
@@ -50,14 +68,22 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
             }
           };
 
+          const isProfileTab = route.name === 'ProfileTab';
+
           return (
             <Pressable key={route.key} style={styles.tabItem} onPress={onPress}>
-              <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
-                <Ionicons
-                  name={focused ? icons.active : icons.inactive}
-                  size={focused ? 24 : 23}
-                  color={focused ? colors.purpleGlow : colors.tabInactive}
-                />
+              <View style={styles.iconWrap}>
+                {isProfileTab && petType ? (
+                  <View style={[styles.tabAvatarRing, focused && styles.tabAvatarRingFocused]}>
+                    <Image source={petImages[petType]} style={styles.tabAvatarImage} resizeMode="cover" />
+                  </View>
+                ) : (
+                  <Ionicons
+                    name={focused ? icons.active : icons.inactive}
+                    size={focused ? 24 : 23}
+                    color={focused ? colors.purpleGlow : colors.tabInactive}
+                  />
+                )}
               </View>
               <Text
                 style={[styles.label, focused ? styles.labelActive : styles.labelInactive]}
@@ -86,12 +112,26 @@ export function MainTabs() {
       <Tab.Screen
         name="PathTab"
         component={HomeStack}
-        options={{ title: 'Главная', popToTopOnBlur: true }}
+        options={({ route }) => ({
+          title: 'Главная',
+          popToTopOnBlur: true,
+          tabBarStyle:
+            getFocusedRouteNameFromRoute(route) === HIDDEN_TABBAR_ROUTES.PathTab
+              ? { display: 'none' }
+              : undefined,
+        })}
       />
       <Tab.Screen
         name="ExerciseTab"
         component={ExerciseStack}
-        options={{ title: 'Практика', popToTopOnBlur: true }}
+        options={({ route }) => ({
+          title: 'Практика',
+          popToTopOnBlur: true,
+          tabBarStyle:
+            getFocusedRouteNameFromRoute(route) === HIDDEN_TABBAR_ROUTES.ExerciseTab
+              ? { display: 'none' }
+              : undefined,
+        })}
       />
       <Tab.Screen
         name="ProfileTab"
@@ -139,8 +179,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconWrapActive: {
-    backgroundColor: 'rgba(180, 144, 255, 0.16)',
+  tabAvatarRing: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1.5,
+    borderColor: colors.tabInactive,
+    overflow: 'hidden',
+  },
+  tabAvatarRingFocused: {
+    borderColor: colors.purpleGlow,
+  },
+  tabAvatarImage: {
+    width: '100%',
+    height: '100%',
   },
   label: {
     fontSize: 11.5,

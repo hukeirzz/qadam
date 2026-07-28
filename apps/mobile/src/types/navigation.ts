@@ -3,6 +3,7 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { Rank } from '@qadam/business-logic';
 import type { SubjectId } from './subject';
+import type { WrongAnswer } from './quiz';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -18,7 +19,7 @@ export type RootStackParamList = {
 export type HomeStackParamList = {
   Home: undefined;
   Premium: undefined;
-  IslandPath: { subjectId: SubjectId };
+  IslandPath: { subjectId: SubjectId; rank?: Rank };
   Theory: { subjectId: SubjectId; topicId: string };
   Quiz: { subjectId: SubjectId; topicId: string };
   CorrectAnswer: {
@@ -28,16 +29,16 @@ export type HomeStackParamList = {
     total: number;
     earnedXp: number;
     livesRemaining: number;
+    mistakes: WrongAnswer[];
   };
-  Competitions: undefined;
-  CompetitionDetail: { competitionId: string };
-  Rating: undefined;
+  MistakesReview: { subjectId: SubjectId; mistakes: WrongAnswer[] };
 };
 
 export type ExerciseStackParamList = {
   ExerciseHome: undefined;
   ExerciseSubject: { subjectId: string };
   PracticeQuiz: { topicId: string; topicTitle: string; subjectId: string };
+  SchoolTests: undefined;
   Premium: undefined;
 };
 

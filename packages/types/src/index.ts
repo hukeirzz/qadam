@@ -20,22 +20,11 @@ export interface UserProfileRow {
   week_start: string | null;
   topic_hearts: Record<string, number>;
   daily_steps: Record<string, number>;
-  /** Added by the schools/classes/roles migration (supabase/migrations) — not on every historical row until that migration is applied live. */
-  role: Role;
   school_id: string | null;
   class_id: string | null;
-  /** Added by the pet/rank/competitions migration (supabase/migrations) — not on every historical row until that migration is applied live. */
   pet_name: string | null;
-  /** Added by the pet_type migration (supabase/migrations) — not on every historical row until that migration is applied live. */
   pet_type: PetType | null;
-  phone: string | null;
-  nickname: string | null;
   rank: Rank | null;
-  entrance_test_score: number | null;
-  entrance_test_total: number | null;
-  show_in_school_rating: boolean;
-  data_consent: boolean;
-  class_label: string | null;
 }
 
 export interface TopicRow {
@@ -87,28 +76,8 @@ export interface SchoolClass {
   name: string;
 }
 
-// Entrance-test rank + competitions/rating — see supabase/migrations for the schema.
+// Entrance-test rank + rating — see supabase/migrations for the schema.
 export type Rank = 'D' | 'C' | 'B' | 'A' | 'S';
-
-export interface Competition {
-  id: string;
-  title: string;
-  description: string | null;
-  prize: string | null;
-  source: 'school' | 'platform';
-  school_id: string | null;
-  created_by: string | null;
-  start_at: string;
-  end_at: string;
-  created_at: string;
-}
-
-export interface CompetitionParticipant {
-  competition_id: string;
-  user_id: string;
-  xp_earned: number;
-  joined_at: string;
-}
 
 /** Row shape returned by the `public_rating` view (safe columns only). */
 export interface RatingEntry {
@@ -116,6 +85,8 @@ export interface RatingEntry {
   display_name: string;
   xp: number;
   rank: Rank | null;
+  streak: number;
+  max_streak: number;
   school_id: string | null;
   class_id: string | null;
 }

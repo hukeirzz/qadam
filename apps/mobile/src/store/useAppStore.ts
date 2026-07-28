@@ -33,6 +33,7 @@ interface AppState {
   rank: Rank | null;
   schoolId: string | null;
   classId: string | null;
+  classLabel: string | null;
 
   xp: number;
   gems: number;
@@ -74,6 +75,7 @@ interface AppState {
     rank: Rank | null;
     school_id: string | null;
     class_id: string | null;
+    class_label?: string | null;
   }) => void;
 
   /** xpReward already accounts for accuracy + hearts (+ differential for replays) */
@@ -94,14 +96,16 @@ interface AppState {
   setOnboarded: (v: boolean) => void;
   setAuthenticated: (v: boolean) => void;
   setPremium: (v: boolean) => void;
+  /** Renames the student and persists it to `students.name`. */
+  setUserName: (name: string) => void;
   logout: () => void;
 }
 
 const FRESH: Omit<AppState,
-  'loadProfile' | 'setOnboardingInfo' | 'completeQuiz' | 'unlockPremiumWithGems' | 'setRemoteTopics' | 'setOnboarded' | 'setAuthenticated' | 'setPremium' | 'logout'
+  'loadProfile' | 'setOnboardingInfo' | 'completeQuiz' | 'unlockPremiumWithGems' | 'setRemoteTopics' | 'setOnboarded' | 'setAuthenticated' | 'setPremium' | 'setUserName' | 'logout'
 > = {
   userId: null, userName: '', isAuthenticated: false, hasOnboarded: false,
-  petName: null, petType: null, rank: null, schoolId: null, classId: null,
+  petName: null, petType: null, rank: null, schoolId: null, classId: null, classLabel: null,
   xp: 0, gems: 0, streak: 0, lastActivity: null,
   completedTopics: [], topicHearts: {},
   completedSteps: 0, totalSteps: TOTAL_STEPS, overallProgress: 0,
@@ -119,10 +123,20 @@ export const useAppStore = create<AppState>((set, get) => ({
   setOnboarded: (v) => set({ hasOnboarded: v }),
   setAuthenticated: (v) => set({ isAuthenticated: v }),
   setPremium: (v) => set({ premiumUnlocked: v }),
-  setOnboardingInfo: (info) => set({
+  setUserName: (name) => {
+    set({ userName: name });
+    const s = get();
+    if (s.userId) {
+      import('../services/progressService').then((m) =>
+        m.saveProfileProgress(s.userId!, { name })
+      ).catch(console.warn);
+    }
+  },
+  setOnboardingInfo: (info) => set((s) => ({
     petName: info.pet_name, petType: info.pet_type ?? null, rank: info.rank,
     schoolId: info.school_id, classId: info.class_id,
-  }),
+    classLabel: info.class_label !== undefined ? info.class_label : s.classLabel,
+  })),
 
   setRemoteTopics: (subjectTopicIds) => set((s) => {
     const totalSteps = Object.values(subjectTopicIds).reduce((sum, ids) => sum + ids.length, 0);

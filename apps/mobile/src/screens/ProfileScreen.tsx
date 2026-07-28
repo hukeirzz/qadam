@@ -1,294 +1,365 @@
-import React from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, View, Image } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
+import { SurfaceCard } from '../components/ui/SurfaceCard';
 import { RankBadge } from '../components/ui/RankBadge';
 import { ProfileStackParamList } from '../navigation/ProfileStack';
-import { useAppStore, calcLevel, getRankTitle, xpToReachLevel } from '../store/useAppStore';
-import { signOut, deleteAccount } from '../services/authService';
-import { colors } from '../theme/colors';
-import { spacing } from '../theme/spacing';
+import { MainTabParamList } from '../types/navigation';
+import { useAppStore } from '../store/useAppStore';
+import { colors, glow, subjectColors } from '../theme/colors';
+import { subjects, getTopicIds } from '../data/subjects';
+import { RANK_ORDER, getRankXpProgress } from '../data/rankProgress';
+import { petImages } from '../assets/petImages';
+import { loadAverageMockScore } from '../services/progressService';
 import { vibrate } from '../services/soundService';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'Profile'>;
 
-const menu: {
-  label: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  screen: keyof ProfileStackParamList;
-  color?: string;
-}[] = [
-  { label: 'Premium', icon: 'diamond', screen: 'Premium', color: colors.purpleGlow },
-  { label: 'Изменить пароль', icon: 'key', screen: 'ChangePassword' },
-];
-
 export function ProfileScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
+
+  const userId = useAppStore((s) => s.userId);
   const userName = useAppStore((s) => s.userName);
+  const classLabel = useAppStore((s) => s.classLabel);
+  const petName = useAppStore((s) => s.petName);
+  const petType = useAppStore((s) => s.petType);
   const xp = useAppStore((s) => s.xp);
   const streak = useAppStore((s) => s.streak);
-  const gems = useAppStore((s) => s.gems);
   const rank = useAppStore((s) => s.rank);
-  const logout = useAppStore((s) => s.logout);
+  const completedSteps = useAppStore((s) => s.completedSteps);
+  const completedTopics = useAppStore((s) => s.completedTopics);
+  const remoteTopicIds = useAppStore((s) => s.remoteTopicIds);
 
-  const handleLogout = () => {
+  const currentRank = rank ?? 'D';
+  const rankIdx = RANK_ORDER.indexOf(currentRank);
+  const nextRank = rankIdx < RANK_ORDER.length - 1 ? RANK_ORDER[rankIdx + 1] : null;
+  const rankProgress = nextRank ? getRankXpProgress(nextRank, xp) : null;
+
+  // Средний балл ОРТ считается не в приложении, а на стороне партнёрской
+  // школы: координатор ОРТ вносит баллы пробных экзаменов в school-web
+  // (mock_results), здесь просто читаем среднее. Для учеников без школы
+  // или пока координатор ничего не внёс — average остаётся null → «—».
+  const [mockScore, setMockScore] = useState<{ average: number | null; count: number } | null>(null);
+  useEffect(() => {
+    if (!userId) return;
+    loadAverageMockScore(userId).then(setMockScore).catch(console.warn);
+  }, [userId]);
+
+  const subjectStats = subjects.map((subject) => {
+    const ids = remoteTopicIds[subject.id]?.length ? remoteTopicIds[subject.id] : getTopicIds(subject.id);
+    const total = ids.length;
+    const done = completedTopics.filter((id) => ids.includes(id)).length;
+    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+    const color = subjectColors[subject.id as keyof typeof subjectColors].primary;
+    return { id: subject.id, title: subject.title, icon: subject.icon, color, pct };
+  });
+
+  const openSettings = () => { vibrate(); navigation.navigate('Settings'); };
+  const openStats = () => { vibrate(); tabNavigation.navigate('StatsTab'); };
+  const openSubject = (subjectId: string) => {
     vibrate();
-    // signOut triggers onAuthStateChange(SIGNED_OUT) → RootNavigator navigates then clears store
-    signOut().catch(console.warn);
+    (tabNavigation as any).navigate('PathTab', { screen: 'IslandPath', params: { subjectId } });
   };
-
-  const handleDeleteAccount = () => {
+  const showStatsInfo = () => {
     vibrate();
     Alert.alert(
-      'Удалить аккаунт?',
-      'Это действие необратимо. Весь прогресс и данные будут удалены.',
-      [
-        { text: 'Отмена', style: 'cancel' },
-        {
-          text: 'Удалить',
-          style: 'destructive',
-          onPress: async () => {
-            const { error } = await deleteAccount();
-            if (error) {
-              Alert.alert('Ошибка', error.message ?? 'Не удалось удалить аккаунт');
-            }
-            // при успехе deleteAccount разлогинит → RootNavigator уведёт на Splash
-          },
-        },
-      ],
+      'Как считаются показатели',
+      '«Тестов пройдено» — количество завершённых тем.\n\n«Средний балл ОРТ» — средний балл пробных экзаменов ОРТ, которые вносит координатор ОРТ твоей партнёрской школы. Если школа не подключена к партнёрской программе или баллы ещё не внесены, показывается «—».',
     );
   };
-
-  const level = calcLevel(xp);
-  const rankTitle = getRankTitle(xp);
-
-  // График показывает ОБЩИЙ накопленный XP и порог следующего уровня.
-  const nextLevelTotal = xpToReachLevel(level + 1);
-  const xpPct = nextLevelTotal > 0 ? (xp / nextLevelTotal) * 100 : 0;
-  const xpToNext = Math.max(0, nextLevelTotal - xp);
 
   return (
     <ScreenBackground>
       <ScrollView
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 100 },
+          { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 120 },
         ]}
       >
-        {/* Avatar */}
-        <View style={styles.avatarRing}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{userName.charAt(0)}</Text>
-          </View>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Профиль</Text>
+          <Pressable style={styles.gearBtn} onPress={openSettings} hitSlop={8}>
+            <Ionicons name="settings-outline" size={20} color={colors.text} />
+          </Pressable>
         </View>
 
-        <Text style={styles.name}>{userName}</Text>
-        <View style={styles.rankRow}>
-          <Text style={styles.rank}>{rankTitle}</Text>
-          {rank ? <RankBadge rank={rank} size="sm" /> : null}
-        </View>
-
-        {/* Level + XP badge */}
-        <View style={styles.levelRow}>
-          <LinearGradient
-            colors={[colors.purple, '#5B2ED4']}
-            style={styles.levelBadge}
-          >
-            <Text style={styles.levelText}>Уровень {level}</Text>
-          </LinearGradient>
-          <Text style={styles.xpText}>
-            {xp}/{nextLevelTotal} XP
-          </Text>
-        </View>
-
-        {/* XP progress bar */}
-        <View style={styles.xpTrack}>
-          <LinearGradient
-            colors={[colors.purple, colors.purpleGlow]}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={[styles.xpFill, { width: `${xpPct}%` }]}
-          />
-        </View>
-        <Text style={styles.xpHint}>
-          До {level + 1} уровня осталось {xpToNext} XP
-        </Text>
-
-        {/* Quick stats */}
-        <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Text style={styles.statVal}>{streak}</Text>
-            <Text style={styles.statLbl}>🔥 Дней</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statBox}>
-            <Text style={styles.statVal}>{gems}</Text>
-            <Text style={styles.statLbl}>💎 Кристаллы</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statBox}>
-            <Text style={styles.statVal}>{xp}</Text>
-            <Text style={styles.statLbl}>⭐ XP</Text>
-          </View>
-        </View>
-
-        {/* Menu */}
-        <View style={styles.menu}>
-          {menu.map((item) => (
-            <Pressable
-              key={item.screen}
-              style={styles.row}
-              onPress={() => { vibrate(); navigation.navigate(item.screen); }}
-            >
-              <View style={[styles.iconBg, item.color ? { backgroundColor: `${item.color}22` } : undefined]}>
-                <Ionicons
-                  name={item.icon}
-                  size={20}
-                  color={item.color ?? colors.textMuted}
-                />
+        {/* Profile card */}
+        <SurfaceCard style={styles.cardShadow} glowColor={glow.purple} radius={22} padding={18}>
+          <View style={styles.identityRow}>
+            <View style={styles.avatarWrap}>
+              <View style={styles.avatarRing}>
+                {petType ? (
+                  <Image source={petImages[petType]} style={styles.avatarImage} resizeMode="cover" />
+                ) : (
+                  <View style={styles.avatarFallback}>
+                    <Text style={styles.avatarFallbackText}>{userName.charAt(0)}</Text>
+                  </View>
+                )}
               </View>
-              <Text style={styles.rowText}>{item.label}</Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+              <Pressable style={styles.editBtn} onPress={openSettings} hitSlop={6}>
+                <Ionicons name="pencil" size={13} color={colors.text} />
+              </Pressable>
+            </View>
+
+            <View style={styles.identityInfo}>
+              <Text style={styles.name} numberOfLines={1}>{userName}</Text>
+              <View style={styles.subLineRow}>
+                {petName ? (
+                  <View style={styles.petNameRow}>
+                    <Ionicons name="paw" size={12} color={colors.purpleGlow} />
+                    <Text style={styles.petNameText} numberOfLines={1}>{petName}</Text>
+                  </View>
+                ) : null}
+                {classLabel ? <Text style={styles.classLabel}>{classLabel}</Text> : null}
+              </View>
+
+              <View style={styles.rankHeaderRow}>
+                <View style={styles.rankPill}>
+                  <RankBadge rank={currentRank} size="sm" />
+                  <Text style={styles.rankPillText}>{currentRank} ранг</Text>
+                </View>
+                <View style={styles.xpTrophyRow}>
+                  <Ionicons name="trophy" size={14} color={colors.gold} />
+                  <Text style={styles.xpTrophyText}>
+                    {xp}{nextRank ? ` / ${rankProgress!.required}` : ''} XP
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.rankTrack}>
+            <LinearGradient
+              colors={[colors.purple, colors.purpleGlow]}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={[styles.rankFill, { width: `${nextRank ? rankProgress!.progressPct : 100}%` }]}
+            />
+          </View>
+          <Text style={styles.rankHint}>
+            {nextRank ? `До следующего ранга: ${rankProgress!.remaining} XP` : 'Максимальный ранг достигнут'}
+          </Text>
+
+          {/* Stats grid */}
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Ionicons name="star" size={18} color={colors.gold} />
+              <Text style={styles.statVal}>{xp}</Text>
+              <Text style={styles.statLbl}>XP</Text>
+            </View>
+            <View style={styles.statBox}>
+              <MaterialCommunityIcons name="fire" size={18} color="#FF8C3B" />
+              <Text style={styles.statVal}>{streak}</Text>
+              <Text style={styles.statLbl}>Серия дней</Text>
+            </View>
+            <View style={styles.statBox}>
+              <MaterialCommunityIcons name="target" size={18} color={colors.success} />
+              <Text style={styles.statVal}>{completedSteps}</Text>
+              <Text style={styles.statLbl}>Тестов пройдено</Text>
+            </View>
+            <View style={styles.statBox}>
+              <MaterialCommunityIcons name="chart-bar" size={18} color={colors.purpleGlow} />
+              <Text style={styles.statVal}>{mockScore?.average ?? '—'}</Text>
+              <Text style={styles.statLbl}>Средний балл ОРТ</Text>
+            </View>
+            <Pressable style={styles.statInfoBtn} onPress={showStatsInfo} hitSlop={8}>
+              <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
+            </Pressable>
+          </View>
+        </SurfaceCard>
+
+        {/* Мои предметы */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Мои предметы</Text>
+          <Pressable onPress={openStats} hitSlop={6}>
+            <Text style={styles.sectionLink}>Смотреть все</Text>
+          </Pressable>
+        </View>
+        <SurfaceCard style={styles.cardShadow} glowColor={glow.purple} radius={20} padding={8}>
+          {subjectStats.map((s, i) => (
+            <Pressable
+              key={s.id}
+              style={[styles.subjectRow, i < subjectStats.length - 1 && styles.subjectRowDivider]}
+              onPress={() => openSubject(s.id)}
+            >
+              <View style={[styles.subjectIconWrap, { backgroundColor: `${s.color}26` }]}>
+                <Text style={[styles.subjectIconGlyph, { color: s.color }]}>{s.icon}</Text>
+              </View>
+              <Text style={styles.subjectName} numberOfLines={1}>{s.title}</Text>
+              <View style={styles.subjectTrack}>
+                <View style={[styles.subjectFill, { width: `${s.pct}%`, backgroundColor: s.color }]} />
+              </View>
+              <Text style={[styles.subjectPct, { color: s.color }]}>{s.pct}%</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
             </Pressable>
           ))}
+        </SurfaceCard>
 
-          {/* Logout */}
-          <Pressable style={styles.row} onPress={handleLogout}>
-            <View style={[styles.iconBg, { backgroundColor: 'rgba(255,59,92,0.12)' }]}>
-              <Ionicons name="log-out-outline" size={20} color="#FF3B5C" />
-            </View>
-            <Text style={[styles.rowText, { color: '#FF3B5C' }]}>Выйти</Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
-          </Pressable>
-
-          {/* Delete account */}
-          <Pressable style={styles.row} onPress={handleDeleteAccount}>
-            <View style={[styles.iconBg, { backgroundColor: 'rgba(255,59,92,0.12)' }]}>
-              <Ionicons name="trash-outline" size={20} color="#FF3B5C" />
-            </View>
-            <Text style={[styles.rowText, { color: '#FF3B5C' }]}>Удалить аккаунт</Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
-          </Pressable>
-        </View>
+        {/* Статистика */}
+        <Pressable style={styles.statsLinkRow} onPress={openStats}>
+          <View style={styles.statsLinkIconWrap}>
+            <Ionicons name="stats-chart" size={18} color={colors.purpleGlow} />
+          </View>
+          <View style={styles.statsLinkTextWrap}>
+            <Text style={styles.statsLinkTitle}>Статистика</Text>
+            <Text style={styles.statsLinkSubtitle}>Подробная статистика и прогресс</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+        </Pressable>
       </ScrollView>
     </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: {
+  scroll: { paddingHorizontal: 16 },
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
+  headerTitle: { color: colors.text, fontSize: 22, fontWeight: '800' },
+  gearBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceGlass,
+    borderWidth: 1,
+    borderColor: colors.borderMuted,
+  },
+  cardShadow: { marginBottom: 18 },
+  identityRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 },
+  avatarWrap: { width: 76, height: 76 },
   avatarRing: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     padding: 3,
-    backgroundColor: 'transparent',
     borderWidth: 2,
     borderColor: colors.purple,
+    overflow: 'hidden',
   },
-  avatar: {
+  avatarImage: { width: '100%', height: '100%', borderRadius: 34 },
+  avatarFallback: {
     flex: 1,
-    borderRadius: 44,
+    borderRadius: 34,
     backgroundColor: colors.purple,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { color: colors.text, fontSize: 34, fontWeight: '800' },
-  name: {
-    color: colors.text,
-    fontSize: 24,
-    fontWeight: '800',
-    marginTop: 14,
+  avatarFallbackText: { color: colors.text, fontSize: 26, fontWeight: '800' },
+  editBtn: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.purple,
+    borderWidth: 2,
+    borderColor: colors.background,
   },
-  rankRow: {
+  identityInfo: { flex: 1 },
+  name: { color: colors.text, fontSize: 19, fontWeight: '800' },
+  subLineRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  petNameRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  petNameText: { color: colors.purpleGlow, fontSize: 13, fontWeight: '700' },
+  classLabel: { color: colors.textMuted, fontSize: 13, fontWeight: '700' },
+  rankHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
-  },
-  rank: {
-    color: colors.textMuted,
-    fontSize: 14,
-  },
-  levelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 14,
-  },
-  levelBadge: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  levelText: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  xpText: {
-    color: colors.purpleGlow,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  xpTrack: {
-    width: '82%',
-    height: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 6,
-    overflow: 'hidden',
+    justifyContent: 'space-between',
     marginTop: 10,
+  },
+  rankPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingRight: 10,
+    paddingLeft: 3,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: 'rgba(144,71,255,0.18)',
+    borderWidth: 1,
+    borderColor: colors.purple,
+  },
+  rankPillText: { color: colors.text, fontSize: 12, fontWeight: '800' },
+  xpTrophyRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  xpTrophyText: { color: colors.text, fontSize: 13, fontWeight: '700' },
+  rankTrack: {
+    height: 10,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 5,
+    overflow: 'hidden',
     marginBottom: 6,
   },
-  xpFill: {
-    height: '100%',
-    borderRadius: 6,
-  },
-  xpHint: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 20,
-  },
+  rankFill: { height: '100%', borderRadius: 5 },
+  rankHint: { color: colors.textMuted, fontSize: 12, fontWeight: '600', marginBottom: 18 },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceGlass,
-    borderRadius: 20,
-    padding: 16,
-    width: '100%',
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: colors.borderMuted,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderMuted,
+    position: 'relative',
   },
-  statBox: { flex: 1, alignItems: 'center' },
-  statVal: {
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: '800',
+  statBox: { flex: 1, alignItems: 'center', gap: 4 },
+  statVal: { color: colors.text, fontSize: 18, fontWeight: '800' },
+  statLbl: { color: colors.textMuted, fontSize: 10.5, fontWeight: '600', textAlign: 'center' },
+  statInfoBtn: { position: 'absolute', top: -8, right: -4 },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
-  statLbl: {
-    color: colors.textMuted,
-    fontSize: 11,
-    marginTop: 4,
+  sectionTitle: { color: colors.text, fontSize: 17, fontWeight: '800' },
+  sectionLink: { color: colors.purpleGlow, fontSize: 13, fontWeight: '700' },
+  subjectRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
   },
-  statDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+  subjectRowDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
   },
-  menu: {
-    width: '100%',
-    gap: 8,
+  subjectIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  row: {
+  subjectIconGlyph: { fontSize: 15, fontWeight: '800' },
+  subjectName: { width: 96, color: colors.text, fontSize: 13, fontWeight: '600' },
+  subjectTrack: {
+    flex: 1,
+    height: 6,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  subjectFill: { height: '100%', borderRadius: 3 },
+  subjectPct: { fontSize: 12, fontWeight: '700', width: 34, textAlign: 'right' },
+  statsLinkRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
@@ -298,18 +369,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderMuted,
   },
-  iconBg: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+  statsLinkIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(144,71,255,0.15)',
   },
-  rowText: {
-    flex: 1,
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '600',
-  },
+  statsLinkTextWrap: { flex: 1 },
+  statsLinkTitle: { color: colors.text, fontSize: 15, fontWeight: '700' },
+  statsLinkSubtitle: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
 });

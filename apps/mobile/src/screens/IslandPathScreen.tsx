@@ -27,6 +27,8 @@ const XP_RULES = [
 
 export function IslandPathScreen({ navigation, route }: Props) {
   const { subjectId } = route.params;
+  const userRank = useAppStore((s) => s.rank) ?? 'D';
+  const rank = route.params.rank ?? userRank;
   const subject = getSubjectById(subjectId);
   const palette = subjectColors[subjectId];
   const insets = useSafeAreaInsets();
@@ -167,6 +169,7 @@ export function IslandPathScreen({ navigation, route }: Props) {
             <TopicPathMap
               topics={topics}
               subjectId={subjectId}
+              rank={rank}
               topicHearts={topicHearts}
               onTopicPress={openTopic}
             />
