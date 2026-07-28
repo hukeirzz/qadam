@@ -5,11 +5,6 @@ import * as agg from '@/lib/aggregate';
 export default async function DashboardHomePage() {
   const api = await createServerApi();
   const session = await api.auth.getSession();
-  const name =
-    (session?.user.user_metadata?.name as string | undefined) ||
-    session?.user.email?.split('@')[0] ||
-    'Пользователь';
-  const firstName = name.split(/\s+/)[0];
 
   const roleInfo = session ? await api.profile.role(session.user.id) : null;
   const schoolId = roleInfo?.school_id ?? null;
@@ -42,7 +37,6 @@ export default async function DashboardHomePage() {
 
   return (
     <DashboardHome
-      firstName={firstName}
       totalStudents={students.length}
       attentionCount={atRisk.length}
       avgRank={agg.avgRankLetter(students)}

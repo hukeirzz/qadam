@@ -312,7 +312,7 @@ export function ResultsEditor({
           <table className="w-full min-w-[720px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-xs text-slate-400">
-                <th className="sticky left-0 z-10 bg-white px-3 py-2 text-left font-medium">Ученик</th>
+                <th className="px-3 py-2 text-left font-medium">Ученик</th>
                 {exams.map((e) => (<th key={e.id} className="px-2 py-2 text-center font-medium">{e.name}</th>))}
                 <th className="px-2 py-2 text-center font-medium text-slate-500">Средний</th>
                 <th className="px-2 py-2 text-center font-medium text-slate-500">Прогресс</th>
@@ -326,7 +326,7 @@ export function ResultsEditor({
                 const prog = present.length >= 2 ? present[present.length - 1] - present[0] : null;
                 return (
                   <tr key={st.id} className="border-b border-slate-100 last:border-0">
-                    <td className="sticky left-0 z-10 whitespace-nowrap bg-white px-3 py-2.5">
+                    <td className="whitespace-nowrap px-3 py-2.5">
                       <p className="font-medium text-slate-800">{st.name}</p>
                       <p className="text-xs text-slate-400">{classes.find((c) => c.id === st.class_id)?.name ?? '—'}</p>
                     </td>

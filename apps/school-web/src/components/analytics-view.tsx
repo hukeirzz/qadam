@@ -75,12 +75,12 @@ export function AnalyticsView({
         <p className="mt-1 text-sm text-slate-500">Три сигнала ученика: точность ответов, XP-активность и результаты пробных ОРТ.</p>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {KPI.map((s) => (
-          <div key={s.label} className="flex items-center gap-4 rounded-2xl bg-white p-5 shadow-sm shadow-slate-200/50 ring-1 ring-slate-100">
-            <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${s.chip}`}><s.Icon className="h-6 w-6" /></span>
-            <p className="flex-1 text-sm font-semibold leading-tight text-slate-700">{s.label}</p>
-            <p className={`text-3xl font-bold tracking-tight ${s.num}`}>{s.value}</p>
+          <div key={s.label} className="flex flex-col gap-2.5 rounded-2xl bg-white p-4 shadow-sm shadow-slate-200/50 ring-1 ring-slate-100 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
+            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${s.chip}`}><s.Icon className="h-5 w-5 sm:h-6 sm:w-6" /></span>
+            <p className="min-w-0 flex-1 text-sm font-semibold leading-tight text-slate-700">{s.label}</p>
+            <p className={`text-2xl font-bold tracking-tight sm:text-3xl ${s.num}`}>{s.value}</p>
           </div>
         ))}
       </div>
@@ -159,7 +159,7 @@ export function AnalyticsView({
           ) : (
             <>
               <div className="mt-4 overflow-x-auto">
-                <table className="w-full min-w-[440px] border-separate border-spacing-1 text-center text-sm">
+                <table className="w-full border-separate border-spacing-1 text-center text-sm">
                   <thead>
                     <tr className="text-xs text-slate-400">
                       <th className="py-1" />
@@ -169,8 +169,8 @@ export function AnalyticsView({
                   <tbody>
                     {accuracy.rows.map((row) => (
                       <tr key={row.cls}>
-                        <td className="pr-2 text-left text-sm font-semibold text-slate-600">{row.cls}</td>
-                        {row.vals.map((v, i) => (<td key={i}><div className="rounded-md py-2.5 text-xs font-semibold" style={accStyle(v)}>{v}%</div></td>))}
+                        <td className="pr-1.5 text-left text-xs font-semibold text-slate-600 sm:pr-2 sm:text-sm">{row.cls}</td>
+                        {row.vals.map((v, i) => (<td key={i}><div className="rounded-md py-2 text-[11px] font-semibold sm:py-2.5 sm:text-xs" style={accStyle(v)}>{v}%</div></td>))}
                       </tr>
                     ))}
                   </tbody>
@@ -191,13 +191,13 @@ export function AnalyticsView({
           {radarSeries.length === 0 ? (
             <p className="py-10 text-center text-sm text-slate-400">Пока нет данных по практике.</p>
           ) : (
-            <div className="mt-2 flex flex-wrap items-center justify-center gap-6 sm:flex-nowrap">
+            <div className="mt-2 flex flex-col items-center gap-4 sm:flex-row sm:justify-center sm:gap-6">
               {shownRadar.length === 0 ? (
-                <div className="flex h-[280px] w-full max-w-[280px] items-center justify-center text-center text-sm text-slate-400">Выберите класс справа</div>
+                <div className="flex h-[240px] w-full max-w-[280px] items-center justify-center text-center text-sm text-slate-400">Выберите класс справа</div>
               ) : (
-                <RadarChart axes={agg.SUBJECTS.map((s) => agg.SUBJECT_AXIS[s.id])} series={shownRadar} max={100} size={280} />
+                <RadarChart axes={agg.SUBJECTS.map((s) => agg.SUBJECT_AXIS[s.id])} series={shownRadar} max={100} size={260} />
               )}
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-row flex-wrap justify-center gap-x-4 gap-y-2 sm:flex-col sm:justify-start">
                 {radarSeries.map((s) => {
                   const on = !hiddenRadar.has(s.label);
                   return (
