@@ -61,15 +61,15 @@ export function StudentsRoster({ students, classes }: { students: Student[]; cla
         </div>
 
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[680px] border-collapse text-sm">
+          <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs text-slate-400">
-                <th className="px-3 py-3 font-medium">Ученик</th>
-                <th className="px-3 py-3 font-medium">Класс</th>
-                <th className="px-3 py-3 font-medium">Ранг</th>
-                <th className="px-3 py-3 font-medium">Серия дней</th>
-                <th className="px-3 py-3 font-medium">Последняя активность</th>
-                <th className="px-3 py-3" />
+                <th className="px-2 py-3 font-medium sm:px-3">Ученик</th>
+                <th className="hidden px-2 py-3 font-medium sm:table-cell sm:px-3">Класс</th>
+                <th className="px-2 py-3 font-medium sm:px-3">Ранг</th>
+                <th className="px-2 py-3 font-medium sm:px-3">Серия</th>
+                <th className="hidden px-3 py-3 font-medium md:table-cell">Последняя активность</th>
+                <th className="hidden px-3 py-3 md:table-cell" />
               </tr>
             </thead>
             <tbody>
@@ -81,21 +81,21 @@ export function StudentsRoster({ students, classes }: { students: Student[]; cla
                 const stale = /дней назад/.test(last) && parseInt(last) >= 5;
                 return (
                   <tr key={s.id} className="border-b border-slate-100 last:border-0">
-                    <td className="px-3 py-3.5">
-                      <Link href={`/students/${s.id}`} className="flex items-center gap-3 hover:text-brand">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-xs font-semibold text-violet-700">{initials(s.name)}</span>
+                    <td className="px-2 py-3.5 sm:px-3">
+                      <Link href={`/students/${s.id}`} className="flex items-center gap-2.5 hover:text-brand sm:gap-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-semibold text-violet-700">{initials(s.name)}</span>
                         <span className="font-medium text-slate-800">{s.name}</span>
                       </Link>
                     </td>
-                    <td className="px-3 py-3.5 text-slate-500">{clsName(s.class_id)}</td>
-                    <td className="px-3 py-3.5">
+                    <td className="hidden px-2 py-3.5 text-slate-500 sm:table-cell sm:px-3">{clsName(s.class_id)}</td>
+                    <td className="px-2 py-3.5 sm:px-3">
                       <span className={`inline-flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold ${RANK_BADGE[s.rank] ?? 'bg-slate-100 text-slate-600'}`}>{s.rank}</span>
                     </td>
-                    <td className="px-3 py-3.5">
+                    <td className="px-2 py-3.5 sm:px-3">
                       <span className={`font-semibold ${s.streak > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>🔥 {s.streak}</span>
                     </td>
-                    <td className={`px-3 py-3.5 ${stale ? 'text-red-500' : 'text-slate-500'}`}>{last}</td>
-                    <td className="px-3 py-3.5">
+                    <td className={`hidden px-3 py-3.5 md:table-cell ${stale ? 'text-red-500' : 'text-slate-500'}`}>{last}</td>
+                    <td className="hidden px-3 py-3.5 md:table-cell">
                       <Link href={`/students/${s.id}`} className="text-slate-400 hover:text-slate-700" aria-label="Открыть профиль">
                         <MoreIcon className="h-5 w-5" />
                       </Link>

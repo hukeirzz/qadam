@@ -38,6 +38,14 @@ export function StudentProfile({
     </div>
   );
 
+  const tile = (label: string, value: ReactNode, sub?: string) => (
+    <div className="rounded-2xl bg-slate-50 px-4 py-3.5">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="mt-1.5 text-2xl font-bold leading-none text-slate-800">{value}</p>
+      <p className="mt-1.5 h-3.5 text-[11px] leading-none text-slate-400">{sub ?? ''}</p>
+    </div>
+  );
+
   return (
     <div className="mx-auto max-w-[1100px] space-y-6">
       <Link href="/students" className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-brand">
@@ -45,34 +53,26 @@ export function StudentProfile({
       </Link>
 
       {/* Header */}
-      <Card className="!p-0">
-        <div className="flex flex-col sm:flex-row sm:items-center">
-          <div className="flex items-center gap-4 p-6 sm:pr-8">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-500 text-lg font-bold text-white">{initials(student.name)}</span>
-            <div className="leading-tight">
-              <h1 className="text-xl font-bold tracking-tight text-slate-800">{student.name}</h1>
-              <span className="mt-1.5 inline-block rounded-md bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">{className}</span>
-            </div>
+      <Card>
+        <div className="flex items-center gap-4">
+          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-500 text-xl font-bold text-white shadow-sm shadow-violet-500/25">{initials(student.name)}</span>
+          <div className="min-w-0">
+            <h1 className="truncate text-xl font-bold tracking-tight text-slate-800 sm:text-2xl">{student.name}</h1>
+            <span className="mt-1.5 inline-block rounded-md bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">{className}</span>
           </div>
+        </div>
 
-          <div className="hidden w-px self-stretch bg-slate-200 sm:block" />
-
-          <div className="flex flex-wrap items-start gap-x-16 gap-y-4 p-6 sm:pl-8 sm:pt-10">
-            <div className="min-w-[58px]">
-              <p className="text-xs text-slate-400">Ранг</p>
-              <p className={`mt-1.5 text-4xl font-extrabold leading-none ${RANK_TEXT[student.rank] ?? 'text-slate-600'}`}>{student.rank}</p>
-              <p className="mt-1.5 h-3.5" />
-            </div>
-            {stat('XP', String(student.xp))}
-            {stat('Серия', `🔥 ${student.streak}`, `макс. ${student.max_streak}`, true)}
-            {stat('Ср. балл ОРТ', mockAvg != null ? String(mockAvg) : '—', 'из 245')}
-            {stat('Пробных', (
-              <span className="inline-flex items-center gap-1.5">
-                <ShieldIcon className="h-5 w-5 text-violet-300" />
-                {mockHistory.length}
-              </span>
-            ))}
-          </div>
+        <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+          {tile('Ранг', <span className={RANK_TEXT[student.rank] ?? 'text-slate-600'}>{student.rank}</span>)}
+          {tile('XP', String(student.xp))}
+          {tile('Серия', `🔥 ${student.streak}`, `макс. ${student.max_streak}`)}
+          {tile('Ср. балл ОРТ', mockAvg != null ? String(mockAvg) : '—', 'из 245')}
+          {tile('Пробных', (
+            <span className="inline-flex items-center gap-1.5">
+              <ShieldIcon className="h-5 w-5 text-violet-300" />
+              {mockHistory.length}
+            </span>
+          ))}
         </div>
       </Card>
 

@@ -20,9 +20,8 @@ function initialsOf(name: string) {
 export type Attention = { id: string; name: string; cls: string; reason: string; tone: string };
 
 export function DashboardHome({
-  firstName, totalStudents, attentionCount, avgRank, sCount, rankDist, attention, dynamics,
+  totalStudents, attentionCount, avgRank, sCount, rankDist, attention, dynamics,
 }: {
-  firstName: string;
   totalStudents: number;
   attentionCount: number;
   avgRank: string;
@@ -46,16 +45,16 @@ export function DashboardHome({
   return (
     <div className="mx-auto max-w-[1400px] space-y-6">
       <header>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-800">Добро пожаловать, {firstName}! 👋</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-800">Добро пожаловать! 👋</h1>
         <p className="mt-1 text-sm text-slate-500">Сегодня отличный день для новых достижений ваших учеников.</p>
       </header>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {STATS.map((s) => (
-          <div key={s.label} className="flex items-center gap-4 rounded-2xl bg-white p-5 shadow-sm shadow-slate-200/50 ring-1 ring-slate-100">
-            <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${s.chip}`}><s.Icon className="h-6 w-6" /></span>
-            <p className="flex-1 text-sm font-semibold leading-tight text-slate-700">{s.label}</p>
-            <p className={`text-3xl font-bold tracking-tight ${s.num}`}>{s.value}</p>
+          <div key={s.label} className="flex flex-col gap-2.5 rounded-2xl bg-white p-4 shadow-sm shadow-slate-200/50 ring-1 ring-slate-100 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
+            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${s.chip}`}><s.Icon className="h-5 w-5 sm:h-6 sm:w-6" /></span>
+            <p className="min-w-0 flex-1 text-sm font-semibold leading-tight text-slate-700">{s.label}</p>
+            <p className={`text-2xl font-bold tracking-tight sm:text-3xl ${s.num}`}>{s.value}</p>
           </div>
         ))}
       </div>
@@ -67,13 +66,13 @@ export function DashboardHome({
             <Link href="/students" className="text-sm font-medium text-brand hover:text-brand-hover">Посмотреть всех</Link>
           </div>
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[560px] border-collapse text-sm">
+            <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs text-slate-400">
                   <th className="px-2 py-3 font-medium">Ученик</th>
                   <th className="px-2 py-3 font-medium">Класс</th>
                   <th className="px-2 py-3 font-medium">Описание</th>
-                  <th className="px-2 py-3 font-medium" />
+                  <th className="hidden px-2 py-3 font-medium xl:table-cell" />
                 </tr>
               </thead>
               <tbody>
@@ -90,7 +89,7 @@ export function DashboardHome({
                     </td>
                     <td className="px-2 py-3"><span className="rounded-md bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">{a.cls}</span></td>
                     <td className={`px-2 py-3 text-xs font-medium ${a.tone}`}>{a.reason}</td>
-                    <td className="px-2 py-3">
+                    <td className="hidden px-2 py-3 xl:table-cell">
                       <div className="flex items-center justify-end gap-1">
                         <Link href="/students" className="whitespace-nowrap rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50">Открыть профиль</Link>
                         <ChevronDownIcon className="h-4 w-4 -rotate-90 text-slate-300" />
@@ -110,13 +109,13 @@ export function DashboardHome({
           </div>
           <ul className="mt-5 space-y-4">
             {rankRows.map((r) => (
-              <li key={r.rank} className="flex items-center gap-3">
+              <li key={r.rank} className="flex items-center gap-2.5 sm:gap-3">
                 <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${r.badge}`}>{r.rank}</span>
-                <span className="w-24 shrink-0 text-sm text-slate-600">{r.count} учеников</span>
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+                <span className="w-20 shrink-0 text-sm text-slate-600">{r.count} учеников</span>
+                <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100">
                   <div className="h-full rounded-full" style={{ width: `${r.pct}%`, background: r.color }} />
                 </div>
-                <span className="w-10 shrink-0 text-right text-sm font-medium text-slate-700">{r.pct}%</span>
+                <span className="w-9 shrink-0 text-right text-sm font-medium text-slate-700">{r.pct}%</span>
               </li>
             ))}
           </ul>

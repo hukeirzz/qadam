@@ -99,11 +99,11 @@ export function TestBuilder({
           const done = step > n;
           return (
             <div key={label} className="flex items-center gap-2">
-              <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${active ? 'bg-brand text-white' : done ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
+              <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${active ? 'bg-brand text-white' : done ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
                 {done ? '✓' : n}
               </span>
-              <span className={active ? 'font-semibold text-slate-800' : 'text-slate-400'}>{label}</span>
-              {n < 3 && <span className="mx-1 h-px w-6 bg-slate-200" />}
+              <span className={`${active ? 'inline font-semibold text-slate-800' : 'hidden text-slate-400 sm:inline'}`}>{label}</span>
+              {n < 3 && <span className="mx-1 h-px w-4 shrink-0 bg-slate-200 sm:w-6" />}
             </div>
           );
         })}
@@ -228,12 +228,16 @@ export function TestBuilder({
                 return (
                   <li key={s.id}>
                     <label className={`flex cursor-pointer items-center gap-3 rounded-xl border p-2.5 transition ${on ? 'border-brand/40 bg-violet-50/40' : 'border-transparent hover:bg-slate-50'}`}>
-                      <input type="checkbox" checked={on} onChange={() => toggleStudent(s.id)} className="h-4 w-4 rounded accent-[#6d28d9]" />
+                      <input type="checkbox" checked={on} onChange={() => toggleStudent(s.id)} className="h-4 w-4 shrink-0 rounded accent-[#6d28d9]" />
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-semibold text-violet-700">{initials(s.name)}</span>
-                      <span className="flex-1 text-sm font-medium text-slate-800">{s.name}</span>
-                      {rec && <span className="rounded-md bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-500">рекомендуется</span>}
-                      <span className="text-xs text-slate-400">{acc != null ? `точность ${acc}%` : 'нет данных'}</span>
-                      <span className={`inline-flex h-6 w-6 items-center justify-center rounded-md text-[11px] font-bold ${RANK_BADGE[s.rank] ?? 'bg-slate-100 text-slate-600'}`}>{s.rank}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-slate-800">{s.name}</p>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                          {rec && <span className="rounded-md bg-red-50 px-1.5 py-0.5 text-[11px] font-semibold text-red-500">рекомендуется</span>}
+                          <span className="text-xs text-slate-400">{acc != null ? `точность ${acc}%` : 'нет данных'}</span>
+                        </div>
+                      </div>
+                      <span className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[11px] font-bold ${RANK_BADGE[s.rank] ?? 'bg-slate-100 text-slate-600'}`}>{s.rank}</span>
                     </label>
                   </li>
                 );

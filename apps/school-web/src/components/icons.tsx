@@ -28,6 +28,18 @@ export const HomeIcon = (p: IconProps) => (
   </Svg>
 );
 
+export const MenuIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M3 6h18M3 12h18M3 18h18" />
+  </Svg>
+);
+
+export const CloseIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M6 6l12 12M18 6 6 18" />
+  </Svg>
+);
+
 export const AnalyticsIcon = (p: IconProps) => (
   <Svg {...p}>
     <path d="M3 3v18h18" />

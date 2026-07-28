@@ -1,5 +1,8 @@
+'use client';
+
 // Dependency-free SVG charts for the dashboard. Sized via viewBox so they
 // scale to their container; colors follow the violet/indigo brand.
+import { useEffect, useRef, useState } from 'react';
 
 export function LineChart({
   labels,
@@ -14,9 +17,23 @@ export function LineChart({
   threshold?: number;
   thresholdLabel?: string;
 }) {
-  // Wide viewBox so the SVG barely upscales — keeps axis text small/crisp.
-  const W = 1000;
-  const H = 230;
+  // Measure the actual rendered width so we can draw at 1:1 pixel scale — this
+  // keeps axis text/points a readable size and the chart a sensible height on
+  // narrow (mobile) screens instead of collapsing into a thin sliver.
+  const ref = useRef<HTMLDivElement>(null);
+  const [cw, setCw] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => setCw(el.clientWidth);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const W = cw || 640;
+  const H = Math.round(Math.min(Math.max(W * 0.42, 160), 240));
   const padL = 34;
   const padR = 14;
   const padT = 16;
@@ -36,7 +53,8 @@ export function LineChart({
   const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(f * max));
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="mt-4 w-full" role="img" aria-label="График активности">
+    <div ref={ref} className="mt-4 w-full">
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} className="block" role="img" aria-label="График активности">
       <defs>
         <linearGradient id="lineFill" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#6d28d9" stopOpacity="0.16" />
@@ -47,7 +65,7 @@ export function LineChart({
       {yTicks.map((t) => (
         <g key={t}>
           <line x1={padL} y1={y(t)} x2={W - padR} y2={y(t)} stroke="#eef0f3" strokeWidth="1" />
-          <text x={padL - 8} y={y(t) + 3} textAnchor="end" fontSize="9" fill="#9ca3af">
+          <text x={padL - 8} y={y(t) + 3} textAnchor="end" fontSize="11" fill="#9ca3af">
             {t}
           </text>
         </g>
@@ -57,7 +75,7 @@ export function LineChart({
         <g>
           <line x1={padL} y1={y(threshold)} x2={W - padR} y2={y(threshold)} stroke="#ef4444" strokeWidth="1.2" strokeDasharray="5 4" opacity="0.75" />
           {thresholdLabel && (
-            <text x={W - padR} y={y(threshold) - 4} textAnchor="end" fontSize="9" fill="#ef4444">
+            <text x={W - padR} y={y(threshold) - 4} textAnchor="end" fontSize="11" fill="#ef4444">
               {thresholdLabel}
             </text>
           )}
@@ -70,11 +88,12 @@ export function LineChart({
         <circle key={i} cx={x(i)} cy={y(v)} r="2.6" fill="#4f46e5" stroke="#fff" strokeWidth="1.4" />
       ))}
       {labels.map((l, i) => (
-        <text key={l} x={x(i)} y={H - 7} textAnchor="middle" fontSize="9" fill="#9ca3af">
+        <text key={l} x={x(i)} y={H - 7} textAnchor={i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'} fontSize="11" fill="#9ca3af">
           {l}
         </text>
       ))}
     </svg>
+    </div>
   );
 }
 
@@ -176,7 +195,7 @@ export function RadarChart({
     cy + frac * r * Math.sin(ang(i)),
   ];
   const rings = [0.25, 0.5, 0.75, 1];
-  const P = 52; // room for full axis labels
+  const P = 60; // room for full axis labels
 
   return (
     <svg viewBox={`${-P} ${-20} ${size + 2 * P} ${size + 40}`} className="w-full max-w-[340px]" role="img" aria-label="Радар точности по разделам">
@@ -202,7 +221,7 @@ export function RadarChart({
         const [x, y] = pt(i, 1.14);
         const anchor = Math.abs(x - cx) < 8 ? 'middle' : x > cx ? 'start' : 'end';
         return (
-          <text key={a} x={x} y={y + 3} textAnchor={anchor} fontSize="12" fill="#64748b">
+          <text key={a} x={x} y={y + 3} textAnchor={anchor} fontSize="11" fill="#64748b">
             {a}
           </text>
         );
