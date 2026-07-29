@@ -39,6 +39,7 @@ export type ExerciseStackParamList = {
   ExerciseSubject: { subjectId: string };
   PracticeQuiz: { topicId: string; topicTitle: string; subjectId: string };
   SchoolTests: undefined;
+  SchoolTestQuiz: { testId: string; title: string };
   Premium: undefined;
 };
 

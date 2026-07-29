@@ -211,7 +211,7 @@ export function ExerciseSubjectScreen({ route }: Props) {
             />
             <View style={styles.heroInfo}>
               <Text style={styles.heroTitle}>{subject.title}</Text>
-              <Text style={styles.heroTagline} numberOfLines={2}>
+              <Text style={styles.heroTagline}>
                 {isPremium ? 'Продвинутые задачи для полной подготовки!' : (SUBJECT_TAGLINES[baseId] ?? '')}
               </Text>
             </View>

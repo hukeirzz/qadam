@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
-import { colors, subjectColors } from '../theme/colors';
+import { colors, subjectColors, glow } from '../theme/colors';
 import { useAppStore } from '../store/useAppStore';
-import { subjects } from '../data/subjects';
 import { ExerciseStackParamList, MainTabParamList } from '../types/navigation';
-import { BaseSubjectId, BASE_SUBJECT_IDS } from '../types/subject';
+import { BaseSubjectId } from '../types/subject';
 import { SUBJECT_META } from './ExerciseScreen';
+import { fetchSchoolTests } from '../services/schoolTestsService';
 import { vibrate } from '../services/soundService';
 
 type Props = NativeStackScreenProps<ExerciseStackParamList, 'SchoolTests'>;
@@ -30,51 +30,41 @@ const FILTERS: { id: FilterId; label: string }[] = [
   { id: 'grammar', label: 'Грамматика' },
 ];
 
-interface SchoolTest {
-  id: string;
-  subjectId: BaseSubjectId;
-  subjectTitle: string;
-  topicTitle: string;
-  icon: string;
-  questionCount: number;
-  isNew: boolean;
-}
-
-const QUESTION_COUNTS: Record<BaseSubjectId, number> = {
-  math: 25,
-  geometry: 20,
-  analogies: 15,
-  reading: 20,
-  grammar: 20,
+const SUBJECT_LABELS: Record<string, string> = {
+  math: 'Математика', geometry: 'Геометрия', analogies: 'Аналогии',
+  reading: 'Чтение', grammar: 'Грамматика',
 };
 
-// Разделы ОРТ — подпись-пилюля с названием раздела, а крупным заголовком
-// идёт конкретная тема, по которой будет тест.
-const SCHOOL_TESTS: SchoolTest[] = BASE_SUBJECT_IDS.map((id) => {
-  const subject = subjects.find((s) => s.id === id)!;
-  return {
-    id: `${id}-1`,
-    subjectId: id,
-    subjectTitle: subject.title,
-    topicTitle: subject.topics[0]?.title ?? subject.title,
-    icon: SUBJECT_META[id].icon,
-    questionCount: QUESTION_COUNTS[id],
-    isNew: true,
-  };
-});
+const FALLBACK_PALETTE = { primary: colors.purple, glow: glow.purple };
+
+type SchoolTestRow = Awaited<ReturnType<typeof fetchSchoolTests>>[number];
 
 export function SchoolTestsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const userName = useAppStore((s) => s.userName);
   const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const [filter, setFilter] = useState<FilterId>('all');
+  const [tests, setTests] = useState<SchoolTestRow[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const initial = userName ? userName.charAt(0).toUpperCase() : '?';
-  const filteredTests = SCHOOL_TESTS.filter((t) => filter === 'all' || t.subjectId === filter);
+  const filteredTests = tests.filter((t) => filter === 'all' || t.subjectId === filter);
 
-  const startTest = (test: SchoolTest) => {
+  // Загружаем при каждом возврате на экран — после прохождения теста
+  // отметка «Пройден» должна появиться без перезапуска приложения.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      fetchSchoolTests().then((rows) => {
+        if (!cancelled) { setTests(rows); setLoading(false); }
+      });
+      return () => { cancelled = true; };
+    }, []),
+  );
+
+  const startTest = (test: SchoolTestRow) => {
     vibrate();
-    Alert.alert(`${test.subjectTitle} • ${test.topicTitle}`, 'Тест скоро будет доступен для прохождения.');
+    navigation.navigate('SchoolTestQuiz', { testId: test.id, title: test.title });
   };
 
   return (
@@ -129,39 +119,61 @@ export function SchoolTestsScreen({ navigation }: Props) {
             ))}
           </ScrollView>
 
-          <View style={styles.testList}>
-            {filteredTests.map((test) => {
-              const palette = subjectColors[test.subjectId];
-              return (
-                <View key={test.id} style={styles.testCard}>
-                  <View style={styles.testTopRow}>
-                    <View style={styles.testLeftCol}>
-                      {test.isNew && (
-                        <View style={styles.newBadge}>
-                          <Text style={styles.newBadgeText}>Новое</Text>
+          {loading ? (
+            <ActivityIndicator size="large" color={colors.purple} style={styles.loading} />
+          ) : filteredTests.length === 0 ? (
+            <Text style={styles.emptyText}>Пока нет тестов от вашей школы</Text>
+          ) : (
+            <View style={styles.testList}>
+              {filteredTests.map((test) => {
+                const palette = test.subjectId
+                  ? subjectColors[test.subjectId as keyof typeof subjectColors] ?? FALLBACK_PALETTE
+                  : FALLBACK_PALETTE;
+                const icon = test.subjectId ? SUBJECT_META[test.subjectId]?.icon ?? '📝' : '📝';
+                const passed = test.myScore != null;
+
+                return (
+                  <View key={test.id} style={styles.testCard}>
+                    <View style={styles.testTopRow}>
+                      <View style={styles.testLeftCol}>
+                        <View style={[styles.testIcon, { backgroundColor: `${palette.primary}26` }]}>
+                          <Text style={[styles.testIconGlyph, { color: palette.primary }]}>{icon}</Text>
                         </View>
+                      </View>
+
+                      <View style={styles.testInfo}>
+                        <View style={styles.pillRow}>
+                          {test.subjectId && (
+                            <View style={styles.testLabelPill}>
+                              <Text style={styles.testLabelPillText}>{SUBJECT_LABELS[test.subjectId] ?? test.subjectId}</Text>
+                            </View>
+                          )}
+                          {test.targetRank && (
+                            <View style={styles.rankPill}>
+                              <Text style={styles.rankPillText}>Ранг {test.targetRank}</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={styles.testSubject} numberOfLines={1}>{test.title}</Text>
+                        <Text style={styles.testMeta}>{test.questionCount} вопросов</Text>
+                      </View>
+
+                      {passed ? (
+                        <View style={styles.passedBadge}>
+                          <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                          <Text style={styles.passedBadgeText}>{test.myScore} / {test.myTotal}</Text>
+                        </View>
+                      ) : (
+                        <Pressable style={styles.startBtn} onPress={() => startTest(test)}>
+                          <Text style={styles.startBtnText}>Начать тест</Text>
+                        </Pressable>
                       )}
-                      <View style={[styles.testIcon, { backgroundColor: `${palette.primary}26` }]}>
-                        <Text style={[styles.testIconGlyph, { color: palette.primary }]}>{test.icon}</Text>
-                      </View>
                     </View>
-
-                    <View style={styles.testInfo}>
-                      <View style={styles.testLabelPill}>
-                        <Text style={styles.testLabelPillText}>{test.subjectTitle}</Text>
-                      </View>
-                      <Text style={styles.testSubject} numberOfLines={1}>{test.topicTitle}</Text>
-                      <Text style={styles.testMeta}>{test.questionCount} вопросов</Text>
-                    </View>
-
-                    <Pressable style={styles.startBtn} onPress={() => startTest(test)}>
-                      <Text style={styles.startBtnText}>Начать тест</Text>
-                    </Pressable>
                   </View>
-                </View>
-              );
-            })}
-          </View>
+                );
+              })}
+            </View>
+          )}
         </ScrollView>
       </View>
     </ScreenBackground>
@@ -240,6 +252,9 @@ const styles = StyleSheet.create({
   filterChipText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
   filterChipTextActive: { color: colors.text, fontWeight: '700' },
 
+  loading: { marginTop: 30 },
+  emptyText: { color: colors.textMuted, fontSize: 14, textAlign: 'center', marginTop: 30 },
+
   testList: { gap: 12 },
   testCard: {
     backgroundColor: colors.surfaceGlass,
@@ -260,6 +275,7 @@ const styles = StyleSheet.create({
   },
   testIconGlyph: { fontSize: 19, fontWeight: '800' },
   testInfo: { flex: 1, minWidth: 0, justifyContent: 'center' },
+  pillRow: { flexDirection: 'row', gap: 6, marginBottom: 5 },
   testLabelPill: {
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(144,71,255,0.16)',
@@ -268,21 +284,21 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 9,
     paddingVertical: 3,
-    marginBottom: 5,
   },
   testLabelPillText: { color: colors.purpleGlow, fontSize: 10.5, fontWeight: '700' },
-  testSubject: { color: colors.text, fontSize: 15, fontWeight: '700', marginBottom: 3 },
-  testMeta: { color: colors.textMuted, fontSize: 12 },
-
-  newBadge: {
-    backgroundColor: 'rgba(46,229,157,0.12)',
+  rankPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,194,75,0.16)',
     borderWidth: 1,
-    borderColor: 'rgba(46,229,157,0.3)',
+    borderColor: 'rgba(255,194,75,0.4)',
     borderRadius: 999,
     paddingHorizontal: 9,
     paddingVertical: 3,
   },
-  newBadgeText: { color: colors.success, fontSize: 10, fontWeight: '800' },
+  rankPillText: { color: '#FFC24B', fontSize: 10.5, fontWeight: '700' },
+  testSubject: { color: colors.text, fontSize: 15, fontWeight: '700', marginBottom: 3 },
+  testMeta: { color: colors.textMuted, fontSize: 12 },
+
   startBtn: {
     backgroundColor: colors.purple,
     borderRadius: 12,
@@ -293,4 +309,20 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   startBtnText: { color: '#FFFFFF', fontSize: 12.5, fontWeight: '800' },
+
+  passedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(46,229,157,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(46,229,157,0.3)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    flexShrink: 0,
+    alignSelf: 'flex-end',
+    marginBottom: 8,
+  },
+  passedBadgeText: { color: colors.success, fontSize: 12.5, fontWeight: '800' },
 });

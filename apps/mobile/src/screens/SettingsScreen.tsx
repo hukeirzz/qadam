@@ -13,7 +13,7 @@ import { useAppStore } from '../store/useAppStore';
 import { petImages } from '../assets/petImages';
 import { signOut, deleteAccount, getSession } from '../services/authService';
 import { saveOnboarding, saveProfileProgress } from '../services/progressService';
-import { fetchClassById, fetchSchoolById, findClassByCode, findSchoolByCode } from '../services/schoolsService';
+import { fetchClassById, findClassByCode } from '../services/schoolsService';
 import { vibrate } from '../services/soundService';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'Settings'>;
@@ -46,7 +46,6 @@ export function SettingsScreen({ navigation }: Props) {
   const setPremium = useAppStore((s) => s.setPremium);
 
   const [email, setEmail] = useState<string | null>(null);
-  const [schoolName, setSchoolName] = useState<string | null>(null);
   const [linkedClassName, setLinkedClassName] = useState<string | null>(null);
 
   const [namePickerOpen, setNamePickerOpen] = useState(false);
@@ -54,9 +53,6 @@ export function SettingsScreen({ navigation }: Props) {
   const [petPickerOpen, setPetPickerOpen] = useState(false);
   const [petNameModalOpen, setPetNameModalOpen] = useState(false);
   const [petNameDraft, setPetNameDraft] = useState('');
-  const [schoolModalOpen, setSchoolModalOpen] = useState(false);
-  const [schoolCodeDraft, setSchoolCodeDraft] = useState('');
-  const [schoolSaving, setSchoolSaving] = useState(false);
   const [classCodeModalOpen, setClassCodeModalOpen] = useState(false);
   const [classCodeDraft, setClassCodeDraft] = useState('');
   const [classCodeSaving, setClassCodeSaving] = useState(false);
@@ -64,11 +60,6 @@ export function SettingsScreen({ navigation }: Props) {
   useEffect(() => {
     getSession().then((session) => setEmail(session?.user?.email ?? null));
   }, []);
-
-  useEffect(() => {
-    if (!schoolId) { setSchoolName(null); return; }
-    fetchSchoolById(schoolId).then((s) => setSchoolName(s?.name ?? null));
-  }, [schoolId]);
 
   useEffect(() => {
     if (!classId) { setLinkedClassName(null); return; }
@@ -122,33 +113,6 @@ export function SettingsScreen({ navigation }: Props) {
     persistOnboarding({ pet_name: trimmed }).catch(console.warn);
   };
 
-  const openSchoolModal = () => {
-    vibrate();
-    setSchoolCodeDraft('');
-    setSchoolModalOpen(true);
-  };
-
-  const saveSchoolCode = async () => {
-    const code = schoolCodeDraft.trim();
-    if (!code) return;
-    setSchoolSaving(true);
-    try {
-      const school = await findSchoolByCode(code);
-      if (!school) {
-        Alert.alert('Школа не найдена', 'Проверь код и попробуй снова');
-        return;
-      }
-      setSchoolName(school.name);
-      await persistOnboarding({ school_id: school.id });
-      // Партнёрская школа — все ранги и премиум-контент открываются автоматически.
-      setPremium(true);
-      if (userId) await saveProfileProgress(userId, { premium_unlocked: true });
-      setSchoolModalOpen(false);
-    } finally {
-      setSchoolSaving(false);
-    }
-  };
-
   const openClassCodeModal = () => {
     vibrate();
     setClassCodeDraft('');
@@ -166,7 +130,6 @@ export function SettingsScreen({ navigation }: Props) {
         return;
       }
       setLinkedClassName(studentClass.name);
-      setSchoolName((await fetchSchoolById(studentClass.school_id))?.name ?? schoolName);
       await persistOnboarding({ school_id: studentClass.school_id, class_id: studentClass.id });
       // Класс всегда принадлежит партнёрской школе — ранги и премиум-контент открываются автоматически.
       setPremium(true);
@@ -274,13 +237,6 @@ export function SettingsScreen({ navigation }: Props) {
         <Text style={styles.sectionTitle}>Школа</Text>
         <View style={styles.card}>
           <Row
-            icon="business"
-            label="Код школы"
-            value={schoolName ?? 'Ввести код школы'}
-            isLast={false}
-            onPress={openSchoolModal}
-          />
-          <Row
             icon="people"
             label="Код класса"
             value={linkedClassName ?? 'Ввести код класса'}
@@ -352,27 +308,6 @@ export function SettingsScreen({ navigation }: Props) {
             />
             <Pressable style={styles.editSaveBtn} onPress={savePetName}>
               <Text style={styles.editSaveBtnText}>Сохранить</Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* School code edit */}
-      <Modal visible={schoolModalOpen} transparent animationType="fade" onRequestClose={() => setSchoolModalOpen(false)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setSchoolModalOpen(false)}>
-          <Pressable style={styles.editModalCard} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.editModalTitle}>Код школы</Text>
-            <TextInput
-              style={styles.editInput}
-              value={schoolCodeDraft}
-              onChangeText={setSchoolCodeDraft}
-              placeholder="Код школы"
-              placeholderTextColor={colors.textDim}
-              autoCapitalize="characters"
-              autoFocus
-            />
-            <Pressable style={styles.editSaveBtn} onPress={saveSchoolCode} disabled={schoolSaving}>
-              <Text style={styles.editSaveBtnText}>{schoolSaving ? 'Проверка…' : 'Сохранить'}</Text>
             </Pressable>
           </Pressable>
         </Pressable>

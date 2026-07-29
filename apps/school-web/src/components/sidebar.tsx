@@ -11,7 +11,7 @@ const NAV = [
   { href: '/analytics', label: 'Аналитика', Icon: AnalyticsIcon },
   { href: '/results', label: 'Добавить результаты', Icon: TableIcon },
   { href: '/students', label: 'Ученики', Icon: StudentsIcon },
-  { href: '/tests', label: 'Свои тесты', Icon: TestsIcon },
+  { href: '/tests', label: 'Тесты школы', Icon: TestsIcon },
 ];
 
 export function Sidebar({

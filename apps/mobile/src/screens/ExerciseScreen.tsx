@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { HeaderBar } from '../components/home/HeaderBar';
@@ -13,6 +13,7 @@ import { islandImages } from '../assets/islandImages';
 import { useAppStore } from '../store/useAppStore';
 import { ExerciseStackParamList } from '../types/navigation';
 import { playSound, vibrate } from '../services/soundService';
+import { fetchSchoolTests } from '../services/schoolTestsService';
 
 type NavProp = NativeStackNavigationProp<ExerciseStackParamList, 'ExerciseHome'>;
 
@@ -28,7 +29,7 @@ export const SUBJECT_META: Record<string, { icon: string; premiumId: string }> =
   grammar:   { icon: 'Aa', premiumId: 'grammar_premium' },
 };
 
-function SchoolTestsBanner({ onPress }: { onPress: () => void }) {
+function SchoolTestsBanner({ count, onPress }: { count: number; onPress: () => void }) {
   return (
     <Pressable style={[styles.bannerShadow, { shadowColor: glow.purple }]} onPress={onPress}>
       <View style={styles.banner}>
@@ -47,9 +48,11 @@ function SchoolTestsBanner({ onPress }: { onPress: () => void }) {
             <Text style={styles.bannerBtnText}>Перейти</Text>
           </View>
 
-          <Text style={styles.bannerCount}>
-            Доступно тестов: <Text style={styles.bannerCountValue}>5</Text>
-          </Text>
+          {count > 0 && (
+            <Text style={styles.bannerCount}>
+              Доступно тестов: <Text style={styles.bannerCountValue}>{count}</Text>
+            </Text>
+          )}
         </View>
       </View>
     </Pressable>
@@ -59,9 +62,21 @@ function SchoolTestsBanner({ onPress }: { onPress: () => void }) {
 export function ExerciseScreen() {
   const insets = useSafeAreaInsets();
   const completedTopics = useAppStore((s) => s.completedTopics);
+  // premiumUnlocked нельзя использовать здесь — его можно получить за гемы
+  // без привязки к школе (unlockPremiumWithGems), а «Тесты» должны быть
+  // видны только ученикам партнёрской школы.
+  const schoolId = useAppStore((s) => s.schoolId);
   const navigation = useNavigation<NavProp>();
+  const [testCount, setTestCount] = useState(0);
 
   const practiceSubjects = subjects.filter((s) => PRACTICE_IDS.includes(s.id as any));
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!schoolId) { setTestCount(0); return; }
+      fetchSchoolTests().then((tests) => setTestCount(tests.length));
+    }, [schoolId]),
+  );
 
   const goToSchoolTests = () => {
     vibrate();
@@ -122,7 +137,7 @@ export function ExerciseScreen() {
           </ScrollView>
 
           {/* ── Тесты партнёрской школы ── */}
-          <SchoolTestsBanner onPress={goToSchoolTests} />
+          {schoolId ? <SchoolTestsBanner count={testCount} onPress={goToSchoolTests} /> : null}
         </ScrollView>
       </View>
     </ScreenBackground>

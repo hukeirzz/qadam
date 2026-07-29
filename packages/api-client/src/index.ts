@@ -17,6 +17,7 @@ import type {
   QuestionWithOptionsRow,
   Rank,
   RatingEntry,
+  SchoolTestQuestionWithOptionsRow,
   TopicRow,
   TopicTheoryRow,
 } from '@qadam/types';
@@ -53,15 +54,26 @@ export interface UserProfile {
   daily_steps: Record<string, number>;
 }
 
-export interface QuizQuestionDTO {
+export interface QuizQuestionBase {
   id: string;
-  topicId: string;
-  subjectId: string;
   text: string;
   options: { id: string; text: string }[];
   correctId: string;
   explanation?: string;
 }
+
+/** Question from the shared topic-scoped bank (`questions`/`options`). */
+export interface QuizQuestionDTO extends QuizQuestionBase {
+  topicId: string;
+  subjectId: string;
+}
+
+/**
+ * Question from a school-authored test (`school_test_questions`/
+ * `school_test_options`) — no topic/subject: a coordinator types these by
+ * hand and they aren't tied to the topic tree.
+ */
+export type SchoolTestQuestionDTO = QuizQuestionBase;
 
 /**
  * Wraps an already-constructed SupabaseClient with the auth/profile/theory/
@@ -381,48 +393,11 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
   };
 
   const schools = {
-    /**
-     * Fetches a single school row. Returns `null` on error / no row (e.g.
-     * the schools/classes/roles migration 20260716000010 not applied yet),
-     * so callers render a fallback rather than crashing.
-     */
-    async fetchById(schoolId: string): Promise<{ id: string; name: string } | null> {
-      const { data, error } = await supabase
-        .from('schools')
-        .select('id, name')
-        .eq('id', schoolId)
-        .single();
-
-      if (error || !data) return null;
-      return data as { id: string; name: string };
-    },
-
     /** For registration's optional school picker. Empty array, not null, when there are no rows yet. */
     async list(): Promise<{ id: string; name: string }[]> {
       const { data, error } = await supabase.from('schools').select('id, name').order('name');
       if (error || !data) return [];
       return data as { id: string; name: string }[];
-    },
-
-    /**
-     * Looks up a school by its short join code — `schools.promo_code`,
-     * added by the backend_v2_tables migration. Goes through the
-     * public_find_school_by_code RPC (supabase/migrations/20260728000003)
-     * rather than a direct table select: schools' RLS only lets a user
-     * read a school they're already linked to, which would make every
-     * lookup during registration (before that link exists) return
-     * nothing. The RPC is security definer and only exposes id/name, not
-     * promo_code, so codes stay non-enumerable. Case-insensitive; returns
-     * null on no match/error so registration can proceed without a school
-     * link rather than blocking on a typo.
-     */
-    async findByCode(code: string): Promise<{ id: string; name: string } | null> {
-      const { data, error } = await supabase
-        .rpc('public_find_school_by_code', { p_code: code.trim() })
-        .maybeSingle();
-
-      if (error || !data) return null;
-      return data as { id: string; name: string };
     },
 
     /**
@@ -444,11 +419,11 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
     /**
      * Looks up a class by its short join code — `classes.promo_code`
      * (backend_v2_tables) — via the public_find_class_by_code RPC
-     * (supabase/migrations/20260729000001), for the same reason
-     * findByCode above goes through a RPC: classes_read's RLS requires
-     * already being linked to the class's school. Returns school_id too,
-     * so entering a class code alone can link both school and class in
-     * one step.
+     * (supabase/migrations/20260729000001): classes_read's RLS requires
+     * already being linked to the class's school, which a student
+     * entering a code for the first time isn't yet, so a direct table
+     * select would find nothing. Returns school_id too, so entering a
+     * class code alone can link both school and class in one step.
      */
     async findClassByCode(code: string): Promise<{ id: string; name: string; school_id: string } | null> {
       const { data, error } = await supabase
@@ -509,6 +484,80 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       const { error } = await supabase.from('students').update({ rank }).eq('id', userId);
       if (error) console.warn('entranceTest.submitResult error:', error.message);
       return { error };
+    },
+  };
+
+  // Тесты партнёрской школы (supabase/migrations/20260729000003). Никакой
+  // фильтрации по школе/классу/рангу здесь нет намеренно: всё решает RLS
+  // (can_student_see_school_test) — приложению достаточно спросить «что
+  // мне видно».
+  const schoolTests = {
+    /** Tests visible to the signed-in student, with their own attempt if any. */
+    async list(): Promise<{
+      id: string; title: string; description: string | null; subjectId: string | null;
+      targetRank: Rank | null; questionCount: number;
+      myScore: number | null; myTotal: number | null;
+    }[]> {
+      const { data, error } = await supabase
+        .from('school_tests')
+        .select(
+          'id, title, description, subject_id, target_rank, created_at, ' +
+            'school_test_questions(id), school_test_results(score, total)',
+        )
+        .eq('published', true)
+        .order('created_at', { ascending: false });
+      if (error || !data) return [];
+      return (data as any[]).map((t) => {
+        const mine = t.school_test_results?.[0]; // RLS отдаёт только свою строку
+        return {
+          id: t.id, title: t.title, description: t.description ?? null,
+          subjectId: t.subject_id ?? null, targetRank: t.target_rank ?? null,
+          questionCount: t.school_test_questions?.length ?? 0,
+          myScore: mine?.score ?? null, myTotal: mine?.total ?? null,
+        };
+      });
+    },
+
+    /**
+     * Full questions for one test, shaped like the other quiz fetchers.
+     * Returns null (not []) on error/empty so the screen can show its own
+     * fallback — same convention as questions.fetchForTopic. Not shuffled:
+     * a coordinator's manual ordering is intentional (unlike the sampled
+     * practice/entrance pools).
+     */
+    async fetchQuestions(testId: string): Promise<SchoolTestQuestionDTO[] | null> {
+      const { data, error } = await supabase
+        .from('school_test_questions')
+        .select('id, order_num, text, explanation, school_test_options(id, order_num, text, is_correct)')
+        .eq('test_id', testId)
+        .order('order_num', { ascending: true });
+      if (error || !data || data.length === 0) return null;
+
+      return (data as unknown as SchoolTestQuestionWithOptionsRow[]).map((q) => {
+        const opts = [...q.school_test_options].sort((a, b) => a.order_num - b.order_num);
+        const correct = opts.find((o) => o.is_correct);
+        return {
+          id: q.id,
+          text: q.text,
+          explanation: q.explanation ?? undefined,
+          options: opts.map((o) => ({ id: o.id, text: o.text })),
+          correctId: correct?.id ?? opts[0]?.id ?? '',
+        };
+      });
+    },
+
+    /**
+     * One attempt per student — unique(test_id, student_id) + INSERT-only
+     * RLS, so a repeat submit fails with 23505 rather than overwriting the
+     * score. The DB trigger recomputes `total`, so it's sent only for
+     * readability.
+     */
+    async submitResult(testId: string, studentId: string, score: number, total: number) {
+      const { error } = await supabase
+        .from('school_test_results')
+        .insert({ test_id: testId, student_id: studentId, score, total });
+      if (error) console.warn('schoolTests.submitResult error:', error.message);
+      return { error, alreadyTaken: error?.code === '23505' };
     },
   };
 
@@ -669,11 +718,148 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
         .upsert(payload, { onConflict: 'exam_id,student_id' });
       return { error };
     },
+
+    /** Tests this school's staff authored (RLS scopes to own school). */
+    async schoolTests(schoolId: string) {
+      const { data } = await supabase
+        .from('school_tests')
+        .select(
+          'id, title, description, target_rank, subject_id, published, created_at, ' +
+            'school_test_classes(class_id), school_test_questions(id), school_test_results(id)',
+        )
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false });
+      return (data ?? []) as unknown as {
+        id: string; title: string; description: string | null;
+        target_rank: string | null; subject_id: string | null;
+        published: boolean; created_at: string;
+        school_test_classes: { class_id: string }[];
+        school_test_questions: { id: string }[];
+        school_test_results: { id: string }[];
+      }[];
+    },
+
+    /** One test's metadata + authored questions (for a read-only detail view). */
+    async schoolTest(testId: string) {
+      const { data } = await supabase
+        .from('school_tests')
+        .select(
+          'id, title, description, target_rank, subject_id, published, created_at, ' +
+            'school_test_classes(class_id), ' +
+            'school_test_questions(id, order_num, text, explanation, school_test_options(id, order_num, text, is_correct))',
+        )
+        .eq('id', testId)
+        .single();
+      return (data ?? null) as unknown as {
+        id: string; title: string; description: string | null;
+        target_rank: string | null; subject_id: string | null;
+        published: boolean; created_at: string;
+        school_test_classes: { class_id: string }[];
+        school_test_questions: {
+          id: string; order_num: number; text: string; explanation: string | null;
+          school_test_options: { id: string; order_num: number; text: string; is_correct: boolean }[];
+        }[];
+      } | null;
+    },
+
+    /** Who took a test and with what score. Mirrors studentMockResults' embed style. */
+    async schoolTestResults(testId: string) {
+      const { data } = await supabase
+        .from('school_test_results')
+        .select('student_id, score, total, created_at, students!inner(name, class_id)')
+        .eq('test_id', testId)
+        .order('score', { ascending: false });
+      return (data ?? []) as unknown as {
+        student_id: string; score: number; total: number; created_at: string;
+        students: { name: string; class_id: string | null };
+      }[];
+    },
+
+    /**
+     * Creates a test with its questions/options. supabase-js has no
+     * transaction API (same constraint as createMockExam + saveMockResults),
+     * so this is a sequence of inserts guarded two ways: `published` stays
+     * false until the last step, so a half-written test is invisible to
+     * students; and any failure best-effort deletes the parent row (cascades).
+     */
+    async createSchoolTest(
+      schoolId: string,
+      createdBy: string,
+      test: {
+        title: string;
+        description?: string | null;
+        targetRank: string | null; // null = любой ранг
+        subjectId: string | null;
+        classIds: string[]; // [] = вся школа
+      },
+      questions: {
+        text: string;
+        explanation?: string | null;
+        options: { text: string; isCorrect: boolean }[];
+      }[],
+    ): Promise<{ id: string | null; error: { message: string } | null }> {
+      const { data: created, error: testErr } = await supabase
+        .from('school_tests')
+        .insert({
+          school_id: schoolId, title: test.title, description: test.description ?? null,
+          target_rank: test.targetRank, subject_id: test.subjectId,
+          created_by: createdBy, published: false,
+        })
+        .select('id').single();
+      if (testErr || !created) {
+        console.warn('staffData.createSchoolTest (test) error:', testErr?.message);
+        return { id: null, error: testErr };
+      }
+      const testId = (created as { id: string }).id;
+
+      const fail = async (e: { message: string }, step: string) => {
+        console.warn(`staffData.createSchoolTest (${step}) error:`, e.message);
+        await supabase.from('school_tests').delete().eq('id', testId); // best-effort rollback
+        return { id: null, error: e };
+      };
+
+      if (test.classIds.length > 0) {
+        const { error } = await supabase.from('school_test_classes')
+          .insert(test.classIds.map((class_id) => ({ test_id: testId, class_id })));
+        if (error) return fail(error, 'classes');
+      }
+
+      // order_num carries the mapping back to `questions[i]` — bulk insert
+      // return order isn't guaranteed, so we sort by it instead of trusting it.
+      const { data: qRows, error: qErr } = await supabase
+        .from('school_test_questions')
+        .insert(questions.map((q, i) => ({
+          test_id: testId, order_num: i, text: q.text, explanation: q.explanation ?? null,
+        })))
+        .select('id, order_num');
+      if (qErr || !qRows) return fail(qErr ?? { message: 'no questions inserted' }, 'questions');
+
+      const ordered = [...(qRows as { id: string; order_num: number }[])]
+        .sort((a, b) => a.order_num - b.order_num);
+      const optionPayload = ordered.flatMap((row) =>
+        questions[row.order_num].options.map((o, oi) => ({
+          question_id: row.id, order_num: oi, text: o.text, is_correct: o.isCorrect,
+        })));
+      const { error: oErr } = await supabase.from('school_test_options').insert(optionPayload);
+      if (oErr) return fail(oErr, 'options');
+
+      const { error: pubErr } = await supabase
+        .from('school_tests').update({ published: true }).eq('id', testId);
+      if (pubErr) return fail(pubErr, 'publish');
+
+      return { id: testId, error: null };
+    },
+
+    async deleteSchoolTest(testId: string) {
+      const { error } = await supabase.from('school_tests').delete().eq('id', testId);
+      if (error) console.warn('staffData.deleteSchoolTest error:', error.message);
+      return { error };
+    },
   };
 
   return {
     supabase, auth, profile, theory, topics, questions, schools,
-    entranceTest, rating, staffData,
+    entranceTest, schoolTests, rating, staffData,
   };
 }
 

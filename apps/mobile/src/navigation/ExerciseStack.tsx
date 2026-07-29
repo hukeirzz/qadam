@@ -4,6 +4,7 @@ import { ExerciseScreen } from '../screens/ExerciseScreen';
 import { ExerciseSubjectScreen } from '../screens/ExerciseSubjectScreen';
 import { PracticeQuizScreen } from '../screens/PracticeQuizScreen';
 import { SchoolTestsScreen } from '../screens/SchoolTestsScreen';
+import { SchoolTestQuizScreen } from '../screens/SchoolTestQuizScreen';
 import { PremiumScreen } from '../screens/PremiumScreen';
 import { ExerciseStackParamList } from '../types/navigation';
 import { colors } from '../theme/colors';
@@ -23,6 +24,7 @@ export function ExerciseStack() {
       <Stack.Screen name="ExerciseSubject" component={ExerciseSubjectScreen} />
       <Stack.Screen name="PracticeQuiz" component={PracticeQuizScreen} />
       <Stack.Screen name="SchoolTests" component={SchoolTestsScreen} />
+      <Stack.Screen name="SchoolTestQuiz" component={SchoolTestQuizScreen} />
       <Stack.Screen name="Premium" component={PremiumScreen} />
     </Stack.Navigator>
   );

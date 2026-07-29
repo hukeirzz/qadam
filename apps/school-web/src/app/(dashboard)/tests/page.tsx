@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getStaff, getServerApi } from '@/lib/auth';
-import { TestBuilder } from '@/components/test-builder';
+import { TestsManager } from '@/components/tests-manager';
 
 export default async function TestsPage() {
   const { session, role } = await getStaff();
@@ -10,12 +10,10 @@ export default async function TestsPage() {
 
   const api = await getServerApi();
 
-  const [classes, students, topics, topicStats] = await Promise.all([
+  const [classes, tests] = await Promise.all([
     api.staffData.classes(schoolId),
-    api.staffData.students(schoolId),
-    api.staffData.topics(),
-    api.staffData.topicStats(schoolId),
+    api.staffData.schoolTests(schoolId),
   ]);
 
-  return <TestBuilder classes={classes} students={students} topics={topics} topicStats={topicStats} />;
+  return <TestsManager schoolId={schoolId} classes={classes} tests={tests} />;
 }
