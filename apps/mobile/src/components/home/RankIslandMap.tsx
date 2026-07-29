@@ -25,38 +25,21 @@ const premiumPetImage = require('../../../assets/premiumpet.png');
 function RankSection({
   rank,
   isCurrent,
-  locked,
+  empty,
   expanded,
   onToggle,
   onIslandPress,
 }: {
   rank: Rank;
   isCurrent: boolean;
-  locked: boolean;
+  /** Для этого ранга ещё нет тем/теории/вопросов — раскрывается, но показывает пустое состояние. */
+  empty: boolean;
   expanded: boolean;
   onToggle: () => void;
   onIslandPress: (id: SubjectId, rank: Rank) => void;
 }) {
   const accent = rankAccentColors[rank];
-
-  // Закрытые ранги не сворачиваются/разворачиваются и никуда не ведут по
-  // тапу (раньше открывали покупку Premium) — просто статичная строка-превью:
-  // бейдж ранга слева, подпись, справа иконка замка.
-  if (locked) {
-    return (
-      <View style={[styles.lockedRowShadow, { shadowColor: accent }]}>
-        <View style={[styles.lockedRow, { borderColor: `${accent}55` }]}>
-          <View style={styles.rankRow}>
-            <RankBadge rank={rank} size="sm" />
-            <Text style={styles.rankLabel}>{rank} ранг</Text>
-          </View>
-          <Ionicons name="lock-closed" size={18} color={colors.textMuted} />
-        </View>
-      </View>
-    );
-  }
-
-  const islands = getIslandsForRank(rank);
+  const islands = empty ? [] : getIslandsForRank(rank);
 
   return (
     <SurfaceCard
@@ -86,7 +69,14 @@ function RankSection({
 
       {expanded && (
         <Animated.View entering={FadeInDown.duration(240)} exiting={FadeOutUp.duration(180)}>
-          <IslandGrid islands={islands} onIslandPress={(id) => onIslandPress(id, rank)} />
+          {empty ? (
+            <View style={styles.emptyRank}>
+              <Ionicons name="time-outline" size={18} color={colors.textMuted} />
+              <Text style={styles.emptyRankText}>Темы и вопросы этого ранга скоро появятся</Text>
+            </View>
+          ) : (
+            <IslandGrid islands={islands} onIslandPress={(id) => onIslandPress(id, rank)} />
+          )}
         </Animated.View>
       )}
     </SurfaceCard>
@@ -130,7 +120,7 @@ export function RankIslandMap({ onIslandPress, onPremiumPress }: Props) {
       <RankSection
         rank={rank}
         isCurrent
-        locked={false}
+        empty={rank !== 'D'}
         expanded={isExpanded(rank)}
         onToggle={() => toggleExpanded(rank)}
         onIslandPress={onIslandPress}
@@ -138,11 +128,14 @@ export function RankIslandMap({ onIslandPress, onPremiumPress }: Props) {
 
       <View>
         {otherRanks.map((r) => (
+          // Реальные темы/теория/вопросы есть только у D ранга — у остальных
+          // сейчас нет контента, но раздел всё равно открыт и раскрывается,
+          // просто показывает пустое состояние вместо тем.
           <RankSection
             key={r}
             rank={r}
             isCurrent={false}
-            locked={!premiumUnlocked}
+            empty={r !== 'D'}
             expanded={isExpanded(r)}
             onToggle={() => toggleExpanded(r)}
             onIslandPress={onIslandPress}
@@ -207,24 +200,22 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.4,
   },
-  lockedRowShadow: {
-    marginHorizontal: 16,
-    marginTop: 10,
-    borderRadius: 18,
-    shadowOpacity: 0.5,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
-  },
-  lockedRow: {
+  emptyRank: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 18,
-    backgroundColor: cardTheme.fill,
-    borderWidth: 1,
+    gap: 8,
+    marginHorizontal: 14,
+    marginBottom: 14,
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  emptyRankText: {
+    flex: 1,
+    color: colors.textMuted,
+    fontSize: 12.5,
+    fontWeight: '600',
+    lineHeight: 17,
   },
   premiumWrap: {
     marginHorizontal: 16,

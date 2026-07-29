@@ -128,6 +128,12 @@ export function ProfileScreen({ navigation }: Props) {
                   <RankBadge rank={currentRank} size="sm" />
                   <Text style={styles.rankPillText}>{currentRank} ранг</Text>
                 </View>
+                <View style={styles.xpTrophyRow}>
+                  <Ionicons name="trophy" size={14} color={colors.gold} />
+                  <Text style={styles.xpTrophyText}>
+                    {xp}{nextRank ? ` / ${rankProgress!.required}` : ''} XP
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
@@ -304,6 +310,8 @@ const styles = StyleSheet.create({
     borderColor: colors.purple,
   },
   rankPillText: { color: colors.text, fontSize: 12, fontWeight: '800' },
+  xpTrophyRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  xpTrophyText: { color: colors.text, fontSize: 13, fontWeight: '700' },
   rankTrack: {
     height: 10,
     backgroundColor: 'rgba(255,255,255,0.08)',

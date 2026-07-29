@@ -13,7 +13,7 @@ import Svg, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { Rank } from '@qadam/business-logic';
 import { dateKey, useAppStore } from '../store/useAppStore';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
@@ -43,7 +43,19 @@ const CHART_TOP_PAD = 18;
 const CHART_BOTTOM_PAD = 6;
 const Y_AXIS_W = 28;
 
-/** Строит {data, labels} в шагах (count) — конвертация в XP происходит снаружи. */
+/** День засчитан в серию, если в этот день пройдена хотя бы одна тема. */
+function isActiveDay(dailySteps: Record<string, number>, d: Date): boolean {
+  return (dailySteps[dateKey(d)] ?? 0) > 0;
+}
+
+/** Максимум по оси Y для периода — не «красивое» число, а реальный предел (день/неделя/месяц). */
+function maxForPeriod(period: Period): number {
+  if (period === '7d' || period === 'month') return 1;
+  if (period === '90d') return 7;
+  return 31;
+}
+
+/** Строит {data, labels}: сколько дней периода вошло в серию активности (не XP). */
 function buildSeries(period: Period, dailySteps: Record<string, number>): { data: number[]; labels: string[] } {
   const today = new Date();
 
@@ -53,7 +65,7 @@ function buildSeries(period: Period, dailySteps: Record<string, number>): { data
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      data.push(dailySteps[dateKey(d)] ?? 0);
+      data.push(isActiveDay(dailySteps, d) ? 1 : 0);
       labels.push(WEEKDAYS[d.getDay()]);
     }
     return { data, labels };
@@ -65,7 +77,7 @@ function buildSeries(period: Period, dailySteps: Record<string, number>): { data
     for (let i = 29; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      data.push(dailySteps[dateKey(d)] ?? 0);
+      data.push(isActiveDay(dailySteps, d) ? 1 : 0);
       const pos = 29 - i;
       labels.push(pos % 6 === 0 || pos === 29 ? String(d.getDate()) : '');
     }
@@ -74,19 +86,20 @@ function buildSeries(period: Period, dailySteps: Record<string, number>): { data
 
   if (period === '90d') {
     // 13 недельных корзин, самая свежая заканчивается сегодня.
+    // Значение — сколько дней недели вошли в серию (0–7).
     const weeks = 13;
     const data: number[] = [];
     const labels: string[] = [];
     for (let w = weeks - 1; w >= 0; w--) {
-      let sum = 0;
+      let activeDays = 0;
       let bucketEnd = today;
       for (let i = 0; i < 7; i++) {
         const d = new Date(today);
         d.setDate(d.getDate() - (w * 7 + i));
-        sum += dailySteps[dateKey(d)] ?? 0;
+        if (isActiveDay(dailySteps, d)) activeDays++;
         if (i === 0) bucketEnd = d;
       }
-      data.push(sum);
+      data.push(activeDays);
       const pos = weeks - 1 - w;
       labels.push(
         pos % 3 === 0 || pos === weeks - 1 ? `${bucketEnd.getDate()}.${bucketEnd.getMonth() + 1}` : '',
@@ -95,27 +108,36 @@ function buildSeries(period: Period, dailySteps: Record<string, number>): { data
     return { data, labels };
   }
 
-  // 'year' — 12 месячных корзин.
+  // 'year' — 12 месячных корзин. Значение — сколько дней месяца вошли в серию.
   const data: number[] = [];
   const labels: string[] = [];
   for (let m = 11; m >= 0; m--) {
     const monthDate = new Date(today.getFullYear(), today.getMonth() - m, 1);
-    let sum = 0;
+    let activeDays = 0;
     for (const key in dailySteps) {
       const [y, mo] = key.split('-').map(Number);
-      if (y === monthDate.getFullYear() && mo === monthDate.getMonth() + 1) sum += dailySteps[key];
+      if (y === monthDate.getFullYear() && mo === monthDate.getMonth() + 1 && dailySteps[key] > 0) activeDays++;
     }
-    data.push(sum);
+    data.push(activeDays);
     labels.push(MONTHS[monthDate.getMonth()]);
   }
   return { data, labels };
 }
 
-function ActivityChart({ data, labels, color }: { data: number[]; labels: string[]; color: string }) {
+function ActivityChart({
+  data,
+  labels,
+  color,
+  max,
+}: {
+  data: number[];
+  labels: string[];
+  color: string;
+  max: number;
+}) {
   const { width } = useWindowDimensions();
   const chartW = width - 32 - 36 - Y_AXIS_W - 8; // экран - паддинг скролла - паддинг карточки - ось Y - зазор
-  const rawMax = Math.max(...data, 1);
-  const niceMax = Math.max(10, Math.ceil(rawMax / 10) * 10);
+  const niceMax = Math.max(1, max);
   const n = data.length;
   const plotH = CHART_H - CHART_TOP_PAD - CHART_BOTTOM_PAD;
   const baselineY = CHART_H - CHART_BOTTOM_PAD;
@@ -128,7 +150,10 @@ function ActivityChart({ data, labels, color }: { data: number[]; labels: string
 
   const linePoints = points.map((p) => `${p.x},${p.y}`).join(' ');
   const areaPoints = `${points[0]?.x ?? 0},${baselineY} ${linePoints} ${points[points.length - 1]?.x ?? 0},${baselineY}`;
-  const yLabels = [4, 3, 2, 1, 0].map((k) => Math.round((niceMax / 4) * k));
+  // Целые дни, поэтому не всегда есть смысл в 5 засечках — берём
+  // min(4, niceMax) шагов, чтобы для «1» получить просто «1»/«0».
+  const steps = Math.min(4, niceMax);
+  const yLabels = Array.from({ length: steps + 1 }, (_, i) => Math.round((niceMax / steps) * (steps - i)));
 
   return (
     <View style={styles.chartRow}>
@@ -145,8 +170,8 @@ function ActivityChart({ data, labels, color }: { data: number[]; labels: string
               <Stop offset="1" stopColor={color} stopOpacity={0} />
             </SvgGradient>
           </Defs>
-          {[0, 1, 2, 3, 4].map((k) => {
-            const y = CHART_TOP_PAD + (plotH / 4) * k;
+          {yLabels.map((_, k) => {
+            const y = CHART_TOP_PAD + (plotH / steps) * k;
             return (
               <SvgLine
                 key={k}
@@ -192,51 +217,43 @@ export function StatsScreen() {
   const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
 
   const completedTopics = useAppStore((s) => s.completedTopics);
-  const xp = useAppStore((s) => s.xp);
-  const completedSteps = useAppStore((s) => s.completedSteps);
   const dailySteps = useAppStore((s) => s.dailySteps);
   const remoteTopicIds = useAppStore((s) => s.remoteTopicIds);
   const userRank = useAppStore((s) => s.rank) ?? 'D';
-  const premiumUnlocked = useAppStore((s) => s.premiumUnlocked);
   const [selectedRank, setSelectedRank] = useState<Rank>(userRank);
   const [period, setPeriod] = useState<Period>('7d');
 
-  // В сторе копится количество пройденных шагов по дням, а не сам XP —
-  // переводим в XP через средний XP за шаг этого пользователя.
-  const avgXpPerStep = completedSteps > 0 ? Math.max(1, Math.round(xp / completedSteps)) : 10;
+  const series = useMemo(() => buildSeries(period, dailySteps), [period, dailySteps]);
 
-  const series = useMemo(() => {
-    const { data, labels } = buildSeries(period, dailySteps);
-    return { data: data.map((v) => v * avgXpPerStep), labels };
-  }, [period, dailySteps, avgXpPerStep]);
-
-  // Тем сейчас нет привязки к рангу в данных — прогресс по разделам общий
-  // для любого выбранного ранга, а закрытые ранги (пока не куплен Premium)
-  // просто показываются заблокированными, как на Главной.
-  const rankLocked = selectedRank !== userRank && !premiumUnlocked;
+  // Реальные темы/теория/вопросы существуют только для D ранга — для
+  // C/B/A/S контента ещё нет, поэтому «Разделы» должны считать темы именно
+  // выбранного ранга, а не общий прогресс независимо от фильтра.
+  const isRealRank = selectedRank === RANK_ORDER[0];
 
   const subjectStats = subjects.map((subject) => {
     const ids = remoteTopicIds[subject.id]?.length ? remoteTopicIds[subject.id] : getTopicIds(subject.id);
-    const total = ids.length;
-    const done = completedTopics.filter((id) => ids.includes(id)).length;
+    const total = isRealRank ? ids.length : 0;
+    const done = isRealRank ? completedTopics.filter((id) => ids.includes(id)).length : 0;
     const pct = total > 0 ? Math.round((done / total) * 100) : 0;
     const color = subjectColors[subject.id as keyof typeof subjectColors].primary;
     return { id: subject.id, title: subject.title, icon: subject.icon, color, pct, done, total };
   });
 
   const openSubject = (subjectId: string) => {
-    if (rankLocked) {
+    if (!isRealRank) {
       vibrate();
-      (navigation as any).navigate('PathTab', { screen: 'Premium' });
       return;
     }
     vibrate();
     (navigation as any).navigate('PathTab', { screen: 'IslandPath', params: { subjectId } });
   };
 
-  const showXpInfo = () => {
+  const showActivityInfo = () => {
     vibrate();
-    Alert.alert('Активность (XP)', 'Сколько опыта ты заработал за пройденные шаги в выбранный период.');
+    Alert.alert(
+      'Серия дней',
+      'Отмечает дни, когда ты проходил хотя бы одну тему — из таких дней подряд складывается серия (streak).',
+    );
   };
 
   return (
@@ -272,17 +289,17 @@ export function StatsScreen() {
         </View>
 
         {/* Activity chart */}
-        <SurfaceCard style={styles.cardShadow} glowColor={glow.purple} radius={20} padding={18}>
+        <SurfaceCard style={styles.cardShadow} glowColor={glow.gold} radius={20} padding={18}>
           <View style={styles.chartHeader}>
             <View style={styles.chartIconWrap}>
-              <Ionicons name="trending-up" size={20} color={colors.text} />
+              <MaterialCommunityIcons name="fire" size={20} color="#FF8C3B" />
             </View>
-            <Text style={styles.cardLabel}>Активность (XP)</Text>
-            <Pressable onPress={showXpInfo} hitSlop={8}>
+            <Text style={styles.cardLabel}>Серия дней</Text>
+            <Pressable onPress={showActivityInfo} hitSlop={8}>
               <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
             </Pressable>
           </View>
-          <ActivityChart data={series.data} labels={series.labels} color={colors.purple} />
+          <ActivityChart data={series.data} labels={series.labels} color="#FF8C3B" max={maxForPeriod(period)} />
         </SurfaceCard>
 
         {/* Разделы */}
@@ -296,7 +313,7 @@ export function StatsScreen() {
           <View style={styles.rankFilterRow}>
             {RANK_ORDER.map((r) => {
               const active = r === selectedRank;
-              const isLockedRank = r !== userRank && !premiumUnlocked;
+              const isEmptyRank = r !== RANK_ORDER[0];
               return (
                 <Pressable
                   key={r}
@@ -304,9 +321,9 @@ export function StatsScreen() {
                   onPress={() => { vibrate(); setSelectedRank(r); }}
                 >
                   <RankBadge rank={r} size="sm" />
-                  {isLockedRank && (
+                  {isEmptyRank && (
                     <Ionicons
-                      name="lock-closed"
+                      name="time-outline"
                       size={10}
                       color={colors.textMuted}
                       style={styles.rankFilterLock}
@@ -317,11 +334,11 @@ export function StatsScreen() {
             })}
           </View>
 
-          {rankLocked && (
+          {!isRealRank && (
             <View style={styles.rankLockedNote}>
-              <Ionicons name="lock-closed" size={13} color={colors.textMuted} />
+              <Ionicons name="time-outline" size={13} color={colors.textMuted} />
               <Text style={styles.rankLockedNoteText}>
-                {selectedRank} ранг закрыт — нужен Premium
+                Темы {selectedRank} ранга появятся позже
               </Text>
             </View>
           )}
@@ -329,7 +346,7 @@ export function StatsScreen() {
           {subjectStats.map((s) => (
             <Pressable
               key={s.id}
-              style={[styles.subjectRow, rankLocked && styles.subjectRowLocked]}
+              style={[styles.subjectRow, !isRealRank && styles.subjectRowLocked]}
               onPress={() => openSubject(s.id)}
             >
               <View style={[styles.subjectIconWrap, { backgroundColor: `${s.color}26` }]}>
@@ -339,11 +356,7 @@ export function StatsScreen() {
               <View style={styles.subjectTrack}>
                 <View style={[styles.subjectFill, { width: `${s.pct}%`, backgroundColor: s.color }]} />
               </View>
-              {rankLocked ? (
-                <Ionicons name="lock-closed" size={14} color={colors.textMuted} />
-              ) : (
-                <Text style={[styles.subjectPct, { color: s.color }]}>{s.pct}%</Text>
-              )}
+              <Text style={[styles.subjectPct, { color: s.color }]}>{s.pct}%</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
             </Pressable>
           ))}
@@ -407,7 +420,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(144,71,255,0.28)',
+    backgroundColor: 'rgba(255,140,59,0.22)',
   },
   cardLabel: {
     flex: 1,
