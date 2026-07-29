@@ -9,7 +9,7 @@ import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { QadamLogo } from '../components/ui/QadamLogo';
 import { signIn, signUp } from '../services/authService';
 import { loadUserProfile, saveOnboarding, saveProfileProgress } from '../services/progressService';
-import { findSchoolByCode } from '../services/schoolsService';
+import { findClassByCode, findSchoolByCode } from '../services/schoolsService';
 import { useAppStore } from '../store/useAppStore';
 import { RootStackParamList } from '../types/navigation';
 import { colors } from '../theme/colors';
@@ -25,6 +25,7 @@ export function RegisterScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [schoolCode, setSchoolCode] = useState('');
+  const [classCode, setClassCode] = useState('');
   const [classLabel, setClassLabel] = useState<string | null>(null);
   const [classPickerOpen, setClassPickerOpen] = useState(false);
   const [dataConsent, setDataConsent] = useState(false);
@@ -84,21 +85,28 @@ export function RegisterScreen({ navigation }: Props) {
         },
       );
 
-      // Код школы необязателен — если введён, но не найден, просто не привязываем школу.
-      const school = schoolCode.trim() ? await findSchoolByCode(schoolCode.trim()) : null;
+      // Код школы/класса необязательны — если введены, но не найдены,
+      // просто не привязываем. Код класса содержит свой school_id, так что
+      // одного его достаточно, чтобы привязать и школу, и класс сразу.
+      const [school, studentClass] = await Promise.all([
+        schoolCode.trim() ? findSchoolByCode(schoolCode.trim()) : null,
+        classCode.trim() ? findClassByCode(classCode.trim()) : null,
+      ]);
+      const resolvedSchoolId = studentClass?.school_id ?? school?.id ?? null;
 
       await saveOnboarding(userId, {
-        school_id: school?.id ?? null,
+        school_id: resolvedSchoolId,
+        class_id: studentClass?.id ?? null,
         class_label: classLabel ?? undefined,
         data_consent: dataConsent,
       });
       setOnboardingInfo({
-        pet_name: null, rank: null, school_id: school?.id ?? null, class_id: null,
+        pet_name: null, rank: null, school_id: resolvedSchoolId, class_id: studentClass?.id ?? null,
         class_label: classLabel,
       });
 
       // Партнёрская школа — все ранги и премиум-контент открываются автоматически.
-      if (school) {
+      if (resolvedSchoolId) {
         setPremium(true);
         await saveProfileProgress(userId, { premium_unlocked: true });
       }
@@ -147,6 +155,9 @@ export function RegisterScreen({ navigation }: Props) {
 
           <Field icon="key-outline" placeholder="Код школы" value={schoolCode} onChangeText={setSchoolCode} autoCapitalize="characters" />
           <Text style={styles.hint}>Необязательно, если ты не ученик партнёрской школы</Text>
+
+          <Field icon="people-outline" placeholder="Код класса" value={classCode} onChangeText={setClassCode} autoCapitalize="characters" />
+          <Text style={styles.hint}>Если знаешь код своего класса — привяжет и школу, и класс</Text>
 
           <Pressable style={styles.inputWrap} onPress={() => setClassPickerOpen(true)}>
             <Ionicons name="school-outline" size={18} color={colors.textDim} style={styles.inputIcon} />

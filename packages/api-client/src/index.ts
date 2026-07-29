@@ -225,6 +225,7 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
         pet_name?: string;
         pet_type?: PetType;
         school_id?: string | null;
+        class_id?: string | null;
         class_label?: string;
         data_consent?: boolean;
       },
@@ -422,6 +423,40 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
 
       if (error || !data) return null;
       return data as { id: string; name: string };
+    },
+
+    /**
+     * Fetches a single class row — used once a student is already linked
+     * to a school (classes_read's RLS allows reading any class in your
+     * own school, so this is a plain select, unlike findClassByCode).
+     */
+    async fetchClassById(classId: string): Promise<{ id: string; name: string } | null> {
+      const { data, error } = await supabase
+        .from('classes')
+        .select('id, name')
+        .eq('id', classId)
+        .single();
+
+      if (error || !data) return null;
+      return data as { id: string; name: string };
+    },
+
+    /**
+     * Looks up a class by its short join code — `classes.promo_code`
+     * (backend_v2_tables) — via the public_find_class_by_code RPC
+     * (supabase/migrations/20260729000001), for the same reason
+     * findByCode above goes through a RPC: classes_read's RLS requires
+     * already being linked to the class's school. Returns school_id too,
+     * so entering a class code alone can link both school and class in
+     * one step.
+     */
+    async findClassByCode(code: string): Promise<{ id: string; name: string; school_id: string } | null> {
+      const { data, error } = await supabase
+        .rpc('public_find_class_by_code', { p_code: code.trim() })
+        .maybeSingle();
+
+      if (error || !data) return null;
+      return data as { id: string; name: string; school_id: string };
     },
   };
 

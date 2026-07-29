@@ -13,7 +13,7 @@ import { useAppStore } from '../store/useAppStore';
 import { petImages } from '../assets/petImages';
 import { signOut, deleteAccount, getSession } from '../services/authService';
 import { saveOnboarding, saveProfileProgress } from '../services/progressService';
-import { findSchoolByCode, fetchSchoolById } from '../services/schoolsService';
+import { fetchClassById, fetchSchoolById, findClassByCode, findSchoolByCode } from '../services/schoolsService';
 import { vibrate } from '../services/soundService';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'Settings'>;
@@ -49,6 +49,7 @@ export function SettingsScreen({ navigation }: Props) {
 
   const [email, setEmail] = useState<string | null>(null);
   const [schoolName, setSchoolName] = useState<string | null>(null);
+  const [linkedClassName, setLinkedClassName] = useState<string | null>(null);
 
   const [namePickerOpen, setNamePickerOpen] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
@@ -59,6 +60,9 @@ export function SettingsScreen({ navigation }: Props) {
   const [schoolModalOpen, setSchoolModalOpen] = useState(false);
   const [schoolCodeDraft, setSchoolCodeDraft] = useState('');
   const [schoolSaving, setSchoolSaving] = useState(false);
+  const [classCodeModalOpen, setClassCodeModalOpen] = useState(false);
+  const [classCodeDraft, setClassCodeDraft] = useState('');
+  const [classCodeSaving, setClassCodeSaving] = useState(false);
 
   useEffect(() => {
     getSession().then((session) => setEmail(session?.user?.email ?? null));
@@ -69,8 +73,13 @@ export function SettingsScreen({ navigation }: Props) {
     fetchSchoolById(schoolId).then((s) => setSchoolName(s?.name ?? null));
   }, [schoolId]);
 
+  useEffect(() => {
+    if (!classId) { setLinkedClassName(null); return; }
+    fetchClassById(classId).then((c) => setLinkedClassName(c?.name ?? null));
+  }, [classId]);
+
   const persistOnboarding = async (
-    patch: Partial<{ pet_name: string; pet_type: PetType; class_label: string; school_id: string | null }>,
+    patch: Partial<{ pet_name: string; pet_type: PetType; class_label: string; school_id: string | null; class_id: string | null }>,
   ) => {
     if (!userId) return;
     await saveOnboarding(userId, patch);
@@ -79,7 +88,7 @@ export function SettingsScreen({ navigation }: Props) {
       pet_type: patch.pet_type ?? petType,
       rank,
       school_id: patch.school_id !== undefined ? patch.school_id : schoolId,
-      class_id: classId,
+      class_id: patch.class_id !== undefined ? patch.class_id : classId,
       class_label: patch.class_label ?? classLabel,
     });
   };
@@ -146,6 +155,34 @@ export function SettingsScreen({ navigation }: Props) {
       setSchoolModalOpen(false);
     } finally {
       setSchoolSaving(false);
+    }
+  };
+
+  const openClassCodeModal = () => {
+    vibrate();
+    setClassCodeDraft('');
+    setClassCodeModalOpen(true);
+  };
+
+  const saveClassCode = async () => {
+    const code = classCodeDraft.trim();
+    if (!code) return;
+    setClassCodeSaving(true);
+    try {
+      const studentClass = await findClassByCode(code);
+      if (!studentClass) {
+        Alert.alert('Класс не найден', 'Проверь код и попробуй снова');
+        return;
+      }
+      setLinkedClassName(studentClass.name);
+      setSchoolName((await fetchSchoolById(studentClass.school_id))?.name ?? schoolName);
+      await persistOnboarding({ school_id: studentClass.school_id, class_id: studentClass.id });
+      // Класс всегда принадлежит партнёрской школе — ранги и премиум-контент открываются автоматически.
+      setPremium(true);
+      if (userId) await saveProfileProgress(userId, { premium_unlocked: true });
+      setClassCodeModalOpen(false);
+    } finally {
+      setClassCodeSaving(false);
     }
   };
 
@@ -256,8 +293,15 @@ export function SettingsScreen({ navigation }: Props) {
             icon="business"
             label="Код школы"
             value={schoolName ?? 'Ввести код школы'}
-            isLast
+            isLast={false}
             onPress={openSchoolModal}
+          />
+          <Row
+            icon="people"
+            label="Код класса"
+            value={linkedClassName ?? 'Ввести код класса'}
+            isLast
+            onPress={openClassCodeModal}
           />
         </View>
 
@@ -358,6 +402,27 @@ export function SettingsScreen({ navigation }: Props) {
             />
             <Pressable style={styles.editSaveBtn} onPress={saveSchoolCode} disabled={schoolSaving}>
               <Text style={styles.editSaveBtnText}>{schoolSaving ? 'Проверка…' : 'Сохранить'}</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Class code edit */}
+      <Modal visible={classCodeModalOpen} transparent animationType="fade" onRequestClose={() => setClassCodeModalOpen(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setClassCodeModalOpen(false)}>
+          <Pressable style={styles.editModalCard} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.editModalTitle}>Код класса</Text>
+            <TextInput
+              style={styles.editInput}
+              value={classCodeDraft}
+              onChangeText={setClassCodeDraft}
+              placeholder="Код класса"
+              placeholderTextColor={colors.textDim}
+              autoCapitalize="characters"
+              autoFocus
+            />
+            <Pressable style={styles.editSaveBtn} onPress={saveClassCode} disabled={classCodeSaving}>
+              <Text style={styles.editSaveBtnText}>{classCodeSaving ? 'Проверка…' : 'Сохранить'}</Text>
             </Pressable>
           </Pressable>
         </Pressable>

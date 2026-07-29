@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    marginBottom: 0,
   },
   image: {
     width: '100%',
@@ -170,6 +170,7 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     fontWeight: '800',
     lineHeight: 17,
+    minHeight: 34,
   },
   progressText: {
     color: colors.textMuted,

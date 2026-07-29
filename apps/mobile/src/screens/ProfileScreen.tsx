@@ -128,12 +128,6 @@ export function ProfileScreen({ navigation }: Props) {
                   <RankBadge rank={currentRank} size="sm" />
                   <Text style={styles.rankPillText}>{currentRank} ранг</Text>
                 </View>
-                <View style={styles.xpTrophyRow}>
-                  <Ionicons name="trophy" size={14} color={colors.gold} />
-                  <Text style={styles.xpTrophyText}>
-                    {xp}{nextRank ? ` / ${rankProgress!.required}` : ''} XP
-                  </Text>
-                </View>
               </View>
             </View>
           </View>
@@ -150,28 +144,39 @@ export function ProfileScreen({ navigation }: Props) {
             {nextRank ? `До следующего ранга: ${rankProgress!.remaining} XP` : 'Максимальный ранг достигнут'}
           </Text>
 
-          {/* Stats grid */}
+          {/* Stats grid — иконки/цифры/подписи идут отдельными рядами, а не
+              4 независимыми колонками, чтобы разные иконки (разных шрифтов)
+              не сбивали построчное выравнивание. */}
           <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-              <Ionicons name="star" size={18} color={colors.gold} />
-              <Text style={styles.statVal}>{xp}</Text>
-              <Text style={styles.statLbl}>XP</Text>
+            <View style={styles.statIconsRow}>
+              <View style={styles.statCol}>
+                <Ionicons name="star" size={18} color={colors.gold} />
+              </View>
+              <View style={styles.statCol}>
+                <MaterialCommunityIcons name="fire" size={18} color="#FF8C3B" />
+              </View>
+              <View style={styles.statCol}>
+                <MaterialCommunityIcons name="target" size={18} color={colors.success} />
+              </View>
+              <View style={styles.statCol}>
+                <MaterialCommunityIcons name="chart-bar" size={18} color={colors.purpleGlow} />
+              </View>
             </View>
-            <View style={styles.statBox}>
-              <MaterialCommunityIcons name="fire" size={18} color="#FF8C3B" />
-              <Text style={styles.statVal}>{streak}</Text>
-              <Text style={styles.statLbl}>Серия дней</Text>
+
+            <View style={styles.statValuesRow}>
+              <Text style={[styles.statVal, styles.statCol]}>{xp}</Text>
+              <Text style={[styles.statVal, styles.statCol]}>{streak}</Text>
+              <Text style={[styles.statVal, styles.statCol]}>{completedSteps}</Text>
+              <Text style={[styles.statVal, styles.statCol]}>{mockScore?.average ?? '—'}</Text>
             </View>
-            <View style={styles.statBox}>
-              <MaterialCommunityIcons name="target" size={18} color={colors.success} />
-              <Text style={styles.statVal}>{completedSteps}</Text>
-              <Text style={styles.statLbl}>Тестов пройдено</Text>
+
+            <View style={styles.statLabelsRow}>
+              <Text style={[styles.statLbl, styles.statCol]}>XP</Text>
+              <Text style={[styles.statLbl, styles.statCol]}>Серия дней</Text>
+              <Text style={[styles.statLbl, styles.statCol]}>Тестов пройдено</Text>
+              <Text style={[styles.statLbl, styles.statCol]}>Средний балл ОРТ</Text>
             </View>
-            <View style={styles.statBox}>
-              <MaterialCommunityIcons name="chart-bar" size={18} color={colors.purpleGlow} />
-              <Text style={styles.statVal}>{mockScore?.average ?? '—'}</Text>
-              <Text style={styles.statLbl}>Средний балл ОРТ</Text>
-            </View>
+
             <Pressable style={styles.statInfoBtn} onPress={showStatsInfo} hitSlop={8}>
               <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
             </Pressable>
@@ -299,8 +304,6 @@ const styles = StyleSheet.create({
     borderColor: colors.purple,
   },
   rankPillText: { color: colors.text, fontSize: 12, fontWeight: '800' },
-  xpTrophyRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  xpTrophyText: { color: colors.text, fontSize: 13, fontWeight: '700' },
   rankTrack: {
     height: 10,
     backgroundColor: 'rgba(255,255,255,0.08)',
@@ -311,16 +314,17 @@ const styles = StyleSheet.create({
   rankFill: { height: '100%', borderRadius: 5 },
   rankHint: { color: colors.textMuted, fontSize: 12, fontWeight: '600', marginBottom: 18 },
   statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: colors.borderMuted,
     position: 'relative',
   },
-  statBox: { flex: 1, alignItems: 'center', gap: 4 },
+  statIconsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  statValuesRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
+  statLabelsRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  statCol: { flex: 1, alignItems: 'center', textAlign: 'center' },
   statVal: { color: colors.text, fontSize: 18, fontWeight: '800' },
-  statLbl: { color: colors.textMuted, fontSize: 10.5, fontWeight: '600', textAlign: 'center' },
+  statLbl: { color: colors.textMuted, fontSize: 10.5, fontWeight: '600' },
   statInfoBtn: { position: 'absolute', top: -8, right: -4 },
   sectionHeaderRow: {
     flexDirection: 'row',
