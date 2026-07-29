@@ -25,17 +25,26 @@ export const getStaff = cache(async () => {
   const session = await getSession();
   if (!session) return { session: null, role: null, schoolName: null };
   const api = await getServerApi();
-  const { data } = await api.supabase
+
+  const { data, error } = await api.supabase
     .from('staff')
     .select('role, school_id, schools(name)')
     .eq('id', session.user.id)
     .single();
-  if (!data) return { session, role: null, schoolName: null };
-  const row = data as { role: string; school_id: string | null; schools: { name: string } | { name: string }[] | null };
-  const school = Array.isArray(row.schools) ? row.schools[0] : row.schools;
-  return {
-    session,
-    role: { role: row.role, school_id: row.school_id, class_id: null as string | null },
-    schoolName: school?.name ?? null,
-  };
+
+  if (!error && data) {
+    const row = data as { role: string; school_id: string | null; schools: { name: string } | { name: string }[] | null };
+    const school = Array.isArray(row.schools) ? row.schools[0] : row.schools;
+    return {
+      session,
+      role: { role: row.role, school_id: row.school_id, class_id: null as string | null },
+      schoolName: school?.name ?? null,
+    };
+  }
+
+  // Fallback so a join/embed hiccup can never lock a valid staff user out:
+  // resolve the role with the plain lookup (school name just falls back to a
+  // generic label). Costs one extra round-trip only on the error path.
+  const role = await api.profile.role(session.user.id);
+  return { session, role, schoolName: null };
 });
