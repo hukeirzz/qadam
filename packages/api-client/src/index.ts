@@ -551,8 +551,24 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
   const staffData = {
     async classes(schoolId: string) {
       const { data } = await supabase
-        .from('classes').select('id, name').eq('school_id', schoolId).order('name');
-      return (data ?? []) as { id: string; name: string }[];
+        .from('classes').select('id, name, promo_code').eq('school_id', schoolId).order('name');
+      return (data ?? []) as { id: string; name: string; promo_code: string | null }[];
+    },
+
+    /** Creates a class in the school; the DB auto-generates its promo code. */
+    async createClass(schoolId: string, name: string) {
+      const { data, error } = await supabase
+        .from('classes')
+        .insert({ school_id: schoolId, name })
+        .select('id, name, promo_code')
+        .single();
+      return { class: (data as { id: string; name: string; promo_code: string | null } | null), error };
+    },
+
+    /** Regenerates a class's join code (e.g. if it leaked). Returns the new code. */
+    async regenerateClassCode(classId: string) {
+      const { data, error } = await supabase.rpc('regenerate_class_code', { p_class: classId });
+      return { code: (data as string | null) ?? null, error };
     },
 
     async students(schoolId: string) {
