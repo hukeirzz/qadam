@@ -1,13 +1,12 @@
-import { createServerApi } from '@/lib/supabase/server';
+import { getStaff, getServerApi } from '@/lib/auth';
 import { DashboardHome, type Attention } from '@/components/dashboard-home';
 import * as agg from '@/lib/aggregate';
 
 export default async function DashboardHomePage() {
-  const api = await createServerApi();
-  const session = await api.auth.getSession();
+  const { role } = await getStaff();
+  const schoolId = role?.school_id ?? null;
 
-  const roleInfo = session ? await api.profile.role(session.user.id) : null;
-  const schoolId = roleInfo?.school_id ?? null;
+  const api = await getServerApi();
 
   let students: agg.Student[] = [];
   let classes: agg.ClassRow[] = [];

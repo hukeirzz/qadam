@@ -1,16 +1,15 @@
 import { redirect } from 'next/navigation';
-import { createServerApi } from '@/lib/supabase/server';
+import { getStaff, getServerApi } from '@/lib/auth';
 import { StudentsRoster } from '@/components/students-roster';
 import { ClassManager } from '@/components/class-manager';
 
 export default async function StudentsPage() {
-  const api = await createServerApi();
-  const session = await api.auth.getSession();
+  const { session, role } = await getStaff();
   if (!session) redirect('/login');
+  if (!role?.school_id) redirect('/login?error=not-staff');
+  const schoolId = role.school_id;
 
-  const roleInfo = await api.profile.role(session.user.id);
-  if (!roleInfo?.school_id) redirect('/login?error=not-staff');
-  const schoolId = roleInfo.school_id;
+  const api = await getServerApi();
 
   const [students, classes] = await Promise.all([
     api.staffData.students(schoolId),

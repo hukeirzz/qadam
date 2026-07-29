@@ -1,21 +1,20 @@
 import { redirect, notFound } from 'next/navigation';
-import { createServerApi } from '@/lib/supabase/server';
+import { getStaff, getServerApi } from '@/lib/auth';
 import { StudentProfile } from '@/components/student-profile';
 import * as agg from '@/lib/aggregate';
 
 export default async function StudentProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const api = await createServerApi();
-  const session = await api.auth.getSession();
+  const { session, role } = await getStaff();
   if (!session) redirect('/login');
-  const roleInfo = await api.profile.role(session.user.id);
-  if (!roleInfo?.school_id) redirect('/login?error=not-staff');
+  if (!role?.school_id) redirect('/login?error=not-staff');
 
+  const api = await getServerApi();
   const student = await api.staffData.student(id);
   if (!student) notFound();
 
   const [classes, stats, mocks, topics] = await Promise.all([
-    api.staffData.classes(roleInfo.school_id),
+    api.staffData.classes(role.school_id),
     api.staffData.studentTopicStats(id),
     api.staffData.studentMockResults(id),
     api.staffData.topics(),
