@@ -61,7 +61,7 @@ export function EntranceTestScreen({ navigation }: Props) {
       const rank = calcRank(correctCount, total);
       setSubmitting(true);
       if (userId) {
-        await submitEntranceTestResult(userId, correctCount, total, rank);
+        await submitEntranceTestResult(userId, rank);
       }
       setSubmitting(false);
       navigation.replace('EntranceTestResult', { score: correctCount, total, rank });

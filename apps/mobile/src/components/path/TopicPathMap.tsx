@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import type { Rank } from '@qadam/business-logic';
 import { topicPlatforms } from '../../assets/topicPlatforms';
-import { Topic, SubjectId } from '../../types/subject';
+import { topicNodeImages } from '../../assets/topicNodeImages';
+import { BaseSubjectId, isPremiumSubjectId, Topic, SubjectId } from '../../types/subject';
 import { PathSnake } from './PathSnake';
 import { TopicNode, getPlatformCenter, ROW_HEIGHT, H_PAD } from './TopicNode';
 
@@ -11,13 +13,17 @@ const getSide = (index: number): 'left' | 'right' =>
 interface Props {
   topics: Topic[];
   subjectId: SubjectId;
+  rank: Rank;
   topicHearts: Record<string, number>;
   onTopicPress: (topicId: string) => void;
 }
 
-export function TopicPathMap({ topics, subjectId, topicHearts, onTopicPress }: Props) {
+export function TopicPathMap({ topics, subjectId, rank, topicHearts, onTopicPress }: Props) {
   const { width } = useWindowDimensions();
-  const platformImage = topicPlatforms[subjectId];
+  // Премиум-предметы не привязаны к рангам — у них своя общая платформа.
+  const platformImage = isPremiumSubjectId(subjectId)
+    ? topicPlatforms[subjectId]
+    : topicNodeImages[rank][subjectId as BaseSubjectId];
   const mapHeight = topics.length * ROW_HEIGHT + 8;
 
   const centers = useMemo(

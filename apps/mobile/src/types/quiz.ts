@@ -16,3 +16,8 @@ export interface QuizQuestion {
 }
 
 export type AnswerState = 'idle' | 'correct' | 'wrong';
+
+export interface WrongAnswer {
+  question: QuizQuestion;
+  chosenId: string;
+}

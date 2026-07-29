@@ -8,8 +8,8 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { QadamLogo } from '../components/ui/QadamLogo';
 import { signIn, signUp } from '../services/authService';
-import { loadUserProfile, saveOnboarding } from '../services/progressService';
-import { findSchoolByCode } from '../services/schoolsService';
+import { loadUserProfile, saveOnboarding, saveProfileProgress } from '../services/progressService';
+import { findClassByCode, findSchoolByCode } from '../services/schoolsService';
 import { useAppStore } from '../store/useAppStore';
 import { RootStackParamList } from '../types/navigation';
 import { colors } from '../theme/colors';
@@ -25,17 +25,16 @@ export function RegisterScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [schoolCode, setSchoolCode] = useState('');
+  const [classCode, setClassCode] = useState('');
   const [classLabel, setClassLabel] = useState<string | null>(null);
   const [classPickerOpen, setClassPickerOpen] = useState(false);
   const [dataConsent, setDataConsent] = useState(false);
-  const [showInRating, setShowInRating] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const loadProfile = useAppStore((s) => s.loadProfile);
   const setOnboardingInfo = useAppStore((s) => s.setOnboardingInfo);
-
-  const consentsGiven = dataConsent && showInRating;
+  const setPremium = useAppStore((s) => s.setPremium);
 
   const handleSubmit = async () => {
     setError('');
@@ -47,8 +46,8 @@ export function RegisterScreen({ navigation }: Props) {
       setError('Пароль минимум 6 символов');
       return;
     }
-    if (!consentsGiven) {
-      setError('Нужно отметить оба согласия');
+    if (!dataConsent) {
+      setError('Нужно дать согласие на обработку данных');
       return;
     }
 
@@ -86,16 +85,31 @@ export function RegisterScreen({ navigation }: Props) {
         },
       );
 
-      // Код школы необязателен — если введён, но не найден, просто не привязываем школу.
-      const school = schoolCode.trim() ? await findSchoolByCode(schoolCode.trim()) : null;
+      // Код школы/класса необязательны — если введены, но не найдены,
+      // просто не привязываем. Код класса содержит свой school_id, так что
+      // одного его достаточно, чтобы привязать и школу, и класс сразу.
+      const [school, studentClass] = await Promise.all([
+        schoolCode.trim() ? findSchoolByCode(schoolCode.trim()) : null,
+        classCode.trim() ? findClassByCode(classCode.trim()) : null,
+      ]);
+      const resolvedSchoolId = studentClass?.school_id ?? school?.id ?? null;
 
       await saveOnboarding(userId, {
+        school_id: resolvedSchoolId,
+        class_id: studentClass?.id ?? null,
         class_label: classLabel ?? undefined,
-        school_id: school?.id ?? null,
         data_consent: dataConsent,
-        show_in_school_rating: showInRating,
       });
-      setOnboardingInfo({ pet_name: null, rank: null, school_id: school?.id ?? null, class_id: null });
+      setOnboardingInfo({
+        pet_name: null, rank: null, school_id: resolvedSchoolId, class_id: studentClass?.id ?? null,
+        class_label: classLabel,
+      });
+
+      // Партнёрская школа — все ранги и премиум-контент открываются автоматически.
+      if (resolvedSchoolId) {
+        setPremium(true);
+        await saveProfileProgress(userId, { premium_unlocked: true });
+      }
 
       navigation.replace('PetName');
     } catch (e) {
@@ -142,6 +156,9 @@ export function RegisterScreen({ navigation }: Props) {
           <Field icon="key-outline" placeholder="Код школы" value={schoolCode} onChangeText={setSchoolCode} autoCapitalize="characters" />
           <Text style={styles.hint}>Необязательно, если ты не ученик партнёрской школы</Text>
 
+          <Field icon="people-outline" placeholder="Код класса" value={classCode} onChangeText={setClassCode} autoCapitalize="characters" />
+          <Text style={styles.hint}>Если знаешь код своего класса — привяжет и школу, и класс</Text>
+
           <Pressable style={styles.inputWrap} onPress={() => setClassPickerOpen(true)}>
             <Ionicons name="school-outline" size={18} color={colors.textDim} style={styles.inputIcon} />
             <Text style={[styles.input, !classLabel && styles.placeholder]}>{classLabel ?? 'Класс'}</Text>
@@ -149,11 +166,6 @@ export function RegisterScreen({ navigation }: Props) {
           </Pressable>
 
           <Consent checked={dataConsent} onToggle={() => setDataConsent((v) => !v)} label="Согласие на обработку данных" />
-          <Consent
-            checked={showInRating}
-            onToggle={() => setShowInRating((v) => !v)}
-            label="Участвовать в школьном рейтинге"
-          />
 
           {error ? (
             <View style={styles.errorBox}>
@@ -162,15 +174,15 @@ export function RegisterScreen({ navigation }: Props) {
             </View>
           ) : null}
 
-          <TouchableOpacity activeOpacity={0.85} onPress={handleSubmit} disabled={loading || !consentsGiven}>
+          <TouchableOpacity activeOpacity={0.85} onPress={handleSubmit} disabled={loading || !dataConsent}>
             <LinearGradient
-              colors={consentsGiven ? [colors.purple, '#6B2FD4'] : [colors.surface, colors.surface]}
-              style={[styles.btn, !consentsGiven && styles.btnDisabled]}
+              colors={dataConsent ? [colors.purple, '#6B2FD4'] : [colors.surface, colors.surface]}
+              style={[styles.btn, !dataConsent && styles.btnDisabled]}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={[styles.btnText, !consentsGiven && styles.btnTextDisabled]}>Зарегистрироваться</Text>
+                <Text style={[styles.btnText, !dataConsent && styles.btnTextDisabled]}>Зарегистрироваться</Text>
               )}
             </LinearGradient>
           </TouchableOpacity>

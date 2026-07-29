@@ -3,13 +3,15 @@ import { Image, Pressable, ScrollView, StyleSheet, View, Alert } from 'react-nat
 import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
+import type { Rank } from '@qadam/business-logic';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { colors, subjectColors } from '../theme/colors';
-import { subjects, getSubjectById } from '../data/subjects';
+import { subjects } from '../data/subjects';
 import { islandImages } from '../assets/islandImages';
+import { rankImages } from '../assets/rankImages';
+import { RANK_ORDER, RANK_XP_THRESHOLDS, getRankXpProgress } from '../data/rankProgress';
 import { useAppStore } from '../store/useAppStore';
 import { ExerciseStackParamList } from '../types/navigation';
 import { SUBJECT_META } from './ExerciseScreen';
@@ -20,17 +22,51 @@ import { vibrate } from '../services/soundService';
 
 type Props = NativeStackScreenProps<ExerciseStackParamList, 'ExerciseSubject'>;
 
+const RANK_ACCENT: Record<Rank, string> = {
+  D: '#B5804A',
+  C: '#9AA7C7',
+  B: '#8B6DFF',
+  A: '#FF4D6D',
+  S: '#FFC24B',
+};
+
+const SUBJECT_TAGLINES: Record<string, string> = {
+  math: 'Решай задачи, развивай логику и набирай максимум баллов!',
+  geometry: 'Изучай фигуры, углы и пространственное мышление!',
+  analogies: 'Находи связи между словами и тренируй смекалку!',
+  reading: 'Понимай тексты глубже и отвечай точнее!',
+  grammar: 'Совершенствуй язык и не теряй баллы на мелочах!',
+};
+
+function rankXpLabel(rank: Rank): string {
+  const idx = RANK_ORDER.indexOf(rank);
+  const min = RANK_XP_THRESHOLDS[rank];
+  const next = RANK_ORDER[idx + 1];
+  return next ? `${min} – ${RANK_XP_THRESHOLDS[next] - 1} XP` : `${min}+ XP`;
+}
+
+/**
+ * Темы предмета (subject.topics) — это контент D ранга, единственного острова
+ * с реально составленными темами на сегодня. Остальные ранги показывают свои
+ * будущие острова пустыми, а не «раздёргивают» тему D ранга по кусочкам.
+ */
+function topicsForRank(rank: Rank, topics: Topic[]): Topic[] {
+  return rank === RANK_ORDER[0] ? topics : [];
+}
+
 export function ExerciseSubjectScreen({ route }: Props) {
   const { subjectId } = route.params;
   const insets = useSafeAreaInsets();
   const completedTopics = useAppStore((s) => s.completedTopics);
   const premiumUnlocked = useAppStore((s) => s.premiumUnlocked);
   const gems = useAppStore((s) => s.gems);
-  const streak = useAppStore((s) => s.streak);
+  const xp = useAppStore((s) => s.xp);
+  const rank = useAppStore((s) => s.rank);
   const navigation = useNavigation<any>();
 
   const [results, setResults] = useState<Record<string, PracticeResult>>({});
   const [remoteTopics, setRemoteTopics] = useState<Topic[] | null>(null);
+  const [selectedRank, setSelectedRank] = useState<Rank>(rank ?? 'D');
 
   const isPremium = subjectId.endsWith('_premium');
   const baseId = isPremium ? subjectId.replace('_premium', '') : subjectId;
@@ -60,15 +96,8 @@ export function ExerciseSubjectScreen({ route }: Props) {
   const total = displayTopics.length;
   const progress = total > 0 ? unlockedCount / total : 0;
 
-  // Переход к теории острова
-  const goToTheory = (topicId: string) => {
-    navigation.navigate('PathTab', {
-      screen: 'Theory',
-      params: { subjectId: baseId as SubjectId, topicId },
-    });
-  };
+  const rankTopics = topicsForRank(selectedRank, subject.topics);
 
-  // Переход к тесту практики
   const goToQuiz = (topicId: string, topicTitle: string) => {
     vibrate();
     navigation.navigate('PracticeQuiz', { topicId, topicTitle, subjectId });
@@ -90,6 +119,68 @@ export function ExerciseSubjectScreen({ route }: Props) {
     }
   };
 
+  const showRankInfo = () => {
+    vibrate();
+    Alert.alert(
+      'Ранги и острова',
+      'Темы этого острова относятся к D рангу. Темы для C–S рангов появятся здесь по мере добавления нового контента. Проходи темы на Главной, чтобы открыть их здесь для практики.',
+    );
+  };
+
+  const renderTopicCard = (topic: Topic) => {
+    const isUnlocked = completedTopics.includes(topic.id);
+    const result = results[topic.id];
+    const hasTested = !!result;
+    const cardProgress = hasTested ? result.pct / 100 : 0;
+
+    return (
+      <Pressable
+        key={topic.id}
+        style={[styles.topicCard, !isUnlocked && styles.topicCardLocked]}
+        disabled={!isUnlocked}
+        onPress={() => goToQuiz(topic.id, topic.title)}
+      >
+        <View style={[styles.topicIcon, { backgroundColor: `${palette.primary}26` }]}>
+          <Text style={[styles.topicIconGlyph, { color: palette.primary }]}>{subject.icon}</Text>
+        </View>
+
+        <View style={styles.topicInfo}>
+          <Text style={[styles.topicTitle, !isUnlocked && styles.topicTitleLocked]} numberOfLines={1}>
+            {topic.title}
+          </Text>
+
+          {isUnlocked ? (
+            <View style={styles.topicProgressRow}>
+              <View style={styles.topicTrack}>
+                <View
+                  style={[
+                    styles.topicFill,
+                    { width: `${cardProgress * 100}%`, backgroundColor: palette.primary },
+                  ]}
+                />
+              </View>
+              <Text style={styles.topicFraction}>
+                {hasTested ? `${result.correct} / ${result.total}` : 'Не пройдено'}
+              </Text>
+            </View>
+          ) : (
+            <Text style={styles.topicSubLocked}>Сначала пройди на острове</Text>
+          )}
+        </View>
+
+        <View style={styles.topicRight}>
+          <View style={[styles.topicChevronBtn, !isUnlocked && styles.topicChevronBtnLocked]}>
+            <Ionicons
+              name={isUnlocked ? 'chevron-forward' : 'lock-closed'}
+              size={16}
+              color={isUnlocked ? colors.text : colors.textDim}
+            />
+          </View>
+        </View>
+      </Pressable>
+    );
+  };
+
   return (
     <ScreenBackground>
       <View style={[styles.flex, { paddingTop: insets.top }]}>
@@ -97,14 +188,12 @@ export function ExerciseSubjectScreen({ route }: Props) {
         {/* ── Header ── */}
         <View style={styles.header}>
           <Pressable style={styles.backBtn} onPress={() => { vibrate(); navigation.goBack(); }}>
-            <Ionicons name="chevron-back" size={26} color={colors.text} />
+            <Ionicons name="chevron-back" size={22} color={colors.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Практика</Text>
-          <View style={styles.headerRight}>
-            <Text style={styles.statEmoji}>🔥</Text>
-            <Text style={styles.statVal}>{streak}</Text>
-            <Ionicons name="diamond" size={14} color="#5B9DFF" style={{ marginLeft: 10 }} />
-            <Text style={styles.statVal}>{gems}</Text>
+          <View style={styles.flexSpacer} />
+          <View style={styles.gemsChip}>
+            <Ionicons name="diamond" size={15} color="#63B4FF" />
+            <Text style={styles.gemsText}>{gems}</Text>
           </View>
         </View>
 
@@ -113,106 +202,120 @@ export function ExerciseSubjectScreen({ route }: Props) {
           contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 130 }]}
         >
 
-          {/* ── Hero card ── */}
-          <View style={styles.heroCard}>
-            <View style={styles.heroRow}>
-              <Image
-                source={islandImages[subjectId as keyof typeof islandImages]}
-                style={styles.heroIsland}
-                resizeMode="contain"
-              />
-              <View style={styles.heroInfo}>
-                <Text style={styles.heroTitle}>{subject.title}</Text>
-                <Text style={[styles.heroLevel, { color: palette.primary }]}>
-                  {isPremium ? 'Продвинутый уровень' : 'Базовый уровень'}
-                </Text>
-                <View style={styles.heroProgressRow}>
-                  <Text style={styles.heroProgressLabel}>Открыто тем</Text>
-                  <Text style={[styles.heroProgressCount, { color: palette.primary }]}>
-                    {unlockedCount}/{total}
-                  </Text>
-                </View>
-                <View style={styles.heroTrack}>
-                  <View
-                    style={[
-                      styles.heroFill,
-                      { width: `${progress * 100}%` as any, backgroundColor: palette.primary },
-                    ]}
-                  />
-                </View>
-              </View>
+          {/* ── Hero ── */}
+          <View style={styles.heroRow}>
+            <Image
+              source={islandImages[subjectId as keyof typeof islandImages]}
+              style={styles.heroIsland}
+              resizeMode="contain"
+            />
+            <View style={styles.heroInfo}>
+              <Text style={styles.heroTitle}>{subject.title}</Text>
+              <Text style={styles.heroTagline} numberOfLines={2}>
+                {isPremium ? 'Продвинутые задачи для полной подготовки!' : (SUBJECT_TAGLINES[baseId] ?? '')}
+              </Text>
             </View>
           </View>
 
-          {/* ── Info banner ── */}
-          <View style={styles.infoBanner}>
-            <Ionicons name="information-circle" size={18} color={colors.purpleGlow} />
-            <Text style={styles.infoText}>
-              Пройди тему на Главной — она откроется здесь для практики
+          <View style={styles.heroProgressRow}>
+            <Text style={styles.heroProgressLabel}>Твой прогресс</Text>
+            <Text style={[styles.heroProgressCount, { color: palette.primary }]}>
+              {unlockedCount} / {total}
             </Text>
           </View>
-
-          {/* ── Section header ── */}
-          <Text style={styles.sectionTitle}>Темы раздела</Text>
-
-          {/* ── Topic cards ── */}
-          <View style={styles.topicList}>
-            {displayTopics.map((topic, idx) => {
-              const isUnlocked = completedTopics.includes(topic.id);
-              const result = results[topic.id];
-              const hasTested = !!result;
-
-              return (
-                <Pressable
-                  key={topic.id}
-                  style={[
-                    styles.topicCard,
-                    isUnlocked && { borderColor: palette.primary + '55' },
-                    !isUnlocked && styles.topicCardLocked,
-                  ]}
-                  disabled={!isUnlocked}
-                  onPress={() => goToQuiz(topic.id, topic.title)}
-                >
-                  {/* Number badge */}
-                  {isUnlocked ? (
-                    <LinearGradient colors={palette.gradient as [string, string]} style={styles.numBadge}>
-                      <Text style={styles.numBadgeText}>{idx + 1}</Text>
-                    </LinearGradient>
-                  ) : (
-                    <View style={styles.numBadgeLocked}>
-                      <Text style={styles.numBadgeTextLocked}>{idx + 1}</Text>
-                    </View>
-                  )}
-
-                  {/* Info */}
-                  <View style={styles.topicInfo}>
-                    <Text style={[styles.topicTitle, !isUnlocked && styles.topicTitleLocked]}>
-                      {topic.title}
-                    </Text>
-
-                    {isUnlocked ? (
-                      hasTested ? (
-                        <Text style={[styles.topicResult, { color: palette.secondary }]}>
-                          Результат: {result.correct}/{result.total} ({result.pct}%)
-                        </Text>
-                      ) : (
-                        <Text style={styles.topicSub}>Тема открыта · Ещё не проходил</Text>
-                      )
-                    ) : (
-                      <Text style={styles.topicSubLocked}>Сначала пройди на острове</Text>
-                    )}
-                  </View>
-
-                  {/* Buttons */}
-                  {isUnlocked ? (
-                    <Ionicons name="chevron-forward" size={20} color={palette.secondary} />
-                  ) : (
-                    <Ionicons name="lock-closed" size={20} color={colors.textDim} />
-                  )}
-                </Pressable>
-              );
-            })}
+          <View style={styles.heroTrack}>
+            <View
+              style={[
+                styles.heroFill,
+                { width: `${progress * 100}%` as any, backgroundColor: palette.primary },
+              ]}
+            />
           </View>
+
+          {isPremium ? (
+            <>
+              {/* ── Info banner ── */}
+              <View style={styles.infoBanner}>
+                <Ionicons name="information-circle" size={18} color={colors.purpleGlow} />
+                <Text style={styles.infoText}>
+                  Пройди тему на Главной — она откроется здесь для практики
+                </Text>
+              </View>
+
+              <Text style={styles.sectionTitle}>Темы раздела</Text>
+              <View style={styles.topicList}>
+                {displayTopics.map((topic) => renderTopicCard(topic))}
+              </View>
+            </>
+          ) : (
+            <>
+              {/* ── Выбери ранг ── */}
+              <Text style={styles.sectionTitle}>Выбери ранг</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.rankRow}
+              >
+                {RANK_ORDER.map((r) => {
+                  const isSelected = r === selectedRank;
+                  const rProgress = getRankXpProgress(r, xp);
+                  const accent = RANK_ACCENT[r];
+
+                  return (
+                    <Pressable
+                      key={r}
+                      style={[
+                        styles.rankCard,
+                        isSelected && [styles.rankCardSelected, { borderColor: accent }],
+                      ]}
+                      onPress={() => { vibrate(); setSelectedRank(r); }}
+                    >
+                      {!rProgress.achieved && (
+                        <View style={styles.rankLockBadge}>
+                          <Ionicons name="lock-closed" size={10} color={colors.textMuted} />
+                        </View>
+                      )}
+                      <Image source={rankImages[r]} style={styles.rankImg} resizeMode="contain" />
+                      <Text style={styles.rankLabel}>{r} ранг</Text>
+                      <Text style={styles.rankXpLabel}>{rankXpLabel(r)}</Text>
+                      {isSelected && (
+                        <View style={styles.rankMiniTrack}>
+                          <View
+                            style={[
+                              styles.rankMiniFill,
+                              { width: `${rProgress.progressPct}%`, backgroundColor: accent },
+                            ]}
+                          />
+                        </View>
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+
+              {/* ── Темы ранга ── */}
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>Темы {selectedRank} ранга</Text>
+                <View style={styles.islandPill}>
+                  <Text style={styles.islandPillText}>Остров {subject.number} из {subjects.length}</Text>
+                </View>
+                <Pressable onPress={showRankInfo} hitSlop={8} style={styles.infoBtn}>
+                  <Ionicons name="information-circle-outline" size={20} color={colors.textMuted} />
+                </Pressable>
+              </View>
+
+              <View style={styles.topicList}>
+                {rankTopics.length > 0 ? (
+                  rankTopics.map((topic) => renderTopicCard(topic))
+                ) : (
+                  <View style={styles.emptyRankCard}>
+                    <Text style={styles.emptyRankText}>Темы этого острова скоро появятся</Text>
+                  </View>
+                )}
+              </View>
+
+            </>
+          )}
 
           {/* ── Premium banner ── */}
           {!premiumUnlocked && (
@@ -238,37 +341,53 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 10,
-    gap: 8,
   },
-  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { flex: 1, color: colors.text, fontSize: 18, fontWeight: '700' },
-  headerRight: { flexDirection: 'row', alignItems: 'center' },
-  statEmoji: { fontSize: 14 },
-  statVal: { color: colors.text, fontSize: 14, fontWeight: '700', marginLeft: 4 },
-
-  scroll: { paddingHorizontal: 16, paddingTop: 4 },
-
-  /* Hero */
-  heroCard: {
-    backgroundColor: colors.surfaceGlass,
+  flexSpacer: { flex: 1 },
+  backBtn: {
+    width: 40,
+    height: 40,
     borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceGlass,
     borderWidth: 1,
     borderColor: colors.borderMuted,
-    padding: 16,
-    marginBottom: 14,
   },
-  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  heroIsland: { width: 110, height: 110 },
+  gemsChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 999,
+    backgroundColor: colors.surfaceGlass,
+    borderWidth: 1,
+    borderColor: colors.borderMuted,
+  },
+  gemsText: { color: colors.text, fontSize: 15, fontWeight: '800' },
+
+  scroll: { paddingHorizontal: 16, paddingTop: 8 },
+
+  /* Hero */
+  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 },
+  heroIsland: { width: 132, height: 132 },
   heroInfo: { flex: 1 },
-  heroTitle: { color: colors.text, fontSize: 22, fontWeight: '800', marginBottom: 2 },
-  heroLevel: { fontSize: 13, fontWeight: '700', marginBottom: 8 },
-  heroProgressRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  heroProgressLabel: { color: colors.textMuted, fontSize: 12 },
-  heroProgressCount: { fontSize: 12, fontWeight: '700' },
-  heroTrack: { height: 6, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' },
-  heroFill: { height: '100%', borderRadius: 3 },
+  heroTitle: { color: colors.text, fontSize: 28, fontWeight: '800', marginBottom: 6 },
+  heroTagline: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
+
+  heroProgressRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  heroProgressLabel: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
+  heroProgressCount: { fontSize: 16, fontWeight: '800' },
+  heroTrack: {
+    height: 7,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 22,
+  },
+  heroFill: { height: '100%', borderRadius: 4 },
 
   /* Info banner */
   infoBanner: {
@@ -287,15 +406,71 @@ const styles = StyleSheet.create({
 
   /* Section */
   sectionTitle: { color: colors.text, fontSize: 17, fontWeight: '800', marginBottom: 12 },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  islandPill: {
+    backgroundColor: 'rgba(144,71,255,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(144,71,255,0.3)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  islandPillText: { color: colors.purpleGlow, fontSize: 12, fontWeight: '700' },
+  infoBtn: { marginLeft: 'auto' },
+
+  /* Rank selector */
+  rankRow: { gap: 10, paddingBottom: 4, marginBottom: 22 },
+  rankCard: {
+    width: 128,
+    alignItems: 'center',
+    backgroundColor: colors.surfaceGlass,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.borderMuted,
+    paddingVertical: 16,
+    paddingHorizontal: 10,
+  },
+  rankCardSelected: {
+    borderWidth: 2,
+    backgroundColor: 'rgba(144,71,255,0.1)',
+  },
+  rankLockBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  rankImg: { width: 56, height: 56, marginBottom: 8 },
+  rankLabel: { color: colors.text, fontSize: 13, fontWeight: '800', marginBottom: 3 },
+  rankXpLabel: { color: colors.textMuted, fontSize: 10.5, fontWeight: '600', textAlign: 'center' },
+  rankMiniTrack: {
+    width: '100%',
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+    marginTop: 10,
+  },
+  rankMiniFill: { height: '100%', borderRadius: 2 },
 
   /* Topic list */
-  topicList: { gap: 10, marginBottom: 20 },
+  topicList: { gap: 10, marginBottom: 18 },
 
   topicCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surfaceGlass,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.borderMuted,
     paddingHorizontal: 14,
@@ -304,84 +479,52 @@ const styles = StyleSheet.create({
   },
   topicCardLocked: { opacity: 0.55 },
 
-  numBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+  topicIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
-  numBadgeLocked: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  numBadgeText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  numBadgeTextLocked: {
-    color: colors.textDim,
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  topicIconGlyph: { fontSize: 18, fontWeight: '800' },
 
-  topicInfo: { flex: 1 },
-  topicTitle: { color: colors.text, fontSize: 14, fontWeight: '700', marginBottom: 3 },
+  topicInfo: { flex: 1, minWidth: 0 },
+  topicTitle: { color: colors.text, fontSize: 14.5, fontWeight: '700', marginBottom: 4 },
   topicTitleLocked: { color: colors.textDim },
-  topicSub: { color: colors.textMuted, fontSize: 11 },
   topicSubLocked: { color: colors.textDim, fontSize: 11 },
-  topicResult: { fontSize: 11, fontWeight: '600' },
 
-  testBtn: {
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    alignItems: 'center',
-    flexShrink: 0,
+  topicProgressRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  topicTrack: {
+    flex: 1,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
   },
-  testBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  topicFill: { height: '100%', borderRadius: 3 },
+  topicFraction: { color: colors.textMuted, fontSize: 11, fontWeight: '600', flexShrink: 0 },
 
-  openBtn: {
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    alignItems: 'center',
-    flexShrink: 0,
-    borderWidth: 1.5,
-    borderColor: colors.purple,
-  },
-  openBtnText: { color: colors.purpleGlow, fontSize: 13, fontWeight: '700' },
-
-  /* Hint */
-  hintCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(144,71,255,0.10)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(144,71,255,0.25)',
-    padding: 14,
-    marginBottom: 14,
-  },
-  hintIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.purple,
+  topicRight: { alignItems: 'center', gap: 8, flexShrink: 0 },
+  topicChevronBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(144,71,255,0.18)',
   },
-  hintText: { flex: 1, color: colors.textMuted, fontSize: 13, lineHeight: 20 },
+  topicChevronBtnLocked: { backgroundColor: 'rgba(255,255,255,0.06)' },
+
+  emptyRankCard: {
+    backgroundColor: colors.surfaceGlass,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.borderMuted,
+    paddingVertical: 22,
+    alignItems: 'center',
+  },
+  emptyRankText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
 
   /* Premium */
   premiumBanner: {

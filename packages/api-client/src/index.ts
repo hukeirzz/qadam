@@ -12,7 +12,6 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type {
-  Competition,
   OptionRow,
   PetType,
   QuestionWithOptionsRow,
@@ -173,13 +172,9 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
     },
 
     /**
-     * Pet name, entrance-test rank, and school/class linkage, from the
-     * pet/rank/competitions migration (supabase/migrations/20260722000001)
-     * and the schools/classes/roles one. Kept separate from load() above
-     * for the same reason role() is — apps/mobile's existing profile load
-     * doesn't depend on either migration having been applied to the live
-     * project yet, so returning users' load() still works even before
-     * they land.
+     * Pet name/type, entrance-test rank, and school/class linkage. Kept
+     * separate from load() above for the same reason role() is — apps/
+     * mobile's existing profile load doesn't depend on this data.
      */
     async onboardingInfo(userId: string): Promise<{
       pet_name: string | null;
@@ -187,10 +182,11 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       rank: Rank | null;
       school_id: string | null;
       class_id: string | null;
+      class_label: string | null;
     } | null> {
       const { data, error } = await supabase
-        .from('user_profiles')
-        .select('pet_name, pet_type, rank, school_id, class_id')
+        .from('students')
+        .select('pet_name, pet_type, rank, school_id, class_id, class_label')
         .eq('id', userId)
         .single();
 
@@ -201,29 +197,40 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
         rank: Rank | null;
         school_id: string | null;
         class_id: string | null;
+        class_label: string | null;
       };
     },
 
     /**
-     * Registration/onboarding fields (pet name/type, phone, school/class,
-     * consent) — separate from save() below for the same reason role() is
-     * separate: these columns come from a different, not-yet-applied
-     * migration, and this isn't on the hot path quiz completion calls.
+     * A student's average ОРТ score across all mock exams their school's
+     * coordinator has entered (mock_results.total, see results-editor.tsx
+     * in apps/school-web) — null/0 count for students not linked to a
+     * partner school, or whose coordinator hasn't entered scores yet.
      */
+    async averageMockScore(studentId: string): Promise<{ average: number | null; count: number }> {
+      const { data, error } = await supabase
+        .from('mock_results')
+        .select('total')
+        .eq('student_id', studentId);
+
+      if (error || !data || data.length === 0) return { average: null, count: 0 };
+      const rows = data as { total: number }[];
+      const average = Math.round(rows.reduce((sum, r) => sum + r.total, 0) / rows.length);
+      return { average, count: rows.length };
+    },
+
     async saveOnboarding(
       userId: string,
       updates: {
         pet_name?: string;
         pet_type?: PetType;
-        phone?: string;
-        nickname?: string;
-        class_label?: string;
         school_id?: string | null;
+        class_id?: string | null;
+        class_label?: string;
         data_consent?: boolean;
-        show_in_school_rating?: boolean;
       },
     ) {
-      const { error } = await supabase.from('user_profiles').update(updates).eq('id', userId);
+      const { error } = await supabase.from('students').update(updates).eq('id', userId);
       if (error) console.warn('profile.saveOnboarding error:', error.message);
       return { error };
     },
@@ -231,6 +238,7 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
     async save(
       userId: string,
       updates: {
+        name?: string;
         xp?: number;
         gems?: number;
         streak?: number;
@@ -397,20 +405,58 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
     },
 
     /**
-     * Looks up a school by its short join code (from the school_code
-     * migration, supabase/migrations/20260724000001). Case-insensitive.
-     * Returns null on no match/error so registration can proceed without
-     * a school link rather than blocking on a typo.
+     * Looks up a school by its short join code — `schools.promo_code`,
+     * added by the backend_v2_tables migration. Goes through the
+     * public_find_school_by_code RPC (supabase/migrations/20260728000003)
+     * rather than a direct table select: schools' RLS only lets a user
+     * read a school they're already linked to, which would make every
+     * lookup during registration (before that link exists) return
+     * nothing. The RPC is security definer and only exposes id/name, not
+     * promo_code, so codes stay non-enumerable. Case-insensitive; returns
+     * null on no match/error so registration can proceed without a school
+     * link rather than blocking on a typo.
      */
     async findByCode(code: string): Promise<{ id: string; name: string } | null> {
       const { data, error } = await supabase
-        .from('schools')
-        .select('id, name')
-        .ilike('code', code.trim())
+        .rpc('public_find_school_by_code', { p_code: code.trim() })
         .maybeSingle();
 
       if (error || !data) return null;
       return data as { id: string; name: string };
+    },
+
+    /**
+     * Fetches a single class row — used once a student is already linked
+     * to a school (classes_read's RLS allows reading any class in your
+     * own school, so this is a plain select, unlike findClassByCode).
+     */
+    async fetchClassById(classId: string): Promise<{ id: string; name: string } | null> {
+      const { data, error } = await supabase
+        .from('classes')
+        .select('id, name')
+        .eq('id', classId)
+        .single();
+
+      if (error || !data) return null;
+      return data as { id: string; name: string };
+    },
+
+    /**
+     * Looks up a class by its short join code — `classes.promo_code`
+     * (backend_v2_tables) — via the public_find_class_by_code RPC
+     * (supabase/migrations/20260729000001), for the same reason
+     * findByCode above goes through a RPC: classes_read's RLS requires
+     * already being linked to the class's school. Returns school_id too,
+     * so entering a class code alone can link both school and class in
+     * one step.
+     */
+    async findClassByCode(code: string): Promise<{ id: string; name: string; school_id: string } | null> {
+      const { data, error } = await supabase
+        .rpc('public_find_class_by_code', { p_code: code.trim() })
+        .maybeSingle();
+
+      if (error || !data) return null;
+      return data as { id: string; name: string; school_id: string };
     },
   };
 
@@ -459,53 +505,10 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       return shaped.slice(0, count);
     },
 
-    async submitResult(userId: string, score: number, total: number, rank: Rank) {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ entrance_test_score: score, entrance_test_total: total, rank })
-        .eq('id', userId);
+    async submitResult(userId: string, rank: Rank) {
+      const { error } = await supabase.from('students').update({ rank }).eq('id', userId);
       if (error) console.warn('entranceTest.submitResult error:', error.message);
       return { error };
-    },
-  };
-
-  const competitions = {
-    async list(schoolId: string | null): Promise<Competition[] | null> {
-      let query = supabase.from('competitions').select('*').order('start_at', { ascending: false });
-      query = schoolId
-        ? query.or(`source.eq.platform,school_id.eq.${schoolId}`)
-        : query.eq('source', 'platform');
-      const { data, error } = await query;
-      if (error || !data) return null;
-      return data as Competition[];
-    },
-
-    async fetchById(id: string): Promise<Competition | null> {
-      const { data, error } = await supabase.from('competitions').select('*').eq('id', id).single();
-      if (error || !data) return null;
-      return data as Competition;
-    },
-
-    async join(competitionId: string, userId: string) {
-      const { error } = await supabase
-        .from('competition_participants')
-        .insert({ competition_id: competitionId, user_id: userId });
-      return { error };
-    },
-
-    async leaderboard(competitionId: string): Promise<{ userId: string; displayName: string; xpEarned: number }[] | null> {
-      const { data, error } = await supabase
-        .from('competition_participants')
-        .select('user_id, xp_earned, user_profiles(name, nickname)')
-        .eq('competition_id', competitionId)
-        .order('xp_earned', { ascending: false });
-
-      if (error || !data) return null;
-      return (data as any[]).map((row) => ({
-        userId: row.user_id,
-        displayName: row.user_profiles?.nickname ?? row.user_profiles?.name ?? 'Игрок',
-        xpEarned: row.xp_earned ?? 0,
-      }));
     },
   };
 
@@ -670,7 +673,7 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
 
   return {
     supabase, auth, profile, theory, topics, questions, schools,
-    entranceTest, competitions, rating, staffData,
+    entranceTest, rating, staffData,
   };
 }
 
