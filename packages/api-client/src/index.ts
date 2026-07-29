@@ -550,12 +550,20 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
      * One attempt per student — unique(test_id, student_id) + INSERT-only
      * RLS, so a repeat submit fails with 23505 rather than overwriting the
      * score. The DB trigger recomputes `total`, so it's sent only for
-     * readability.
+     * readability. `durationSeconds` is wall-clock time from when the
+     * student started the test to submit — tracked silently (no in-app
+     * timer UI), surfaced only to the coordinator in results.
      */
-    async submitResult(testId: string, studentId: string, score: number, total: number) {
+    async submitResult(
+      testId: string,
+      studentId: string,
+      score: number,
+      total: number,
+      durationSeconds?: number,
+    ) {
       const { error } = await supabase
         .from('school_test_results')
-        .insert({ test_id: testId, student_id: studentId, score, total });
+        .insert({ test_id: testId, student_id: studentId, score, total, duration_seconds: durationSeconds ?? null });
       if (error) console.warn('schoolTests.submitResult error:', error.message);
       return { error, alreadyTaken: error?.code === '23505' };
     },
@@ -766,11 +774,11 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
     async schoolTestResults(testId: string) {
       const { data } = await supabase
         .from('school_test_results')
-        .select('student_id, score, total, created_at, students!inner(name, class_id)')
+        .select('student_id, score, total, duration_seconds, created_at, students!inner(name, class_id)')
         .eq('test_id', testId)
         .order('score', { ascending: false });
       return (data ?? []) as unknown as {
-        student_id: string; score: number; total: number; created_at: string;
+        student_id: string; score: number; total: number; duration_seconds: number | null; created_at: string;
         students: { name: string; class_id: string | null };
       }[];
     },

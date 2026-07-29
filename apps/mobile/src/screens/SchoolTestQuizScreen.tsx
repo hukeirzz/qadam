@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,11 +28,16 @@ export function SchoolTestQuizScreen({ route, navigation }: Props) {
 
   const [questions, setQuestions] = useState<SchoolTestQuestionDTO[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
+  // Молча считаем время прохождения — таймер нигде не показывается,
+  // значение уходит в school_test_results.duration_seconds только при
+  // отправке результата (см. handleNext).
+  const startedAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     fetchSchoolTestQuestions(testId).then((qs) => {
       setQuestions(qs ?? []);
       setLoadingQuestions(false);
+      startedAtRef.current = Date.now();
     });
   }, [testId]);
 
@@ -62,7 +67,12 @@ export function SchoolTestQuizScreen({ route, navigation }: Props) {
     if (index + 1 >= total) {
       setSubmitting(true);
       if (userId) {
-        const { alreadyTaken: taken } = await submitSchoolTestResult(testId, userId, correctCount, total);
+        const durationSeconds = startedAtRef.current != null
+          ? Math.round((Date.now() - startedAtRef.current) / 1000)
+          : undefined;
+        const { alreadyTaken: taken } = await submitSchoolTestResult(
+          testId, userId, correctCount, total, durationSeconds,
+        );
         setAlreadyTaken(!!taken);
       }
       setSubmitting(false);

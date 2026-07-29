@@ -9,10 +9,17 @@ type TestDetail = {
   school_test_questions: { id: string }[];
 };
 type ResultRow = {
-  student_id: string; score: number; total: number; created_at: string;
+  student_id: string; score: number; total: number; duration_seconds: number | null; created_at: string;
   students: { name: string; class_id: string | null };
 };
 type ClassRow = { id: string; name: string };
+
+function formatDuration(seconds: number | null): string {
+  if (seconds == null) return '—';
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
 
 export function SchoolTestResults({
   test, results, classes,
@@ -74,6 +81,7 @@ export function SchoolTestResults({
                   <th className="px-2 py-2 font-medium">Класс</th>
                   <th className="px-2 py-2 text-center font-medium">Балл</th>
                   <th className="px-2 py-2 text-center font-medium">%</th>
+                  <th className="px-2 py-2 text-center font-medium">Время</th>
                   <th className="px-2 py-2 text-right font-medium">Дата</th>
                 </tr>
               </thead>
@@ -90,6 +98,7 @@ export function SchoolTestResults({
                           {pct}%
                         </span>
                       </td>
+                      <td className="px-2 py-2.5 text-center text-slate-500">{formatDuration(r.duration_seconds)}</td>
                       <td className="px-2 py-2.5 text-right text-xs text-slate-400">
                         {new Date(r.created_at).toLocaleDateString('ru-RU')}
                       </td>
