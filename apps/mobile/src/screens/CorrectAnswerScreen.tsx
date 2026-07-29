@@ -26,7 +26,7 @@ export function CorrectAnswerScreen({ navigation, route }: Props) {
 
   useEffect(() => {
     playSound('complete');
-    completeQuiz(subjectId, topicId, correctCount, total, earnedXp, livesRemaining);
+    completeQuiz(topicId, correctCount, total, earnedXp, livesRemaining);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

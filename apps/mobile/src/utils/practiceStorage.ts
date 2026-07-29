@@ -4,17 +4,26 @@ export interface PracticeResult {
   correct: number;
   total: number;
   pct: number;
+  /** Best `correct` ever reached for this topic — used to only pay out XP for the improvement. */
+  best: number;
 }
 
 const KEY = (topicId: string) => `practice_result_${topicId}`;
 
+/** Returns the previous best `correct` (before this save), so the caller can pay XP for the improvement only. */
 export async function savePracticeResult(
   topicId: string,
   correct: number,
   total: number,
-): Promise<void> {
-  const result: PracticeResult = { correct, total, pct: Math.round((correct / total) * 100) };
+): Promise<{ prevBest: number }> {
+  const existing = await getPracticeResult(topicId);
+  const prevBest = existing?.best ?? 0;
+  const result: PracticeResult = {
+    correct, total, pct: Math.round((correct / total) * 100),
+    best: Math.max(prevBest, correct),
+  };
   await AsyncStorage.setItem(KEY(topicId), JSON.stringify(result));
+  return { prevBest };
 }
 
 export async function getPracticeResult(topicId: string): Promise<PracticeResult | null> {

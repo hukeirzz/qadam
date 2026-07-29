@@ -11,8 +11,6 @@ import Svg, {
   Stop,
 } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { Rank } from '@qadam/business-logic';
 import { dateKey, useAppStore } from '../store/useAppStore';
@@ -21,18 +19,16 @@ import { SurfaceCard } from '../components/ui/SurfaceCard';
 import { RankBadge } from '../components/ui/RankBadge';
 import { colors, glow, subjectColors } from '../theme/colors';
 import { getTopicIds, subjects } from '../data/subjects';
-import { MainTabParamList } from '../types/navigation';
 import { vibrate } from '../services/soundService';
 
 const WEEKDAYS = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']; // Date.getDay(): 0 = воскресенье
 const MONTHS = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
 
-type Period = '7d' | 'month' | '90d' | 'year';
+type Period = '7d' | 'month' | 'year';
 
 const PERIODS: { key: Period; label: string }[] = [
   { key: '7d', label: '7 дней' },
   { key: 'month', label: 'Месяц' },
-  { key: '90d', label: '90 дней' },
   { key: 'year', label: 'Год' },
 ];
 
@@ -51,7 +47,6 @@ function isActiveDay(dailySteps: Record<string, number>, d: Date): boolean {
 /** Максимум по оси Y для периода — не «красивое» число, а реальный предел (день/неделя/месяц). */
 function maxForPeriod(period: Period): number {
   if (period === '7d' || period === 'month') return 1;
-  if (period === '90d') return 7;
   return 31;
 }
 
@@ -80,30 +75,6 @@ function buildSeries(period: Period, dailySteps: Record<string, number>): { data
       data.push(isActiveDay(dailySteps, d) ? 1 : 0);
       const pos = 29 - i;
       labels.push(pos % 6 === 0 || pos === 29 ? String(d.getDate()) : '');
-    }
-    return { data, labels };
-  }
-
-  if (period === '90d') {
-    // 13 недельных корзин, самая свежая заканчивается сегодня.
-    // Значение — сколько дней недели вошли в серию (0–7).
-    const weeks = 13;
-    const data: number[] = [];
-    const labels: string[] = [];
-    for (let w = weeks - 1; w >= 0; w--) {
-      let activeDays = 0;
-      let bucketEnd = today;
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(today);
-        d.setDate(d.getDate() - (w * 7 + i));
-        if (isActiveDay(dailySteps, d)) activeDays++;
-        if (i === 0) bucketEnd = d;
-      }
-      data.push(activeDays);
-      const pos = weeks - 1 - w;
-      labels.push(
-        pos % 3 === 0 || pos === weeks - 1 ? `${bucketEnd.getDate()}.${bucketEnd.getMonth() + 1}` : '',
-      );
     }
     return { data, labels };
   }
@@ -214,7 +185,6 @@ function ActivityChart({
 
 export function StatsScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
 
   const completedTopics = useAppStore((s) => s.completedTopics);
   const dailySteps = useAppStore((s) => s.dailySteps);
@@ -239,19 +209,10 @@ export function StatsScreen() {
     return { id: subject.id, title: subject.title, icon: subject.icon, color, pct, done, total };
   });
 
-  const openSubject = (subjectId: string) => {
-    if (!isRealRank) {
-      vibrate();
-      return;
-    }
-    vibrate();
-    (navigation as any).navigate('PathTab', { screen: 'IslandPath', params: { subjectId } });
-  };
-
   const showActivityInfo = () => {
     vibrate();
     Alert.alert(
-      'Серия дней',
+      'Активность',
       'Отмечает дни, когда ты проходил хотя бы одну тему — из таких дней подряд складывается серия (streak).',
     );
   };
@@ -294,7 +255,7 @@ export function StatsScreen() {
             <View style={styles.chartIconWrap}>
               <MaterialCommunityIcons name="fire" size={20} color="#FF8C3B" />
             </View>
-            <Text style={styles.cardLabel}>Серия дней</Text>
+            <Text style={styles.cardLabel}>Активность</Text>
             <Pressable onPress={showActivityInfo} hitSlop={8}>
               <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
             </Pressable>
@@ -344,10 +305,9 @@ export function StatsScreen() {
           )}
 
           {subjectStats.map((s) => (
-            <Pressable
+            <View
               key={s.id}
               style={[styles.subjectRow, !isRealRank && styles.subjectRowLocked]}
-              onPress={() => openSubject(s.id)}
             >
               <View style={[styles.subjectIconWrap, { backgroundColor: `${s.color}26` }]}>
                 <Text style={[styles.subjectIconGlyph, { color: s.color }]}>{s.icon}</Text>
@@ -357,8 +317,7 @@ export function StatsScreen() {
                 <View style={[styles.subjectFill, { width: `${s.pct}%`, backgroundColor: s.color }]} />
               </View>
               <Text style={[styles.subjectPct, { color: s.color }]}>{s.pct}%</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
-            </Pressable>
+            </View>
           ))}
         </SurfaceCard>
       </ScrollView>

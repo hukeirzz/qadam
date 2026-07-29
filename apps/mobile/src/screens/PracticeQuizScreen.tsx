@@ -13,6 +13,7 @@ import { PracticeQuestion, OptionKey } from '../data/practiceQuestions/types';
 import { savePracticeResult } from '../utils/practiceStorage';
 import { testSuccessBackgrounds, testFailBackgrounds } from '../assets/testResultBackgrounds';
 import { useAppStore } from '../store/useAppStore';
+import { recordTopicStat } from '../services/progressService';
 import { playSound, vibrate } from '../services/soundService';
 
 type Props = NativeStackScreenProps<ExerciseStackParamList, 'PracticeQuiz'>;
@@ -33,12 +34,15 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
   const { topicId, topicTitle, subjectId } = route.params;
   const insets = useSafeAreaInsets();
   const petType = useAppStore((s) => s.petType);
+  const userId = useAppStore((s) => s.userId);
+  const addXp = useAppStore((s) => s.addXp);
 
   const [questions, setQuestions] = useState<PracticeQuestion[]>([]);
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<OptionKey | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
   const [phase, setPhase] = useState<'quiz' | 'result'>('quiz');
+  const [xpEarned, setXpEarned] = useState(0);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -50,6 +54,7 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
     setSelected(null);
     setCorrectCount(0);
     setPhase('quiz');
+    setXpEarned(0);
     fadeAnim.setValue(1);
   }, [topicId]);
 
@@ -66,12 +71,29 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
     if (key === current.correct) setCorrectCount((c) => c + 1);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     playSound('tap');
     const nextIndex = index + 1;
     if (nextIndex >= questions.length) {
-      const finalCorrect = correctCount + (isCorrect ? 0 : 0); // already updated
-      savePracticeResult(topicId, correctCount + (selected === current.correct ? 1 : 0) - (isCorrect ? 0 : 0), questions.length).catch(() => {});
+      // Единственное место, где реально копится точность по темам для
+      // school-web («Точность по разделам») — острова/теория туда не
+      // попадают, только практика.
+      if (userId) {
+        recordTopicStat(topicId, subjectId, correctCount, questions.length).catch(console.warn);
+      }
+      // XP: 10 за каждый верный ответ на первом прохождении темы; при
+      // повторном — только за прирост над лучшим результатом (иначе можно
+      // фармить XP, проходя одну тему по кругу).
+      try {
+        const { prevBest } = await savePracticeResult(topicId, correctCount, questions.length);
+        const gained = Math.max(0, correctCount - prevBest) * 10;
+        if (gained > 0) {
+          addXp(gained);
+          setXpEarned(gained);
+        }
+      } catch {
+        // локальное хранилище недоступно — просто не начисляем XP в этот раз
+      }
       playSound('complete');
       setPhase('result');
       return;
@@ -114,6 +136,7 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
 
         <View style={[styles.resultContent, { paddingBottom: insets.bottom + 20 }]}>
           <Text style={styles.resultTitle}>{isGreat ? 'Отличная работа!' : 'Есть куда расти!'}</Text>
+          <Text style={styles.resultXp}>+{xpEarned} XP</Text>
           <Text style={styles.resultPct}>{pct}%</Text>
 
           <View style={styles.resultStatsRow}>
@@ -353,6 +376,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   resultTitle: { color: colors.text, fontSize: 26, fontWeight: '800', textAlign: 'center' },
+  resultXp: { color: '#FFD166', fontSize: 15, fontWeight: '800', textAlign: 'center', marginTop: 2 },
   resultPct: { color: '#FFD166', fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 6 },
   resultStatsRow: { flexDirection: 'row', justifyContent: 'center', gap: 20, marginBottom: 18 },
   resultStat: { flexDirection: 'row', alignItems: 'center', gap: 6 },

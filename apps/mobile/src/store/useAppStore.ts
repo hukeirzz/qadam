@@ -80,7 +80,6 @@ interface AppState {
 
   /** xpReward already accounts for accuracy + hearts (+ differential for replays) */
   completeQuiz: (
-    subjectId: string,
     topicId: string,
     correctCount: number,
     total: number,
@@ -89,6 +88,11 @@ interface AppState {
   ) => void;
   /** Spend 200 gems to unlock premium. Returns true if successful. */
   unlockPremiumWithGems: () => boolean;
+  /**
+   * Awards XP outside the completeQuiz flow (e.g. Практика retries) — just
+   * XP + level-up sound, no streak/topic/heart bookkeeping.
+   */
+  addXp: (amount: number) => void;
   /**
    * Push real per-subject topic IDs from Supabase into the store.
    * Also recalculates totalSteps and overallProgress automatically.
@@ -103,7 +107,7 @@ interface AppState {
 }
 
 const FRESH: Omit<AppState,
-  'loadProfile' | 'setOnboardingInfo' | 'completeQuiz' | 'unlockPremiumWithGems' | 'setRemoteTopics' | 'setOnboarded' | 'setAuthenticated' | 'setPremium' | 'setUserName' | 'logout'
+  'loadProfile' | 'setOnboardingInfo' | 'completeQuiz' | 'unlockPremiumWithGems' | 'addXp' | 'setRemoteTopics' | 'setOnboarded' | 'setAuthenticated' | 'setPremium' | 'setUserName' | 'logout'
 > = {
   userId: null, userName: '', isAuthenticated: false, hasOnboarded: false,
   petName: null, petType: null, rank: null, schoolId: null, classId: null, classLabel: null,
@@ -177,7 +181,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
   },
 
-  completeQuiz: (subjectId, topicId, correctCount, total, xpReward, livesRemaining) => {
+  completeQuiz: (topicId, correctCount, total, xpReward, livesRemaining) => {
     const s = get();
     const alreadyDone = s.completedTopics.includes(topicId);
     const prevHearts = s.topicHearts[topicId] ?? 0;
@@ -238,7 +242,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
 
     if (s.userId) {
-      import('../services/progressService').then((m) => {
+      import('../services/progressService').then((m) =>
         m.saveProfileProgress(s.userId!, {
           xp: newXp,
           streak: newStreak, last_activity: today,
@@ -247,11 +251,8 @@ export const useAppStore = create<AppState>((set, get) => ({
           week_start: currentWeekStart,
           topic_hearts: newTopicHearts,
           daily_steps: newDailySteps,
-        }).catch(console.warn);
-        // Копится в student_topic_stats — это то, что school-web показывает
-        // директору/координатору как «Точность по разделам».
-        m.recordTopicStat(topicId, subjectId, correctCount, total).catch(console.warn);
-      });
+        })
+      ).catch(console.warn);
     }
   },
 
@@ -267,6 +268,21 @@ export const useAppStore = create<AppState>((set, get) => ({
       ).catch(console.warn);
     }
     return true;
+  },
+
+  addXp: (amount) => {
+    if (amount <= 0) return;
+    const s = get();
+    const newXp = s.xp + amount;
+    if (calcLevel(newXp) > calcLevel(s.xp)) {
+      setTimeout(() => playSound('level_up'), 300);
+    }
+    set({ xp: newXp });
+    if (s.userId) {
+      import('../services/progressService').then((m) =>
+        m.saveProfileProgress(s.userId!, { xp: newXp })
+      ).catch(console.warn);
+    }
   },
 
   logout: () => {

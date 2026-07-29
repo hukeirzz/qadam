@@ -39,7 +39,7 @@ const TAB_LABELS: Record<string, string> = {
 // кнопку завершения).
 const HIDDEN_TABBAR_ROUTES: Record<string, string[]> = {
   PathTab: ['Quiz', 'CorrectAnswer'],
-  ExerciseTab: ['PracticeQuiz'],
+  ExerciseTab: ['PracticeQuiz', 'SchoolTestQuiz'],
 };
 
 function CustomTabBar({ state, navigation, descriptors }: BottomTabBarProps) {

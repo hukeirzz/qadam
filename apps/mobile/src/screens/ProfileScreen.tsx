@@ -3,15 +3,12 @@ import { Alert, Pressable, ScrollView, StyleSheet, View, Image } from 'react-nat
 import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native';
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { SurfaceCard } from '../components/ui/SurfaceCard';
 import { RankBadge } from '../components/ui/RankBadge';
 import { ProfileStackParamList } from '../navigation/ProfileStack';
-import { MainTabParamList } from '../types/navigation';
 import { useAppStore } from '../store/useAppStore';
 import { colors, glow, subjectColors } from '../theme/colors';
 import { subjects, getTopicIds } from '../data/subjects';
@@ -24,7 +21,6 @@ type Props = NativeStackScreenProps<ProfileStackParamList, 'Profile'>;
 
 export function ProfileScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
 
   const userId = useAppStore((s) => s.userId);
   const userName = useAppStore((s) => s.userName);
@@ -63,11 +59,6 @@ export function ProfileScreen({ navigation }: Props) {
   });
 
   const openSettings = () => { vibrate(); navigation.navigate('Settings'); };
-  const openStats = () => { vibrate(); tabNavigation.navigate('StatsTab'); };
-  const openSubject = (subjectId: string) => {
-    vibrate();
-    (tabNavigation as any).navigate('PathTab', { screen: 'IslandPath', params: { subjectId } });
-  };
   const showStatsInfo = () => {
     vibrate();
     Alert.alert(
@@ -190,18 +181,12 @@ export function ProfileScreen({ navigation }: Props) {
         </SurfaceCard>
 
         {/* Мои предметы */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Мои предметы</Text>
-          <Pressable onPress={openStats} hitSlop={6}>
-            <Text style={styles.sectionLink}>Смотреть все</Text>
-          </Pressable>
-        </View>
+        <Text style={styles.sectionTitle}>Мои предметы</Text>
         <SurfaceCard style={styles.cardShadow} glowColor={glow.purple} radius={20} padding={8}>
           {subjectStats.map((s, i) => (
-            <Pressable
+            <View
               key={s.id}
               style={[styles.subjectRow, i < subjectStats.length - 1 && styles.subjectRowDivider]}
-              onPress={() => openSubject(s.id)}
             >
               <View style={[styles.subjectIconWrap, { backgroundColor: `${s.color}26` }]}>
                 <Text style={[styles.subjectIconGlyph, { color: s.color }]}>{s.icon}</Text>
@@ -211,22 +196,10 @@ export function ProfileScreen({ navigation }: Props) {
                 <View style={[styles.subjectFill, { width: `${s.pct}%`, backgroundColor: s.color }]} />
               </View>
               <Text style={[styles.subjectPct, { color: s.color }]}>{s.pct}%</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
-            </Pressable>
+            </View>
           ))}
         </SurfaceCard>
 
-        {/* Статистика */}
-        <Pressable style={styles.statsLinkRow} onPress={openStats}>
-          <View style={styles.statsLinkIconWrap}>
-            <Ionicons name="stats-chart" size={18} color={colors.purpleGlow} />
-          </View>
-          <View style={styles.statsLinkTextWrap}>
-            <Text style={styles.statsLinkTitle}>Статистика</Text>
-            <Text style={styles.statsLinkSubtitle}>Подробная статистика и прогресс</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
-        </Pressable>
       </ScrollView>
     </ScreenBackground>
   );
@@ -334,14 +307,7 @@ const styles = StyleSheet.create({
   statVal: { color: colors.text, fontSize: 18, fontWeight: '800' },
   statLbl: { color: colors.textMuted, fontSize: 10.5, fontWeight: '600' },
   statInfoBtn: { position: 'absolute', top: -8, right: -4 },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  sectionTitle: { color: colors.text, fontSize: 17, fontWeight: '800' },
-  sectionLink: { color: colors.purpleGlow, fontSize: 13, fontWeight: '700' },
+  sectionTitle: { color: colors.text, fontSize: 17, fontWeight: '800', marginBottom: 12 },
   subjectRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -371,25 +337,4 @@ const styles = StyleSheet.create({
   },
   subjectFill: { height: '100%', borderRadius: 3 },
   subjectPct: { fontSize: 12, fontWeight: '700', width: 34, textAlign: 'right' },
-  statsLinkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    backgroundColor: colors.surfaceGlass,
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.borderMuted,
-  },
-  statsLinkIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(144,71,255,0.15)',
-  },
-  statsLinkTextWrap: { flex: 1 },
-  statsLinkTitle: { color: colors.text, fontSize: 15, fontWeight: '700' },
-  statsLinkSubtitle: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
 });
