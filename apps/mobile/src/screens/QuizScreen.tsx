@@ -165,6 +165,7 @@ export function QuizScreen({ navigation, route }: Props) {
         </View>
 
         <ScrollView
+          style={styles.flex}
           contentContainerStyle={[
             styles.scroll,
             { paddingBottom: insets.bottom + 16 },
@@ -217,7 +218,7 @@ export function QuizScreen({ navigation, route }: Props) {
 
         {/* Bottom bar */}
         {answerState !== 'idle' && (
-          <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 116 }]}>
+          <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
             {question.explanation && answerState === 'wrong' ? (
               <Pressable style={styles.explainBtn}>
                 <Text style={styles.explainBtnText}>Объяснение</Text>

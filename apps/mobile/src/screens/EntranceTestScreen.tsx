@@ -105,6 +105,7 @@ export function EntranceTestScreen({ navigation }: Props) {
         </View>
 
         <ScrollView
+          style={styles.flex}
           contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 16 }]}
           showsVerticalScrollIndicator={false}
         >

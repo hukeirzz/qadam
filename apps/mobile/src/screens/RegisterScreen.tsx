@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { TextInput } from '../components/ui/TextInput';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,8 +16,6 @@ import { colors } from '../theme/colors';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
-const CLASS_OPTIONS = ['8 класс', '9 класс', '10 класс', '11 класс'];
-
 export function RegisterScreen({ navigation }: Props) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -26,8 +24,6 @@ export function RegisterScreen({ navigation }: Props) {
   const [showPass, setShowPass] = useState(false);
   const [schoolCode, setSchoolCode] = useState('');
   const [classCode, setClassCode] = useState('');
-  const [classLabel, setClassLabel] = useState<string | null>(null);
-  const [classPickerOpen, setClassPickerOpen] = useState(false);
   const [dataConsent, setDataConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -97,12 +93,10 @@ export function RegisterScreen({ navigation }: Props) {
       await saveOnboarding(userId, {
         school_id: resolvedSchoolId,
         class_id: studentClass?.id ?? null,
-        class_label: classLabel ?? undefined,
         data_consent: dataConsent,
       });
       setOnboardingInfo({
         pet_name: null, rank: null, school_id: resolvedSchoolId, class_id: studentClass?.id ?? null,
-        class_label: classLabel,
       });
 
       // Партнёрская школа — все ранги и премиум-контент открываются автоматически.
@@ -159,12 +153,6 @@ export function RegisterScreen({ navigation }: Props) {
           <Field icon="people-outline" placeholder="Код класса" value={classCode} onChangeText={setClassCode} autoCapitalize="characters" />
           <Text style={styles.hint}>Если знаешь код своего класса — привяжет и школу, и класс</Text>
 
-          <Pressable style={styles.inputWrap} onPress={() => setClassPickerOpen(true)}>
-            <Ionicons name="school-outline" size={18} color={colors.textDim} style={styles.inputIcon} />
-            <Text style={[styles.input, !classLabel && styles.placeholder]}>{classLabel ?? 'Класс'}</Text>
-            <Ionicons name="chevron-down" size={18} color={colors.textDim} />
-          </Pressable>
-
           <Consent checked={dataConsent} onToggle={() => setDataConsent((v) => !v)} label="Согласие на обработку данных" />
 
           {error ? (
@@ -194,22 +182,6 @@ export function RegisterScreen({ navigation }: Props) {
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      <Modal visible={classPickerOpen} transparent animationType="fade" onRequestClose={() => setClassPickerOpen(false)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setClassPickerOpen(false)}>
-          <View style={styles.modalCard}>
-            {CLASS_OPTIONS.map((opt) => (
-              <Pressable
-                key={opt}
-                style={styles.modalOption}
-                onPress={() => { setClassLabel(opt); setClassPickerOpen(false); }}
-              >
-                <Text style={styles.modalOptionText}>{opt}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </Pressable>
-      </Modal>
     </ScreenBackground>
   );
 }
@@ -309,26 +281,4 @@ const styles = StyleSheet.create({
   switchMode: { marginTop: 20, alignItems: 'center' },
   switchText: { color: colors.textMuted, fontSize: 14 },
   switchLink: { color: colors.purpleGlow, fontWeight: '700' },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-  },
-  modalCard: {
-    width: '100%',
-    backgroundColor: colors.surface,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-  },
-  modalOption: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  modalOptionText: { color: colors.text, fontSize: 15, fontWeight: '600', textAlign: 'center' },
 });

@@ -18,8 +18,6 @@ import { vibrate } from '../services/soundService';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'Settings'>;
 
-const CLASS_OPTIONS = ['8 класс', '9 класс', '10 класс', '11 класс'];
-
 const PET_TYPES: { type: PetType; label: string }[] = [
   { type: 'bars', label: 'Снежный барс' },
   { type: 'cat', label: 'Кот' },
@@ -53,7 +51,6 @@ export function SettingsScreen({ navigation }: Props) {
 
   const [namePickerOpen, setNamePickerOpen] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
-  const [classPickerOpen, setClassPickerOpen] = useState(false);
   const [petPickerOpen, setPetPickerOpen] = useState(false);
   const [petNameModalOpen, setPetNameModalOpen] = useState(false);
   const [petNameDraft, setPetNameDraft] = useState('');
@@ -91,12 +88,6 @@ export function SettingsScreen({ navigation }: Props) {
       class_id: patch.class_id !== undefined ? patch.class_id : classId,
       class_label: patch.class_label ?? classLabel,
     });
-  };
-
-  const selectClass = (opt: string) => {
-    vibrate();
-    setClassPickerOpen(false);
-    persistOnboarding({ class_label: opt }).catch(console.warn);
   };
 
   const selectPetType = (type: PetType) => {
@@ -232,14 +223,7 @@ export function SettingsScreen({ navigation }: Props) {
         {/* Профиль */}
         <Text style={styles.sectionTitle}>Профиль</Text>
         <View style={styles.card}>
-          <Row icon="person" label="ФИО" value={userName} isLast={false} onPress={openNameModal} />
-          <Row
-            icon="school"
-            label="Класс"
-            value={classLabel ?? 'Не указан'}
-            isLast
-            onPress={() => { vibrate(); setClassPickerOpen(true); }}
-          />
+          <Row icon="person" label="ФИО" value={userName} isLast onPress={openNameModal} />
         </View>
 
         {/* Питомец */}
@@ -335,19 +319,6 @@ export function SettingsScreen({ navigation }: Props) {
               <Text style={styles.editSaveBtnText}>Сохранить</Text>
             </Pressable>
           </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* Class picker */}
-      <Modal visible={classPickerOpen} transparent animationType="fade" onRequestClose={() => setClassPickerOpen(false)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setClassPickerOpen(false)}>
-          <View style={styles.modalCard}>
-            {CLASS_OPTIONS.map((opt) => (
-              <Pressable key={opt} style={styles.modalOption} onPress={() => selectClass(opt)}>
-                <Text style={styles.modalOptionText}>{opt}</Text>
-              </Pressable>
-            ))}
-          </View>
         </Pressable>
       </Modal>
 
@@ -542,12 +513,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
-  },
-  modalOption: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   modalOptionText: { color: colors.text, fontSize: 15, fontWeight: '600', textAlign: 'center' },
   modalPetOption: {

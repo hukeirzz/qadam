@@ -33,12 +33,13 @@ const TAB_LABELS: Record<string, string> = {
   ProfileTab: 'Профиль',
 };
 
-// Полноэкранные экраны результата (фото на весь экран) сами занимают
-// нижнюю часть — плавающий navbar на них скрываем, чтобы не перекрывал
-// кнопки.
-const HIDDEN_TABBAR_ROUTES: Record<string, string> = {
-  PathTab: 'CorrectAnswer',
-  ExerciseTab: 'PracticeQuiz',
+// Экраны с собственной панелью действий внизу (варианты ответа, кнопка
+// «Далее», полноэкранные результаты) — плавающий navbar на них скрываем,
+// иначе он перекрывает нижнюю часть контента (последний вариант ответа,
+// кнопку завершения).
+const HIDDEN_TABBAR_ROUTES: Record<string, string[]> = {
+  PathTab: ['Quiz', 'CorrectAnswer'],
+  ExerciseTab: ['PracticeQuiz'],
 };
 
 function CustomTabBar({ state, navigation, descriptors }: BottomTabBarProps) {
@@ -115,10 +116,9 @@ export function MainTabs() {
         options={({ route }) => ({
           title: 'Главная',
           popToTopOnBlur: true,
-          tabBarStyle:
-            getFocusedRouteNameFromRoute(route) === HIDDEN_TABBAR_ROUTES.PathTab
-              ? { display: 'none' }
-              : undefined,
+          tabBarStyle: HIDDEN_TABBAR_ROUTES.PathTab.includes(getFocusedRouteNameFromRoute(route) ?? '')
+            ? { display: 'none' }
+            : undefined,
         })}
       />
       <Tab.Screen
@@ -127,10 +127,9 @@ export function MainTabs() {
         options={({ route }) => ({
           title: 'Практика',
           popToTopOnBlur: true,
-          tabBarStyle:
-            getFocusedRouteNameFromRoute(route) === HIDDEN_TABBAR_ROUTES.ExerciseTab
-              ? { display: 'none' }
-              : undefined,
+          tabBarStyle: HIDDEN_TABBAR_ROUTES.ExerciseTab.includes(getFocusedRouteNameFromRoute(route) ?? '')
+            ? { display: 'none' }
+            : undefined,
         })}
       />
       <Tab.Screen

@@ -162,6 +162,7 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
         </View>
 
         <ScrollView
+          style={styles.flex}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.quizScroll, { paddingBottom: insets.bottom + 130 }]}
         >

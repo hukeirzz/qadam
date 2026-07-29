@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
 
   /* Hero */
   heroRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 },
-  heroIsland: { width: 132, height: 132 },
+  heroIsland: { width: 168, height: 168 },
   heroInfo: { flex: 1 },
   heroTitle: { color: colors.text, fontSize: 28, fontWeight: '800', marginBottom: 6 },
   heroTagline: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
