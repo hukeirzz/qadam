@@ -80,6 +80,7 @@ interface AppState {
 
   /** xpReward already accounts for accuracy + hearts (+ differential for replays) */
   completeQuiz: (
+    subjectId: string,
     topicId: string,
     correctCount: number,
     total: number,
@@ -176,7 +177,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
   },
 
-  completeQuiz: (topicId, correctCount, total, xpReward, livesRemaining) => {
+  completeQuiz: (subjectId, topicId, correctCount, total, xpReward, livesRemaining) => {
     const s = get();
     const alreadyDone = s.completedTopics.includes(topicId);
     const prevHearts = s.topicHearts[topicId] ?? 0;
@@ -237,7 +238,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
 
     if (s.userId) {
-      import('../services/progressService').then((m) =>
+      import('../services/progressService').then((m) => {
         m.saveProfileProgress(s.userId!, {
           xp: newXp,
           streak: newStreak, last_activity: today,
@@ -246,8 +247,11 @@ export const useAppStore = create<AppState>((set, get) => ({
           week_start: currentWeekStart,
           topic_hearts: newTopicHearts,
           daily_steps: newDailySteps,
-        })
-      ).catch(console.warn);
+        }).catch(console.warn);
+        // Копится в student_topic_stats — это то, что school-web показывает
+        // директору/координатору как «Точность по разделам».
+        m.recordTopicStat(topicId, subjectId, correctCount, total).catch(console.warn);
+      });
     }
   },
 

@@ -231,6 +231,21 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       return { average, count: rows.length };
     },
 
+    /**
+     * Adds this quiz attempt's correct/answered counts to the student's
+     * running per-topic accuracy (student_topic_stats — read by school-web's
+     * "Точность по разделам"/heatmap). Goes through the record_topic_stat
+     * RPC (supabase/migrations/20260729000005) so the increment is atomic
+     * instead of a client-side read-then-write.
+     */
+    async recordTopicStat(topicId: string, subjectId: string, correct: number, answered: number) {
+      const { error } = await supabase.rpc('record_topic_stat', {
+        p_topic_id: topicId, p_subject_id: subjectId, p_correct: correct, p_answered: answered,
+      });
+      if (error) console.warn('profile.recordTopicStat error:', error.message);
+      return { error };
+    },
+
     async saveOnboarding(
       userId: string,
       updates: {
