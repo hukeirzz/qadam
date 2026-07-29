@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createServerApi } from '@/lib/supabase/server';
 import { StudentsRoster } from '@/components/students-roster';
+import { ClassManager } from '@/components/class-manager';
 
 export default async function StudentsPage() {
   const api = await createServerApi();
@@ -16,5 +17,10 @@ export default async function StudentsPage() {
     api.staffData.classes(schoolId),
   ]);
 
-  return <StudentsRoster students={students} classes={classes} />;
+  return (
+    <div className="mx-auto max-w-[1400px] space-y-6">
+      <ClassManager schoolId={schoolId} classes={classes} />
+      <StudentsRoster students={students} classes={classes} />
+    </div>
+  );
 }
