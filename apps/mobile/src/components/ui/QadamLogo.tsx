@@ -14,7 +14,7 @@ const sizes = {
   lg: { width: 160, height: 64,  tagline: 15 },
 };
 
-const LOGO = require('../../../assets/icon.jpeg');
+const LOGO = require('../../../assets/icon.png');
 
 export function QadamLogo({ size = 'md', showTagline = false }: Props) {
   const s = sizes[size];

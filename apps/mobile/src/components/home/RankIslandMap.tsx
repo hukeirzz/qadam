@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     padding: 12,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: '#F3F1FC',
   },
   emptyRankText: {
     flex: 1,

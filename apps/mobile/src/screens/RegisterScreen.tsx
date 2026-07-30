@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
   errorText: { color: '#FF3B5C', fontSize: 13, flex: 1 },
   btn: { marginTop: 4, paddingVertical: 16, borderRadius: 16, alignItems: 'center' },
   btnDisabled: { borderWidth: 1, borderColor: colors.border },
-  btnText: { color: colors.text, fontWeight: '700', fontSize: 16 },
+  btnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16 },
   btnTextDisabled: { color: colors.textDim },
   switchMode: { marginTop: 20, alignItems: 'center' },
   switchText: { color: colors.textMuted, fontSize: 14 },

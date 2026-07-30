@@ -13,8 +13,7 @@ interface Props {
 }
 
 export function SegmentTabs({ active, onChange, accentColor }: Props) {
-  const activePill =
-    accentColor === '#FF3B5C' ? '#5C1F35' : `${accentColor}55`;
+  const activePill = `${accentColor}33`;
 
   return (
     <View style={styles.wrap}>
@@ -43,11 +42,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginHorizontal: 20,
     marginTop: 12,
-    backgroundColor: 'rgba(6, 4, 20, 0.72)',
+    backgroundColor: '#F3F1FC',
     borderRadius: 28,
     padding: 5,
     borderWidth: 1,
-    borderColor: 'rgba(50, 42, 90, 0.5)',
+    borderColor: '#ECE9F7',
   },
   tab: {
     flex: 1,

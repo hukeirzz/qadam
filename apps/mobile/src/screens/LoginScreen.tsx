@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   tabTextActive: {
-    color: colors.text,
+    color: '#FFFFFF',
   },
   subtitle: {
     color: colors.textMuted,
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btnText: {
-    color: colors.text,
+    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 16,
   },

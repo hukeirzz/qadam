@@ -161,9 +161,9 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#F3F1FC',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderColor: cardTheme.border,
   },
   title: {
     color: colors.text,
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   track: {
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#ECE9F7',
     overflow: 'hidden',
   },
   fill: {

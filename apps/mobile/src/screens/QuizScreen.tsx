@@ -154,7 +154,7 @@ export function QuizScreen({ navigation, route }: Props) {
                 key={i}
                 name="heart"
                 size={18}
-                color={i < lives ? palette.primary : 'rgba(255,255,255,0.15)'}
+                color={i < lives ? palette.primary : '#E4E1F0'}
               />
             ))}
           </View>
@@ -316,9 +316,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
     padding: 14,
     borderRadius: 14,
-    backgroundColor: 'rgba(10, 8, 28, 0.75)',
+    backgroundColor: '#F3F1FC',
     borderWidth: 1,
-    borderColor: 'rgba(90, 80, 140, 0.35)',
+    borderColor: colors.border,
   },
   explanationTitle: {
     color: colors.purpleGlow,
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   nextText: {
-    color: colors.text,
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
   },

@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, ImageBackground, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Animated, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/ui/Text';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -11,7 +10,8 @@ import { ExerciseStackParamList } from '../types/navigation';
 import { getQuestionsForTopic } from '../data/practiceQuestions';
 import { PracticeQuestion, OptionKey } from '../data/practiceQuestions/types';
 import { savePracticeResult } from '../utils/practiceStorage';
-import { testSuccessBackgrounds, testFailBackgrounds } from '../assets/testResultBackgrounds';
+import { happyPetImages } from '../assets/happyPetImages';
+import { sadPetImages } from '../assets/sadPetImages';
 import { useAppStore } from '../store/useAppStore';
 import { recordTopicStat } from '../services/progressService';
 import { playSound, vibrate } from '../services/soundService';
@@ -116,23 +116,20 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
     const total = questions.length;
     const pct = Math.round((correctCount / total) * 100);
     const isGreat = pct >= 60;
-    const background = (isGreat ? testSuccessBackgrounds : testFailBackgrounds)[petType ?? 'bars'];
+    const petImage = (isGreat ? happyPetImages : sadPetImages)[petType ?? 'bars'];
 
     return (
-      <ImageBackground source={background} style={styles.resultRoot} resizeMode="cover">
-        <LinearGradient
-          pointerEvents="none"
-          colors={['rgba(4,2,14,0)', 'rgba(4,2,14,0.12)', 'rgba(4,2,14,0.45)']}
-          locations={[0, 0.55, 1]}
-          style={StyleSheet.absoluteFillObject}
-        />
-
+      <ScreenBackground style={styles.resultRoot}>
         <Pressable
           style={[styles.resultBackBtn, { top: insets.top + 8 }]}
           onPress={() => { vibrate(); navigation.goBack(); }}
         >
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
+
+        <View style={styles.petWrap} pointerEvents="none">
+          <Image source={petImage} style={styles.petImage} resizeMode="contain" />
+        </View>
 
         <View style={[styles.resultContent, { paddingBottom: insets.bottom + 20 }]}>
           <Text style={styles.resultTitle}>{isGreat ? 'Отличная работа!' : 'Есть куда расти!'}</Text>
@@ -159,7 +156,7 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
             <Text style={styles.btnSecondaryText}>Вернуться к темам</Text>
           </Pressable>
         </View>
-      </ImageBackground>
+      </ScreenBackground>
     );
   }
 
@@ -206,7 +203,7 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
                 let bg: string = colors.surfaceGlass;
                 let border: string = colors.borderMuted;
                 let textColor: string = colors.text;
-                let badgeBg: string = 'rgba(255,255,255,0.08)';
+                let badgeBg: string = '#F3F1FC';
                 let badgeText: string = colors.textMuted;
 
                 if (isAnswered) {
@@ -236,7 +233,7 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
                     key={key}
                     style={[styles.optionBtn, { backgroundColor: bg, borderColor: border }]}
                     onPress={() => handleSelect(key)}
-                    android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
+                    android_ripple={{ color: 'rgba(144,71,255,0.12)' }}
                   >
                     <View style={[styles.optionBadge, { backgroundColor: badgeBg }]}>
                       <Text style={[styles.optionBadgeText, { color: badgeText }]}>{key}</Text>
@@ -297,7 +294,7 @@ const styles = StyleSheet.create({
   headerTitle: { flex: 1, color: colors.text, fontSize: 16, fontWeight: '700', textAlign: 'center', marginHorizontal: 4 },
   headerCounter: { width: 44, color: colors.textMuted, fontSize: 13, fontWeight: '700', textAlign: 'right' },
 
-  progressTrack: { height: 3, backgroundColor: 'rgba(255,255,255,0.07)' },
+  progressTrack: { height: 3, backgroundColor: colors.border },
   progressFill: { height: '100%', backgroundColor: colors.purple, borderRadius: 2 },
 
   quizScroll: { paddingHorizontal: 16, paddingTop: 16 },
@@ -359,7 +356,7 @@ const styles = StyleSheet.create({
   nextBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
   // Result screen styles
-  resultRoot: { flex: 1, backgroundColor: '#0A0620' },
+  resultRoot: { flex: 1 },
   resultBackBtn: {
     position: 'absolute',
     left: 8,
@@ -369,15 +366,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 1,
   },
-  resultContent: {
+  petWrap: {
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 40,
+  },
+  petImage: {
+    width: 300,
+    height: 300,
+  },
+  resultContent: {
     justifyContent: 'flex-end',
     paddingHorizontal: 28,
     gap: 10,
   },
   resultTitle: { color: colors.text, fontSize: 26, fontWeight: '800', textAlign: 'center' },
-  resultXp: { color: '#FFD166', fontSize: 15, fontWeight: '800', textAlign: 'center', marginTop: 2 },
-  resultPct: { color: '#FFD166', fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 6 },
+  resultXp: { color: colors.gold, fontSize: 15, fontWeight: '800', textAlign: 'center', marginTop: 2 },
+  resultPct: { color: colors.gold, fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 6 },
   resultStatsRow: { flexDirection: 'row', justifyContent: 'center', gap: 20, marginBottom: 18 },
   resultStat: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   resultStatText: { color: colors.text, fontSize: 14, fontWeight: '700' },
@@ -397,7 +403,7 @@ const styles = StyleSheet.create({
 
   btnSecondary: {
     width: '100%',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: '#F3F1FC',
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',

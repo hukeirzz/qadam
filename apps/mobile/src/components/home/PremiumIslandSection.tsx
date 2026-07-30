@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   unlockText: {
-    color: colors.text,
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
   },

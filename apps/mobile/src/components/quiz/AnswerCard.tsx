@@ -37,7 +37,7 @@ export function AnswerCard({
         styles.card,
         pressed && !disabled && styles.cardPressed,
         resolved,
-        state === 'idle' && { borderColor: 'rgba(255,255,255,0.1)' },
+        state === 'idle' && { borderColor: colors.border },
       ]}
     >
       <View style={[styles.badge, { borderColor: accentColor }]}>
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 16,
     borderRadius: 16,
-    backgroundColor: 'rgba(10, 8, 28, 0.85)',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
     marginBottom: 10,
   },

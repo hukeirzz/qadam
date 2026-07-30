@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     borderColor: colors.borderMuted,
     paddingVertical: 12,
   },
-  rowDivider: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
+  rowDivider: { borderBottomWidth: 1, borderBottomColor: colors.border },
   rowIconWrap: {
     width: 34,
     height: 34,
@@ -482,5 +482,5 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   editSaveBtn: { backgroundColor: colors.purple, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
-  editSaveBtnText: { color: colors.text, fontWeight: '700', fontSize: 15 },
+  editSaveBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
 });

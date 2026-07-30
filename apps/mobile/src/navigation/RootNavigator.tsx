@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { NavigationContainer, DarkTheme, NavigationContainerRef } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, NavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View } from 'react-native';
 import * as Linking from 'expo-linking';
@@ -51,9 +51,9 @@ async function applyRecoveryLink(url: string | null): Promise<boolean> {
 }
 
 const navTheme = {
-  ...DarkTheme,
+  ...DefaultTheme,
   colors: {
-    ...DarkTheme.colors,
+    ...DefaultTheme.colors,
     background: colors.background,
     card: colors.background,
     text: colors.text,

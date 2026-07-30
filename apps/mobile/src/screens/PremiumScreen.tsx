@@ -196,7 +196,7 @@ export function PremiumScreen({ navigation }: Props) {
                     end={{ x: 1, y: 0.5 }}
                     style={styles.telegramGradient}
                   >
-                    <Ionicons name="card" size={18} color={colors.text} />
+                    <Ionicons name="card" size={18} color="#FFFFFF" />
                     <Text style={styles.telegramText}>Оплатить через M-Bank</Text>
                   </LinearGradient>
                 </Pressable>
@@ -208,7 +208,7 @@ export function PremiumScreen({ navigation }: Props) {
                     end={{ x: 1, y: 0.5 }}
                     style={styles.telegramGradient}
                   >
-                    <Ionicons name="paper-plane" size={18} color={colors.text} />
+                    <Ionicons name="paper-plane" size={18} color="#FFFFFF" />
                     <Text style={styles.telegramText}>Написать в Telegram</Text>
                   </LinearGradient>
                 </Pressable>
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
 
   telegramBtn: { borderRadius: 14, overflow: 'hidden' },
   telegramGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 14 },
-  telegramText: { color: colors.text, fontSize: 15, fontWeight: '700' },
+  telegramText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
 
   referralCard: { backgroundColor: colors.surfaceGlass, borderRadius: 20, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.borderMuted, gap: 12 },
   referralCompactRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },

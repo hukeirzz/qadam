@@ -119,9 +119,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
     padding: 14,
     borderRadius: 14,
-    backgroundColor: 'rgba(10, 8, 28, 0.75)',
+    backgroundColor: '#F3F1FC',
     borderWidth: 1,
-    borderColor: 'rgba(90, 80, 140, 0.35)',
+    borderColor: colors.border,
   },
   explanationTitle: {
     color: colors.purpleGlow,

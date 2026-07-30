@@ -111,7 +111,7 @@ export function TheoryScreen({ navigation, route }: Props) {
               style={styles.btn}
             >
               <Text style={styles.btnText}>Начать квиз</Text>
-              <Ionicons name="arrow-forward" size={18} color={colors.text} style={styles.btnIcon} />
+              <Ionicons name="arrow-forward" size={18} color="#FFFFFF" style={styles.btnIcon} />
             </LinearGradient>
           </Pressable>
         </View>
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   paragraph: {
-    color: 'rgba(255,255,255,0.92)',
+    color: colors.text,
     fontSize: 16,
     lineHeight: 26,
     marginBottom: 16,
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   btnText: {
-    color: colors.text,
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
   },

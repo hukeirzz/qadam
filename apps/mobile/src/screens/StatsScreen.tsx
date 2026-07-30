@@ -147,7 +147,7 @@ function ActivityChart({
               <SvgLine
                 key={k}
                 x1={0} y1={y} x2={chartW} y2={y}
-                stroke="rgba(255,255,255,0.08)"
+                stroke="#ECE9F7"
                 strokeWidth={1}
                 strokeDasharray="4 4"
               />
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   tabTextActive: {
-    color: colors.text,
+    color: '#FFFFFF',
     fontWeight: '800',
   },
   cardShadow: {
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
   subjectTrack: {
     flex: 1,
     height: 6,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: '#ECE9F7',
     borderRadius: 3,
     overflow: 'hidden',
   },

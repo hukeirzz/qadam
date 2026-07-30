@@ -37,7 +37,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <RootNavigator />
       </SafeAreaProvider>
     </ErrorBoundary>

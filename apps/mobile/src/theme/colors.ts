@@ -1,20 +1,20 @@
 export const colors = {
-  background: '#0A0818',
-  backgroundElevated: '#120A2E',
-  surface: '#130B35',
-  surfaceGlass: 'rgba(19, 11, 53, 0.72)',
-  border: '#231656',
-  borderMuted: 'rgba(51, 35, 120, 0.45)',
-  text: '#FFFFFF',
-  textMuted: '#7D75A8',
-  textDim: '#655B96',
-  purple: '#9047FF',
-  purpleGlow: '#B47AFF',
-  purpleDark: '#1A1046',
-  tabBar: '#070417',
-  tabInactive: '#463D73',
-  gold: '#FFD166',
-  success: '#2EE59D',
+  background: '#F7F6FC',
+  backgroundElevated: '#FFFFFF',
+  surface: '#FFFFFF',
+  surfaceGlass: 'rgba(255, 255, 255, 0.9)',
+  border: '#ECE9F7',
+  borderMuted: 'rgba(144, 71, 255, 0.12)',
+  text: '#2B2447',
+  textMuted: '#8B85A8',
+  textDim: '#B3AECB',
+  purple: '#8B5CF6',
+  purpleGlow: '#7C3AED',
+  purpleDark: '#EDE7FB',
+  tabBar: '#FFFFFF',
+  tabInactive: '#8B85A8',
+  gold: '#FFB020',
+  success: '#22C58D',
 } as const;
 
 // Доп. токены для карточек главного экрана — та же полупрозрачная заливка,
@@ -28,11 +28,11 @@ export const cardTheme = {
 
 // Мягкие ambient-свечения под карточками/бейджами (для shadowColor).
 export const glow = {
-  purple: 'rgba(139, 92, 246, 0.5)',
-  gold: 'rgba(255, 209, 102, 0.5)',
-  cyan: 'rgba(34, 211, 238, 0.45)',
-  success: 'rgba(46, 229, 157, 0.45)',
-  rose: 'rgba(251, 123, 176, 0.45)',
+  purple: 'rgba(139, 92, 246, 0.35)',
+  gold: 'rgba(255, 176, 32, 0.35)',
+  cyan: 'rgba(34, 211, 238, 0.3)',
+  success: 'rgba(34, 197, 141, 0.3)',
+  rose: 'rgba(251, 123, 176, 0.3)',
 } as const;
 
 // Двухцветные градиенты для акцентных заливок (кольцо прогресса и т.п.).

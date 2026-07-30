@@ -69,5 +69,5 @@ const styles = StyleSheet.create({
   statValue: { color: colors.text, fontWeight: '700' },
   btnWrap: { width: '100%' },
   btn: { paddingVertical: 16, borderRadius: 16, alignItems: 'center' },
-  btnText: { color: colors.text, fontWeight: '700', fontSize: 16 },
+  btnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16 },
 });

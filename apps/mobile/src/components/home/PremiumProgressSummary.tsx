@@ -21,7 +21,7 @@ function CircularProgress({ percent }: { percent: number }) {
       <Svg width={SIZE} height={SIZE}>
         <Circle
           cx={SIZE / 2} cy={SIZE / 2} r={R}
-          stroke="rgba(255,255,255,0.08)"
+          stroke="#ECE9F7"
           strokeWidth={STROKE}
           fill="none"
         />
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 14,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: '#F3F1FC',
     borderWidth: 1,
     borderColor: 'rgba(168,85,247,0.28)',
     marginBottom: 16,

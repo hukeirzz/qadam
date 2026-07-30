@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   bottomBar: { paddingHorizontal: 20, paddingTop: 12 },
   nextWrap: { borderRadius: 14, overflow: 'hidden' },
   nextBtn: { height: 50, alignItems: 'center', justifyContent: 'center', borderRadius: 14 },
-  nextText: { color: colors.text, fontSize: 16, fontWeight: '700' },
+  nextText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyText: { color: colors.textMuted, fontSize: 16, textAlign: 'center', paddingHorizontal: 32 },
 });

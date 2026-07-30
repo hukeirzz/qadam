@@ -16,7 +16,6 @@ import { useAppStore } from '../store/useAppStore';
 import { ExerciseStackParamList } from '../types/navigation';
 import { SUBJECT_META } from './ExerciseScreen';
 import { SubjectId, Topic } from '../types/subject';
-import { getPracticeResults, PracticeResult } from '../utils/practiceStorage';
 import { fetchTopicsForSubject } from '../services/topicsService';
 import { vibrate } from '../services/soundService';
 
@@ -64,7 +63,6 @@ export function ExerciseSubjectScreen({ route }: Props) {
   const rank = useAppStore((s) => s.rank);
   const navigation = useNavigation<any>();
 
-  const [results, setResults] = useState<Record<string, PracticeResult>>({});
   const [remoteTopics, setRemoteTopics] = useState<Topic[] | null>(null);
   const [selectedRank, setSelectedRank] = useState<Rank>(rank ?? 'D');
 
@@ -79,13 +77,8 @@ export function ExerciseSubjectScreen({ route }: Props) {
     if (!subject) return;
     if (isPremium) {
       fetchTopicsForSubject(subjectId as SubjectId).then((fetched) => {
-        if (fetched) {
-          setRemoteTopics(fetched);
-          getPracticeResults(fetched.map((t) => t.id)).then(setResults);
-        }
+        if (fetched) setRemoteTopics(fetched);
       });
-    } else {
-      getPracticeResults(subject.topics.map((t) => t.id)).then(setResults);
     }
   }, [subjectId]);
 
@@ -108,14 +101,7 @@ export function ExerciseSubjectScreen({ route }: Props) {
     if (premiumUnlocked) {
       navigation.navigate('PathTab', { screen: 'IslandPath', params: { subjectId: meta.premiumId } });
     } else {
-      Alert.alert(
-        'Требуется Premium',
-        'Открой продвинутый уровень за 1000 сом',
-        [
-          { text: 'Отмена', style: 'cancel' },
-          { text: 'Открыть', onPress: () => navigation.navigate('Premium') },
-        ],
-      );
+      navigation.navigate('Premium');
     }
   };
 
@@ -129,9 +115,6 @@ export function ExerciseSubjectScreen({ route }: Props) {
 
   const renderTopicCard = (topic: Topic) => {
     const isUnlocked = completedTopics.includes(topic.id);
-    const result = results[topic.id];
-    const hasTested = !!result;
-    const cardProgress = hasTested ? result.pct / 100 : 0;
 
     return (
       <Pressable
@@ -150,19 +133,7 @@ export function ExerciseSubjectScreen({ route }: Props) {
           </Text>
 
           {isUnlocked ? (
-            <View style={styles.topicProgressRow}>
-              <View style={styles.topicTrack}>
-                <View
-                  style={[
-                    styles.topicFill,
-                    { width: `${cardProgress * 100}%`, backgroundColor: palette.primary },
-                  ]}
-                />
-              </View>
-              <Text style={styles.topicFraction}>
-                {hasTested ? `${result.correct} / ${result.total}` : 'Не пройдено'}
-              </Text>
-            </View>
+            <Text style={styles.topicSubUnlocked}>Доступно для практики</Text>
           ) : (
             <Text style={styles.topicSubLocked}>Сначала пройди на острове</Text>
           )}
@@ -295,7 +266,7 @@ export function ExerciseSubjectScreen({ route }: Props) {
 
               {/* ── Темы ранга ── */}
               <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionTitle}>Темы {selectedRank} ранга</Text>
+                <Text style={[styles.sectionTitle, styles.sectionTitleInline]}>Темы {selectedRank} ранга</Text>
                 <View style={styles.islandPill}>
                   <Text style={styles.islandPillText}>Остров {subject.number} из {subjects.length}</Text>
                 </View>
@@ -325,7 +296,7 @@ export function ExerciseSubjectScreen({ route }: Props) {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.premiumTitle}>Продвинутый уровень</Text>
-                <Text style={styles.premiumSub}>Открыть за 1000 сом →</Text>
+                <Text style={styles.premiumSub}>Открыть за 5000 сом →</Text>
               </View>
             </Pressable>
           )}
@@ -382,7 +353,7 @@ const styles = StyleSheet.create({
   heroProgressCount: { fontSize: 16, fontWeight: '800' },
   heroTrack: {
     height: 7,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#ECE9F7',
     borderRadius: 4,
     overflow: 'hidden',
     marginBottom: 22,
@@ -406,6 +377,7 @@ const styles = StyleSheet.create({
 
   /* Section */
   sectionTitle: { color: colors.text, fontSize: 17, fontWeight: '800', marginBottom: 12 },
+  sectionTitleInline: { marginBottom: 0 },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -448,7 +420,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#ECE9F7',
   },
   rankImg: { width: 56, height: 56, marginBottom: 8 },
   rankLabel: { color: colors.text, fontSize: 13, fontWeight: '800', marginBottom: 3 },
@@ -457,7 +429,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#ECE9F7',
     overflow: 'hidden',
     marginTop: 10,
   },
@@ -493,17 +465,7 @@ const styles = StyleSheet.create({
   topicTitle: { color: colors.text, fontSize: 14.5, fontWeight: '700', marginBottom: 4 },
   topicTitleLocked: { color: colors.textDim },
   topicSubLocked: { color: colors.textDim, fontSize: 11 },
-
-  topicProgressRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  topicTrack: {
-    flex: 1,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    overflow: 'hidden',
-  },
-  topicFill: { height: '100%', borderRadius: 3 },
-  topicFraction: { color: colors.textMuted, fontSize: 11, fontWeight: '600', flexShrink: 0 },
+  topicSubUnlocked: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
 
   topicRight: { alignItems: 'center', gap: 8, flexShrink: 0 },
   topicChevronBtn: {
@@ -514,7 +476,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(144,71,255,0.18)',
   },
-  topicChevronBtnLocked: { backgroundColor: 'rgba(255,255,255,0.06)' },
+  topicChevronBtnLocked: { backgroundColor: '#ECE9F7' },
 
   emptyRankCard: {
     backgroundColor: colors.surfaceGlass,

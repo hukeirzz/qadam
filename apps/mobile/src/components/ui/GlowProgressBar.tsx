@@ -47,13 +47,13 @@ export function GlowProgressBar({
 
 const styles = StyleSheet.create({
   label: {
-    color: '#655B96',
+    color: '#8B85A8',
     fontSize: 12,
     marginBottom: 6,
     fontWeight: '500',
   },
   track: {
-    backgroundColor: 'rgba(28, 18, 69, 0.9)',
+    backgroundColor: '#ECE9F7',
     borderRadius: 10,
     overflow: 'hidden',
     position: 'relative',

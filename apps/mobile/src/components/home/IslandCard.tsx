@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     shadowRadius: 50,
   },
   title: {
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '800',
     textAlign: 'center',
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 5,
     borderRadius: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#ECE9F7',
     overflow: 'hidden',
   },
   fill: {

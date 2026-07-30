@@ -134,7 +134,7 @@ export function TopicNode({
                 color={
                   i < heartsRemaining
                     ? palette.primary
-                    : 'rgba(255,255,255,0.15)'
+                    : '#D9D5EA'
                 }
               />
             ))}
@@ -188,32 +188,29 @@ const styles = StyleSheet.create({
     height: PIN_SIZE,
     borderRadius: PIN_SIZE / 2,
     borderWidth: 3,
-    backgroundColor: '#3D1528',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#FF4D6D',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
+    shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 8,
   },
   pinCircleLocked: {
-    backgroundColor: '#2A2838',
+    backgroundColor: '#E4E1F0',
     shadowOpacity: 0,
   },
   pinCircleCompleted: {
-    backgroundColor: '#1A1046',
+    backgroundColor: '#EDE7FB',
   },
   pinNumber: {
     color: colors.text,
     fontSize: 22,
     fontWeight: '800',
-    textShadowColor: 'rgba(0,0,0,0.45)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
   },
   pinNumberLocked: {
-    color: '#8E8AA8',
+    color: '#A39EC2',
   },
   pinPointer: {
     width: 0,
@@ -255,12 +252,17 @@ const styles = StyleSheet.create({
     maxWidth: 188,
   },
   labelCard: {
-    backgroundColor: 'rgba(10, 8, 28, 0.82)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     paddingVertical: 11,
     paddingHorizontal: 13,
     borderWidth: 1,
-    borderColor: 'rgba(90, 80, 140, 0.35)',
+    borderColor: '#ECE9F7',
+    shadowColor: 'rgba(90, 80, 140, 0.25)',
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
     gap: 6,
   },
   labelAfterIsland: {

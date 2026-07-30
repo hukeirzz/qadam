@@ -83,6 +83,6 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+    backgroundColor: 'rgba(144, 71, 255, 0.28)',
   },
 });

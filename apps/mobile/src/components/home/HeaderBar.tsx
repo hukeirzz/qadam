@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   chipText: {
-    color: '#FFFFFF',
+    color: '#2B2447',
     fontSize: 16,
     fontWeight: '800',
   },

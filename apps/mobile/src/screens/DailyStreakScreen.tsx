@@ -56,7 +56,7 @@ export function DailyStreakScreen({ navigation }: Props) {
                     <Text style={styles.dayLabel}>{day}</Text>
                     <View style={[styles.dayDot, done && styles.dayDotDone]}>
                       {done ? (
-                        <Ionicons name="checkmark" size={14} color={colors.text} />
+                        <Ionicons name="checkmark" size={14} color="#FFFFFF" />
                       ) : null}
                     </View>
                   </View>
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#ECE9F7',
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   },
   goalTrack: {
     height: 8,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#ECE9F7',
     borderRadius: 4,
     overflow: 'hidden',
     marginBottom: 16,
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   ctaText: {
-    color: colors.text,
+    color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
   },
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: colors.border,
   },
   statIcon: { fontSize: 18, width: 24 },
   statLabel: {

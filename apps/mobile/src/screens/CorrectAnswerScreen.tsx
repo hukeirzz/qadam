@@ -1,27 +1,36 @@
 import React, { useEffect } from 'react';
-import { ImageBackground, Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { HomeStackParamList } from '../types/navigation';
+import { HomeStackParamList, MainTabParamList } from '../types/navigation';
 import { colors } from '../theme/colors';
-import { testSuccessBackgrounds, testFailBackgrounds } from '../assets/testResultBackgrounds';
-import { getTopicIds } from '../data/subjects';
+import { ScreenBackground } from '../components/ui/ScreenBackground';
+import { happyPetImages } from '../assets/happyPetImages';
+import { sadPetImages } from '../assets/sadPetImages';
+import { getSubjectById, getTopicIds } from '../data/subjects';
 import { useAppStore } from '../store/useAppStore';
 import { playSound, vibrate } from '../services/soundService';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'CorrectAnswer'>;
 
+const PIN_THRESHOLD_PCT = 90;
+
 export function CorrectAnswerScreen({ navigation, route }: Props) {
   const { subjectId, topicId, correctCount, total, earnedXp, livesRemaining, mistakes } = route.params;
   const isGreat = correctCount >= Math.ceil(total * 0.6);
+  const pct = total > 0 ? (correctCount / total) * 100 : 0;
+  const canPinTopic = pct > PIN_THRESHOLD_PCT;
 
   const insets = useSafeAreaInsets();
   const petType = useAppStore((s) => s.petType);
   const remoteTopicIds = useAppStore((s) => s.remoteTopicIds);
   const completeQuiz = useAppStore((s) => s.completeQuiz);
+  const tabNav = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const wrongCount = total - correctCount;
 
   useEffect(() => {
@@ -56,16 +65,26 @@ export function CorrectAnswerScreen({ navigation, route }: Props) {
     navigation.navigate('MistakesReview', { subjectId, mistakes });
   };
 
-  const background = (isGreat ? testSuccessBackgrounds : testFailBackgrounds)[petType ?? 'bars'];
+  // Практика привязана к базовым (не премиум) предметам — темы там те же,
+  // что и на острове.
+  const baseSubjectId = subjectId.replace('_premium', '');
+  const topicTitle = getSubjectById(baseSubjectId)?.topics.find((t) => t.id === topicId)?.title ?? '';
+
+  const pinTopic = () => {
+    vibrate();
+    (tabNav as any).navigate('ExerciseTab', {
+      screen: 'PracticeQuiz',
+      params: { topicId, topicTitle, subjectId: baseSubjectId },
+    });
+  };
+
+  const petImage = (isGreat ? happyPetImages : sadPetImages)[petType ?? 'bars'];
 
   return (
-    <ImageBackground source={background} style={styles.root} resizeMode="cover">
-      <LinearGradient
-        pointerEvents="none"
-        colors={['rgba(4,2,14,0)', 'rgba(4,2,14,0.12)', 'rgba(4,2,14,0.45)']}
-        locations={[0, 0.55, 1]}
-        style={StyleSheet.absoluteFillObject}
-      />
+    <ScreenBackground style={styles.root}>
+      <View style={styles.petWrap} pointerEvents="none">
+        <Image source={petImage} style={styles.petImage} resizeMode="contain" />
+      </View>
 
       <View style={[styles.content, { paddingBottom: insets.bottom + 20 }]}>
         <Text style={styles.title}>{isGreat ? 'Отличная работа!' : 'Есть куда расти!'}</Text>
@@ -81,6 +100,13 @@ export function CorrectAnswerScreen({ navigation, route }: Props) {
             <Text style={styles.statText}>Ошибок {wrongCount}</Text>
           </View>
         </View>
+
+        {canPinTopic && topicTitle && (
+          <Pressable style={styles.pinBtn} onPress={pinTopic}>
+            <Ionicons name="ribbon" size={18} color={colors.gold} />
+            <Text style={styles.pinBtnText}>Закрепить тему</Text>
+          </Pressable>
+        )}
 
         {mistakes.length > 0 && (
           <Pressable style={styles.secondaryBtn} onPress={reviewMistakes}>
@@ -103,17 +129,25 @@ export function CorrectAnswerScreen({ navigation, route }: Props) {
           </LinearGradient>
         </Pressable>
       </View>
-    </ImageBackground>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0A0620',
+  },
+  petWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 40,
+  },
+  petImage: {
+    width: 300,
+    height: 300,
   },
   content: {
-    flex: 1,
     justifyContent: 'flex-end',
     paddingHorizontal: 28,
     gap: 10,
@@ -125,7 +159,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   xp: {
-    color: '#FFD166',
+    color: colors.gold,
     fontSize: 22,
     fontWeight: '800',
     textAlign: 'center',
@@ -147,15 +181,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  pinBtn: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 16,
+    paddingVertical: 15,
+    backgroundColor: 'rgba(255,176,32,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,176,32,0.4)',
+  },
+  pinBtnText: {
+    color: colors.gold,
+    fontSize: 15,
+    fontWeight: '700',
+  },
   secondaryBtn: {
     width: '100%',
     borderRadius: 16,
     paddingVertical: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#F3F1FC',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: colors.border,
   },
   secondaryBtnText: {
     color: colors.text,
@@ -174,7 +225,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   primaryBtnText: {
-    color: colors.text,
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
   },

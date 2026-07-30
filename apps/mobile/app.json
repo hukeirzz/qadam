@@ -5,13 +5,13 @@
     "version": "1.0.0",
     "scheme": "qadam",
     "orientation": "portrait",
-    "icon": "./assets/icon.jpeg",
-    "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/icon.jpeg",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#05051A"
+      "backgroundColor": "#F7F6FC"
     },
     "ios": {
       "supportsTablet": true,
@@ -20,13 +20,13 @@
     "android": {
       "package": "kg.qadam.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.jpeg",
-        "backgroundColor": "#05051A"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#F7F6FC"
       },
       "edgeToEdgeEnabled": true
     },
     "web": {
-      "favicon": "./assets/icon.jpeg"
+      "favicon": "./assets/icon.png"
     },
     "plugins": [
       "expo-audio"

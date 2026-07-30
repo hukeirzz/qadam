@@ -98,7 +98,7 @@ export function ProfileScreen({ navigation }: Props) {
                 )}
               </View>
               <Pressable style={styles.editBtn} onPress={openSettings} hitSlop={6}>
-                <Ionicons name="pencil" size={13} color={colors.text} />
+                <Ionicons name="pencil" size={13} color="#FFFFFF" />
               </Pressable>
             </View>
 
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarFallbackText: { color: colors.text, fontSize: 26, fontWeight: '800' },
+  avatarFallbackText: { color: '#FFFFFF', fontSize: 26, fontWeight: '800' },
   editBtn: {
     position: 'absolute',
     right: -2,
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   xpTrophyText: { color: colors.text, fontSize: 13, fontWeight: '700' },
   rankTrack: {
     height: 10,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#ECE9F7',
     borderRadius: 5,
     overflow: 'hidden',
     marginBottom: 6,
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
   },
   subjectRowDivider: {
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: colors.border,
   },
   subjectIconWrap: {
     width: 36,
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
   subjectTrack: {
     flex: 1,
     height: 6,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: '#ECE9F7',
     borderRadius: 3,
     overflow: 'hidden',
   },

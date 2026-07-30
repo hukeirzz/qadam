@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
   error: { color: '#FF6B85', fontSize: 13, marginBottom: 10 },
   saveBtn: { marginTop: 8, borderRadius: 16, overflow: 'hidden' },
   saveGrad: { paddingVertical: 16, borderRadius: 16, alignItems: 'center' },
-  saveText: { color: colors.text, fontSize: 16, fontWeight: '700' },
+  saveText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
   resend: { marginTop: 16, alignItems: 'center' },
   resendText: { color: colors.purpleGlow, fontSize: 14, fontWeight: '600' },
 });

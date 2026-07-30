@@ -29,7 +29,7 @@ function CircularProgress({ percent }: { percent: number }) {
         {/* Track */}
         <Circle
           cx={SIZE / 2} cy={SIZE / 2} r={R}
-          stroke="rgba(255,255,255,0.1)"
+          stroke="#ECE9F7"
           strokeWidth={STROKE}
           fill="none"
         />
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(180,144,255,0.35)',
+    backgroundColor: 'rgba(180,144,255,0.18)',
     shadowColor: glow.purple,
     shadowOpacity: 1,
     shadowRadius: 26,

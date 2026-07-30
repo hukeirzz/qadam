@@ -158,10 +158,10 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#130B35',
+    backgroundColor: colors.tabBar,
     borderRadius: 30,
     borderWidth: 1,
-    borderColor: 'rgba(180, 144, 255, 0.2)',
+    borderColor: colors.border,
     paddingHorizontal: 6,
   },
   tabItem: {
