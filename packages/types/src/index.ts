@@ -101,6 +101,7 @@ export interface SchoolTestRow {
   description: string | null;
   target_rank: Rank | null;
   subject_id: string | null;
+  topic_id: string | null;
   published: boolean;
   created_by: string | null;
   created_at: string;

@@ -9,28 +9,31 @@ import { createBrowserApi } from '@/lib/supabase/client';
 import { TestBuilder } from '@/components/test-builder';
 
 type ClassRow = { id: string; name: string; promo_code: string | null };
+type StudentRow = { id: string; name: string; class_id: string | null; rank: string };
+type TopicRow = { id: string; subject_id: string; title: string; order_num: number };
+type TopicStatRow = { student_id: string; topic_id: string; subject_id: string; correct_first: number; answered: number };
 type TestRow = {
   id: string; title: string; description: string | null;
-  target_rank: string | null; subject_id: string | null;
+  target_rank: string | null; subject_id: string | null; topic_id: string | null;
   published: boolean; created_at: string;
-  school_test_classes: { class_id: string }[];
+  school_test_students: { student_id: string }[];
   school_test_questions: { id: string }[];
   school_test_results: { id: string }[];
 };
 
 export function TestsManager({
-  schoolId, classes, tests,
+  schoolId, classes, tests, students, topics, topicStats,
 }: {
   schoolId: string;
   classes: ClassRow[];
   tests: TestRow[];
+  students: StudentRow[];
+  topics: TopicRow[];
+  topicStats: TopicStatRow[];
 }) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
-
-  const classNames = (ids: string[]) =>
-    ids.map((id) => classes.find((c) => c.id === id)?.name).filter(Boolean).join(', ');
 
   async function handleDelete(id: string) {
     if (!window.confirm('Удалить тест? Результаты учеников тоже удалятся.')) return;
@@ -50,7 +53,7 @@ export function TestsManager({
           </span>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-800">Тесты школы</h1>
-            <p className="mt-0.5 text-sm text-slate-500">Появляются у учеников автоматически — по школе, рангу и классу.</p>
+            <p className="mt-0.5 text-sm text-slate-500">Сгенерируйте тест по теме и отправьте его выбранным ученикам.</p>
           </div>
         </div>
         {!creating && (
@@ -67,6 +70,9 @@ export function TestsManager({
         <TestBuilder
           schoolId={schoolId}
           classes={classes}
+          students={students}
+          topics={topics}
+          topicStats={topicStats}
           onDone={() => { setCreating(false); router.refresh(); }}
           onCancel={() => setCreating(false)}
         />
@@ -77,7 +83,6 @@ export function TestsManager({
       ) : (
         <div className="space-y-3">
           {tests.map((t) => {
-            const classIds = t.school_test_classes.map((c) => c.class_id);
             return (
               <Card key={t.id} className="!p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -88,7 +93,7 @@ export function TestsManager({
                     </div>
                     {t.description && <p className="mt-1 text-sm text-slate-500">{t.description}</p>}
                     <p className="mt-2 text-xs text-slate-400">
-                      {t.school_test_questions.length} вопросов · {classIds.length > 0 ? classNames(classIds) : 'вся школа'} · {t.school_test_results.length} прошли
+                      {t.school_test_questions.length} вопросов · отправлено {t.school_test_students.length} ученикам · {t.school_test_results.length} прошли
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">

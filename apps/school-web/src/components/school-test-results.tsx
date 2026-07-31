@@ -5,7 +5,7 @@ import { ArrowRightIcon } from '@/components/icons';
 type TestDetail = {
   id: string; title: string; description: string | null;
   target_rank: string | null; subject_id: string | null;
-  school_test_classes: { class_id: string }[];
+  school_test_students: { student_id: string }[];
   school_test_questions: { id: string }[];
 };
 type ResultRow = {
@@ -13,6 +13,7 @@ type ResultRow = {
   students: { name: string; class_id: string | null };
 };
 type ClassRow = { id: string; name: string };
+type StudentRow = { id: string; name: string; class_id: string | null };
 
 function formatDuration(seconds: number | null): string {
   if (seconds == null) return '—';
@@ -22,14 +23,20 @@ function formatDuration(seconds: number | null): string {
 }
 
 export function SchoolTestResults({
-  test, results, classes,
+  test, results, classes, students,
 }: {
   test: TestDetail;
   results: ResultRow[];
   classes: ClassRow[];
+  students: StudentRow[];
 }) {
   const className = (classId: string | null) => classes.find((c) => c.id === classId)?.name ?? '—';
-  const targetClasses = test.school_test_classes.map((c) => className(c.class_id)).join(', ');
+  const assignedIds = test.school_test_students.map((a) => a.student_id);
+  const doneIds = new Set(results.map((r) => r.student_id));
+  const pending = assignedIds
+    .filter((id) => !doneIds.has(id))
+    .map((id) => students.find((s) => s.id === id))
+    .filter((s): s is StudentRow => !!s);
 
   const avgScore = results.length
     ? Math.round((results.reduce((a, r) => a + r.score, 0) / results.length) * 10) / 10
@@ -58,7 +65,7 @@ export function SchoolTestResults({
         </div>
         {test.description && <p className="mt-1.5 text-sm text-slate-500">{test.description}</p>}
         <p className="mt-2 text-xs text-slate-400">
-          {test.school_test_questions.length} вопросов · {targetClasses || 'вся школа'}
+          {test.school_test_questions.length} вопросов · отправлено {assignedIds.length} ученикам
         </p>
 
         <div className="mt-6 grid grid-cols-3 gap-2.5">
@@ -110,6 +117,19 @@ export function SchoolTestResults({
           </div>
         )}
       </Card>
+
+      {pending.length > 0 && (
+        <Card>
+          <h2 className="font-semibold text-slate-800">Ещё не проходили</h2>
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {pending.map((s) => (
+              <li key={s.id} className="rounded-lg bg-slate-50 px-3 py-1.5 text-sm text-slate-600">
+                {s.name} <span className="text-slate-400">· {className(s.class_id)}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
     </div>
   );
 }

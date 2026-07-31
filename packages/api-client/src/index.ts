@@ -747,16 +747,16 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       const { data } = await supabase
         .from('school_tests')
         .select(
-          'id, title, description, target_rank, subject_id, published, created_at, ' +
-            'school_test_classes(class_id), school_test_questions(id), school_test_results(id)',
+          'id, title, description, target_rank, subject_id, topic_id, published, created_at, ' +
+            'school_test_students(student_id), school_test_questions(id), school_test_results(id)',
         )
         .eq('school_id', schoolId)
         .order('created_at', { ascending: false });
       return (data ?? []) as unknown as {
         id: string; title: string; description: string | null;
-        target_rank: string | null; subject_id: string | null;
+        target_rank: string | null; subject_id: string | null; topic_id: string | null;
         published: boolean; created_at: string;
-        school_test_classes: { class_id: string }[];
+        school_test_students: { student_id: string }[];
         school_test_questions: { id: string }[];
         school_test_results: { id: string }[];
       }[];
@@ -767,17 +767,17 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       const { data } = await supabase
         .from('school_tests')
         .select(
-          'id, title, description, target_rank, subject_id, published, created_at, ' +
-            'school_test_classes(class_id), ' +
+          'id, title, description, target_rank, subject_id, topic_id, published, created_at, ' +
+            'school_test_students(student_id), ' +
             'school_test_questions(id, order_num, text, explanation, school_test_options(id, order_num, text, is_correct))',
         )
         .eq('id', testId)
         .single();
       return (data ?? null) as unknown as {
         id: string; title: string; description: string | null;
-        target_rank: string | null; subject_id: string | null;
+        target_rank: string | null; subject_id: string | null; topic_id: string | null;
         published: boolean; created_at: string;
-        school_test_classes: { class_id: string }[];
+        school_test_students: { student_id: string }[];
         school_test_questions: {
           id: string; order_num: number; text: string; explanation: string | null;
           school_test_options: { id: string; order_num: number; text: string; is_correct: boolean }[];
@@ -811,9 +811,10 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       test: {
         title: string;
         description?: string | null;
-        targetRank: string | null; // null = любой ранг
+        targetRank: string | null; // null = любой ранг — информационное поле, не фильтр видимости
         subjectId: string | null;
-        classIds: string[]; // [] = вся школа
+        topicId?: string | null;
+        studentIds: string[]; // видимость решает только это — назначенные ученики
       },
       questions: {
         text: string;
@@ -825,7 +826,7 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
         .from('school_tests')
         .insert({
           school_id: schoolId, title: test.title, description: test.description ?? null,
-          target_rank: test.targetRank, subject_id: test.subjectId,
+          target_rank: test.targetRank, subject_id: test.subjectId, topic_id: test.topicId ?? null,
           created_by: createdBy, published: false,
         })
         .select('id').single();
@@ -841,10 +842,10 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
         return { id: null, error: e };
       };
 
-      if (test.classIds.length > 0) {
-        const { error } = await supabase.from('school_test_classes')
-          .insert(test.classIds.map((class_id) => ({ test_id: testId, class_id })));
-        if (error) return fail(error, 'classes');
+      if (test.studentIds.length > 0) {
+        const { error } = await supabase.from('school_test_students')
+          .insert(test.studentIds.map((student_id) => ({ test_id: testId, student_id })));
+        if (error) return fail(error, 'students');
       }
 
       // order_num carries the mapping back to `questions[i]` — bulk insert

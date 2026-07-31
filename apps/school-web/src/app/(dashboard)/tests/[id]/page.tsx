@@ -12,10 +12,11 @@ export default async function SchoolTestResultsPage({ params }: { params: Promis
   const test = await api.staffData.schoolTest(id);
   if (!test) notFound(); // RLS already scopes to own school — a foreign id 404s
 
-  const [results, classes] = await Promise.all([
+  const [results, classes, students] = await Promise.all([
     api.staffData.schoolTestResults(id),
     api.staffData.classes(role.school_id),
+    api.staffData.students(role.school_id),
   ]);
 
-  return <SchoolTestResults test={test} results={results} classes={classes} />;
+  return <SchoolTestResults test={test} results={results} classes={classes} students={students} />;
 }
