@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Image, ImageSourcePropType, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
 import { Text } from '../ui/Text';
 import Animated, {
@@ -9,7 +9,8 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { ColorPalette } from '../../theme/colors';
 
 const FLOAT_DISTANCE = 16;
 const FLOAT_DURATION = 2600;
@@ -37,6 +38,8 @@ export function IslandCard({
   style,
   index = 0,
 }: IslandCardProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const progress =
     totalSteps > 0 ? Math.min(1, currentSteps / totalSteps) : 0;
   const floatY = useSharedValue(0);
@@ -122,7 +125,7 @@ export function IslandCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   card: {
     width: '48%',
     marginBottom: 22,
@@ -162,7 +165,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 5,
     borderRadius: 4,
-    backgroundColor: '#ECE9F7',
+    backgroundColor: colors.border,
     overflow: 'hidden',
   },
   fill: {

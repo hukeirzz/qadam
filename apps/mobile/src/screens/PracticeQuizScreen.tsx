@@ -1,17 +1,20 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { ColorPalette } from '../theme/colors';
 import { ExerciseStackParamList } from '../types/navigation';
 import { getQuestionsForTopic } from '../data/practiceQuestions';
 import { PracticeQuestion, OptionKey } from '../data/practiceQuestions/types';
 import { savePracticeResult } from '../utils/practiceStorage';
 import { happyPetImages } from '../assets/happyPetImages';
 import { sadPetImages } from '../assets/sadPetImages';
+import { explainPetImages } from '../assets/explainPetImages';
+import { splitExplanationSteps } from '../utils/explanationSteps';
 import { useAppStore } from '../store/useAppStore';
 import { recordTopicStat } from '../services/progressService';
 import { playSound, vibrate } from '../services/soundService';
@@ -19,7 +22,7 @@ import { playSound, vibrate } from '../services/soundService';
 type Props = NativeStackScreenProps<ExerciseStackParamList, 'PracticeQuiz'>;
 
 const OPTION_KEYS: OptionKey[] = ['А', 'Б', 'В', 'Г'];
-const QUIZ_COUNT = 30;
+export const QUIZ_COUNT = 30;
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -34,8 +37,11 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
   const { topicId, topicTitle, subjectId } = route.params;
   const insets = useSafeAreaInsets();
   const petType = useAppStore((s) => s.petType);
+  const petName = useAppStore((s) => s.petName);
   const userId = useAppStore((s) => s.userId);
   const addXp = useAppStore((s) => s.addXp);
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [questions, setQuestions] = useState<PracticeQuestion[]>([]);
   const [index, setIndex] = useState(0);
@@ -43,6 +49,7 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
   const [correctCount, setCorrectCount] = useState(0);
   const [phase, setPhase] = useState<'quiz' | 'result'>('quiz');
   const [xpEarned, setXpEarned] = useState(0);
+  const [explanationStep, setExplanationStep] = useState(0);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -55,6 +62,7 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
     setCorrectCount(0);
     setPhase('quiz');
     setXpEarned(0);
+    setExplanationStep(0);
     fadeAnim.setValue(1);
   }, [topicId]);
 
@@ -104,6 +112,7 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
     ]).start(() => {
       setIndex(nextIndex);
       setSelected(null);
+      setExplanationStep(0);
     });
   };
 
@@ -203,7 +212,7 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
                 let bg: string = colors.surfaceGlass;
                 let border: string = colors.borderMuted;
                 let textColor: string = colors.text;
-                let badgeBg: string = '#F3F1FC';
+                let badgeBg: string = colors.purpleDark;
                 let badgeText: string = colors.textMuted;
 
                 if (isAnswered) {
@@ -253,16 +262,40 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
             </View>
 
             {/* Explanation */}
-            {isAnswered && (
-              <View style={[styles.explanationCard, { borderColor: isCorrect ? '#4ADE8040' : '#EF444440' }]}>
-                <Ionicons
-                  name={isCorrect ? 'checkmark-circle' : 'information-circle'}
-                  size={18}
-                  color={isCorrect ? '#4ADE80' : '#5B9DFF'}
-                />
-                <Text style={styles.explanationText}>{current.explanation}</Text>
-              </View>
-            )}
+            {isAnswered && current.explanation ? (() => {
+              const steps = splitExplanationSteps(current.explanation);
+              const stepText = steps[explanationStep] ?? current.explanation;
+              const hasMoreSteps = explanationStep < steps.length - 1;
+
+              return (
+                <View style={styles.explanationRow}>
+                  <Image
+                    source={explainPetImages[petType ?? 'bars']}
+                    style={styles.explanationPetImage}
+                    resizeMode="contain"
+                  />
+                  <View
+                    style={[
+                      styles.explanationBubble,
+                      { borderColor: isCorrect ? '#4ADE8040' : '#EF444440' },
+                    ]}
+                  >
+                    <View style={styles.explanationTag}>
+                      <Text style={styles.explanationTagText}>{petName ?? 'Питомец'} объясняет</Text>
+                    </View>
+                    <Text style={styles.explanationText}>{stepText}</Text>
+                    {hasMoreSteps && (
+                      <Pressable
+                        style={styles.explanationNextBtn}
+                        onPress={() => { vibrate(); setExplanationStep((s) => s + 1); }}
+                      >
+                        <Text style={styles.explanationNextBtnText}>Далее</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                </View>
+              );
+            })() : null}
 
             {/* Next button */}
             {isAnswered && (
@@ -280,7 +313,7 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1 },
 
   header: {
@@ -331,17 +364,52 @@ const styles = StyleSheet.create({
   optionBadgeText: { fontSize: 14, fontWeight: '800' },
   optionText: { flex: 1, fontSize: 15, fontWeight: '500', lineHeight: 21 },
 
-  explanationCard: {
+  explanationRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    backgroundColor: 'rgba(91,157,255,0.08)',
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 14,
+    alignItems: 'flex-end',
     marginBottom: 16,
   },
-  explanationText: { flex: 1, color: colors.textMuted, fontSize: 13, lineHeight: 20 },
+  explanationPetImage: {
+    width: 132,
+    height: 132,
+    marginLeft: -12,
+    zIndex: 1,
+  },
+  explanationBubble: {
+    flex: 1,
+    backgroundColor: colors.surfaceGlass,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+  },
+  explanationTag: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(144,71,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(144,71,255,0.35)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 8,
+  },
+  explanationTagText: {
+    color: colors.purpleGlow,
+    fontSize: 11.5,
+    fontWeight: '800',
+  },
+  explanationText: { color: colors.textMuted, fontSize: 13, lineHeight: 20, marginBottom: 10 },
+  explanationNextBtn: {
+    alignSelf: 'flex-end',
+    backgroundColor: colors.purple,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  explanationNextBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
 
   nextBtn: {
     backgroundColor: colors.purple,
@@ -403,7 +471,7 @@ const styles = StyleSheet.create({
 
   btnSecondary: {
     width: '100%',
-    backgroundColor: '#F3F1FC',
+    backgroundColor: colors.purpleDark,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',

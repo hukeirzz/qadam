@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../ui/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { premiumIslands } from '../../data/homeIslands';
 import { getTopicIds } from '../../data/subjects';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { ColorPalette } from '../../theme/colors';
 import { SubjectId } from '../../types/subject';
 import { useAppStore } from '../../store/useAppStore';
 import { IslandCard } from './IslandCard';
@@ -20,6 +21,8 @@ interface Props {
 export function PremiumIslandSection({ unlocked, onUnlockPress, onIslandPress }: Props) {
   const completedTopics = useAppStore((s) => s.completedTopics);
   const remoteTopicIds = useAppStore((s) => s.remoteTopicIds);
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const lastIndex = premiumIslands.length - 1;
 
   return (
@@ -117,7 +120,7 @@ export function PremiumIslandSection({ unlocked, onUnlockPress, onIslandPress }:
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   section: {
     paddingHorizontal: 14,
     paddingTop: 8,

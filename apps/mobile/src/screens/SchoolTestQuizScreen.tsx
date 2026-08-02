@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,7 +13,8 @@ import { AnswerCard } from '../components/quiz/AnswerCard';
 import { fetchSchoolTestQuestions, submitSchoolTestResult } from '../services/schoolTestsService';
 import { ExerciseStackParamList } from '../types/navigation';
 import { AnswerState } from '../types/quiz';
-import { colors } from '../theme/colors';
+import { ColorPalette } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { useAppStore } from '../store/useAppStore';
 import { playSound } from '../services/soundService';
 
@@ -24,6 +25,8 @@ const LABELS = ['1', '2', '3', '4', '5', '6', '7', '8'];
 export function SchoolTestQuizScreen({ route, navigation }: Props) {
   const { testId, title } = route.params;
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const userId = useAppStore((s) => s.userId);
 
   const [questions, setQuestions] = useState<SchoolTestQuestionDTO[]>([]);
@@ -194,7 +197,7 @@ export function SchoolTestQuizScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1 },
   header: { paddingHorizontal: 20, paddingVertical: 12, alignItems: 'center' },
   headerTitle: { color: colors.text, fontSize: 16, fontWeight: '700' },

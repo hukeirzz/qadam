@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { TextInput } from '../components/ui/TextInput';
@@ -7,12 +7,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { QadamLogo } from '../components/ui/QadamLogo';
-import { signIn, signUp } from '../services/authService';
-import { loadUserProfile, saveOnboarding, saveProfileProgress } from '../services/progressService';
-import { findClassByCode } from '../services/schoolsService';
-import { useAppStore } from '../store/useAppStore';
+import { signUp } from '../services/authService';
+import { completeRegistration } from '../services/registrationService';
 import { RootStackParamList } from '../types/navigation';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { ColorPalette } from '../theme/colors';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
@@ -26,10 +25,8 @@ export function RegisterScreen({ navigation }: Props) {
   const [dataConsent, setDataConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  const loadProfile = useAppStore((s) => s.loadProfile);
-  const setOnboardingInfo = useAppStore((s) => s.setOnboardingInfo);
-  const setPremium = useAppStore((s) => s.setPremium);
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const handleSubmit = async () => {
     setError('');
@@ -54,53 +51,19 @@ export function RegisterScreen({ navigation }: Props) {
       if (signUpErr) { setError(translateError(signUpErr.message)); return; }
 
       // signUp already returns a live session when email confirmation isn't
-      // required — no need for a separate signIn round trip in that case.
-      // If there's no session, the Supabase project has "Confirm email"
-      // turned on (Dashboard → Authentication → Sign In / Providers →
-      // Email), which blocks sign-in until the link is clicked — that's a
-      // project setting, not something this screen can bypass. Still try a
-      // normal sign-in as a fallback in case it isn't actually required.
-      let userId = signUpData.user?.id;
+      // required. When it does require confirmation, there's no session yet —
+      // send them to confirm the code in-app (ConfirmEmailScreen) instead of
+      // making them dig up a link in their email client.
       if (!signUpData.session) {
-        const { data: loginData, error: loginErr } = await signIn(email.trim(), password);
-        if (loginErr || !loginData.user) {
-          setError('Подтверди email по ссылке из письма, затем войди — после этого сможешь продолжить регистрацию');
-          return;
-        }
-        userId = loginData.user.id;
+        navigation.replace('ConfirmEmail', {
+          email: email.trim(), fullName, classCode: classCode.trim(), dataConsent,
+        });
+        return;
       }
+      const userId = signUpData.user?.id;
       if (!userId) { setError('Что-то пошло не так'); return; }
-      const profile = await loadUserProfile(userId);
-      loadProfile(
-        profile ?? {
-          id: userId, name: fullName,
-          xp: 0, gems: 0, streak: 0,
-          premium_unlocked: false, last_activity: null,
-          completed_topics: [], weekly_steps: [0, 0, 0, 0, 0, 0, 0], week_start: null,
-        },
-      );
-
-      // Код класса необязателен — если введён, но не найден, просто не
-      // привязываем. Содержит свой school_id, так что заодно привязывает и школу.
-      const studentClass = classCode.trim() ? await findClassByCode(classCode.trim()) : null;
-      const resolvedSchoolId = studentClass?.school_id ?? null;
-
-      await saveOnboarding(userId, {
-        school_id: resolvedSchoolId,
-        class_id: studentClass?.id ?? null,
-        data_consent: dataConsent,
-      });
-      setOnboardingInfo({
-        pet_name: null, rank: null, school_id: resolvedSchoolId, class_id: studentClass?.id ?? null,
-      });
-
-      // Партнёрская школа — все ранги и премиум-контент открываются автоматически.
-      if (resolvedSchoolId) {
-        setPremium(true);
-        await saveProfileProgress(userId, { premium_unlocked: true });
-      }
-
-      navigation.replace('PetName');
+      await completeRegistration(userId, fullName, classCode, dataConsent);
+      navigation.replace('Onboarding');
     } catch (e) {
       console.warn('RegisterScreen submit error:', e);
       setError('Что-то пошло не так. Проверь соединение и попробуй ещё раз.');
@@ -186,6 +149,8 @@ function Field(props: {
   keyboardType?: 'default' | 'email-address' | 'phone-pad';
   autoCapitalize?: 'none' | 'words' | 'characters';
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.inputWrap}>
       <Ionicons name={props.icon} size={18} color={colors.textDim} style={styles.inputIcon} />
@@ -203,6 +168,8 @@ function Field(props: {
 }
 
 function Consent({ checked, onToggle, label }: { checked: boolean; onToggle: () => void; label: string }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Pressable style={styles.consentRow} onPress={onToggle} hitSlop={6}>
       <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
@@ -221,7 +188,7 @@ function translateError(msg: string): string {
   return msg || 'Что-то пошло не так';
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1 },
   scroll: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 48, paddingBottom: 40 },
   logoWrap: { alignItems: 'center', marginBottom: 20 },
@@ -238,7 +205,6 @@ const styles = StyleSheet.create({
   },
   inputIcon: { marginRight: 10 },
   input: { flex: 1, paddingVertical: 15, color: colors.text, fontSize: 15 },
-  placeholder: { color: colors.textDim },
   inputPass: { paddingRight: 0 },
   eyeBtn: { padding: 8 },
   hint: { color: colors.textDim, fontSize: 12, marginTop: -6, marginBottom: 12, marginLeft: 4 },

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,7 +10,8 @@ import { TopicPathMap } from '../components/path/TopicPathMap';
 import { getSubjectById } from '../data/subjects';
 import { fetchTopicsForSubject, getCachedSubjectTopicIds } from '../services/topicsService';
 import { HomeStackParamList } from '../types/navigation';
-import { subjectColors, colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { ColorPalette, subjectColors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { Topic } from '../types/subject';
 import { useAppStore } from '../store/useAppStore';
@@ -18,11 +19,13 @@ import { vibrate } from '../services/soundService';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'IslandPath'>;
 
+const topicBackground = require('../../assets/topic-background.png');
+
 const XP_RULES = [
-  { icon: '❤️❤️❤️', label: 'Все сердца целы',    xp: '100% XP', color: '#4ADE80' },
-  { icon: '❤️❤️🖤', label: '1 сердце потеряно',  xp: '⅔ XP',   color: '#FACC15' },
-  { icon: '❤️🖤🖤', label: '2 сердца потеряно',  xp: '⅓ XP',   color: '#FB923C' },
-  { icon: '🖤🖤🖤', label: 'Все сердца потеряны', xp: '0 XP',   color: '#F87171' },
+  { icon: '⭐⭐⭐', label: 'Все звёзды целы',    xp: '100% XP', color: '#4ADE80' },
+  { icon: '⭐⭐☆', label: '1 звезда потеряна',  xp: '⅔ XP',   color: '#FACC15' },
+  { icon: '⭐☆☆', label: '2 звезды потеряно',  xp: '⅓ XP',   color: '#FB923C' },
+  { icon: '☆☆☆', label: 'Все звёзды потеряны', xp: '0 XP',   color: '#F87171' },
 ];
 
 export function IslandPathScreen({ navigation, route }: Props) {
@@ -32,6 +35,8 @@ export function IslandPathScreen({ navigation, route }: Props) {
   const subject = getSubjectById(subjectId);
   const palette = subjectColors[subjectId];
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [tab, setTab] = useState<PathTab>('path');
   const [topics, setTopics] = useState<Topic[]>(subject?.topics ?? []);
   const [loading, setLoading] = useState(true);
@@ -75,7 +80,7 @@ export function IslandPathScreen({ navigation, route }: Props) {
   const totalCount = topics.length;
 
   return (
-    <ScreenBackground>
+    <ScreenBackground backgroundImage={topicBackground}>
       <View style={[styles.flex, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           <Pressable onPress={() => { vibrate(); navigation.goBack(); }} style={styles.back}>
@@ -115,16 +120,16 @@ export function IslandPathScreen({ navigation, route }: Props) {
                 </Text>
               </View>
               <Text style={styles.infoText}>
-                Пройди все темы, чтобы получить максимум XP и сердец.{'\n'}
+                Пройди все темы, чтобы получить максимум XP и звёзд.{'\n'}
                 Каждый шаг засчитывается в общий прогресс ОРТ.
               </Text>
             </View>
 
             {/* XP rules */}
-            <Text style={styles.sectionLabel}>Система XP и сердец</Text>
+            <Text style={styles.sectionLabel}>Система XP и звёзд</Text>
             <View style={styles.infoCard}>
               <Text style={styles.xpDesc}>
-                За каждый шаг XP считается от точности ответов и оставшихся сердец:
+                За каждый шаг XP считается от точности ответов и оставшихся звёзд:
               </Text>
               {XP_RULES.map((rule, i) => (
                 <View key={i} style={styles.ruleRow}>
@@ -135,7 +140,7 @@ export function IslandPathScreen({ navigation, route }: Props) {
               ))}
               <View style={styles.divider} />
               <Text style={styles.xpTip}>
-                💡 Перепройди тему с большим числом сердец — получи оставшийся XP!
+                💡 Перепройди тему с большим числом звёзд — получи оставшийся XP!
               </Text>
             </View>
 
@@ -144,7 +149,7 @@ export function IslandPathScreen({ navigation, route }: Props) {
             <View style={styles.infoCard}>
               {[
                 { icon: '✅', text: 'Пройденные темы можно проходить повторно' },
-                { icon: '❤️', text: 'Улучши результат по сердцам — получи дополнительный XP' },
+                { icon: '⭐', text: 'Улучши результат по звёздам — получи дополнительный XP' },
                 { icon: '🔥', text: 'Стрик обновляется при любом прохождении' },
               ].map((item, i) => (
                 <View key={i} style={styles.tipRow}>
@@ -180,7 +185,7 @@ export function IslandPathScreen({ navigation, route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1 },
   header: {
     flexDirection: 'row',
@@ -243,7 +248,7 @@ const styles = StyleSheet.create({
   progressTrack: {
     flex: 1,
     height: 6,
-    backgroundColor: '#ECE9F7',
+    backgroundColor: colors.border,
     borderRadius: 3,
     overflow: 'hidden',
   },

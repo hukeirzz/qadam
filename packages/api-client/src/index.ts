@@ -119,6 +119,21 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
     },
 
     /**
+     * Verify the signup confirmation code (email OTP template, see
+     * `mailer_templates_confirmation_content`) — on success a live session
+     * is created, same as clicking the confirmation link would, but
+     * without leaving the app.
+     */
+    async verifySignupCode(email: string, token: string) {
+      return supabase.auth.verifyOtp({ email: email.trim(), token: token.trim(), type: 'signup' });
+    },
+
+    /** Resends the signup confirmation code to the given email. */
+    async resendConfirmationCode(email: string) {
+      return supabase.auth.resend({ type: 'signup', email: email.trim() });
+    },
+
+    /**
      * Delete the account. Auth users can't be deleted from the client
      * directly, so this calls the `delete_account` RPC (SECURITY DEFINER).
      * Signs out locally on success.

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,7 +7,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { HomeStackParamList } from '../types/navigation';
-import { subjectColors, colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { ColorPalette, subjectColors } from '../theme/colors';
 import { fetchTopicTheory, TopicTheory } from '../services/theoryService';
 import { mathBasicImages } from '../assets/mathBasicImages';
 import { playSound, vibrate } from '../services/soundService';
@@ -18,6 +19,8 @@ export function TheoryScreen({ navigation, route }: Props) {
   const { subjectId, topicId } = route.params;
   const palette = subjectColors[subjectId];
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [theory, setTheory] = useState<TopicTheory | null>(null);
   const [loading, setLoading] = useState(true);
@@ -120,7 +123,7 @@ export function TheoryScreen({ navigation, route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {

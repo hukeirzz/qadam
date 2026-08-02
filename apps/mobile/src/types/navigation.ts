@@ -7,8 +7,10 @@ import type { WrongAnswer } from './quiz';
 
 export type RootStackParamList = {
   Splash: undefined;
+  Onboarding: undefined;
   Login: undefined;
   Register: undefined;
+  ConfirmEmail: { email: string; fullName: string; classCode?: string; dataConsent?: boolean };
   PetName: undefined;
   EntranceTest: undefined;
   EntranceTestResult: { score: number; total: number; rank: Rank };

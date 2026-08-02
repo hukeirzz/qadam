@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { TextInput } from '../components/ui/TextInput';
@@ -9,12 +9,15 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { ProfileStackParamList } from '../navigation/ProfileStack';
 import { updatePassword } from '../services/authService';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { ColorPalette } from '../theme/colors';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'ChangePassword'>;
 
 export function ChangePasswordScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [show, setShow] = useState(false);
@@ -108,7 +111,7 @@ export function ChangePasswordScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1 },
   content: { flex: 1, paddingHorizontal: 20 },
   header: {

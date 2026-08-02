@@ -5,7 +5,7 @@ import { PremiumScreen } from '../screens/PremiumScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { DailyStreakScreen } from '../screens/DailyStreakScreen';
 import { ChangePasswordScreen } from '../screens/ChangePasswordScreen';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 
 export type ProfileStackParamList = {
   Profile: undefined;
@@ -18,6 +18,7 @@ export type ProfileStackParamList = {
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
 
 export function ProfileStack() {
+  const { colors } = useTheme();
   return (
     <Stack.Navigator
       screenOptions={{

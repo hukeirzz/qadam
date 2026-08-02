@@ -1,22 +1,26 @@
-import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../ui/Text';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useAppStore } from '../../store/useAppStore';
 import { HomeStackParamList, MainTabParamList } from '../../types/navigation';
 import { vibrate } from '../../services/soundService';
-import { cardTheme, glow } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { CardTheme, ColorPalette } from '../../theme/colors';
+import { petImages } from '../../assets/petImages';
 
 export function HeaderBar() {
   const streak = useAppStore((s) => s.streak);
   const gems = useAppStore((s) => s.gems);
   const userName = useAppStore((s) => s.userName);
+  const petType = useAppStore((s) => s.petType);
   const nav = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const tabNav = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
+  const { colors, cardTheme, glow } = useTheme();
+  const styles = useMemo(() => createStyles(colors, cardTheme), [colors, cardTheme]);
 
   const initial = userName ? userName.charAt(0).toUpperCase() : '?';
 
@@ -53,23 +57,22 @@ export function HeaderBar() {
           onPress={() => { vibrate(); tabNav.navigate('ProfileTab'); }}
           hitSlop={8}
         >
-          <LinearGradient
-            colors={['#B490FF', '#7C3AED']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.avatarRing}
-          >
-            <View style={styles.avatarInner}>
-              <Text style={styles.avatarText}>{initial}</Text>
-            </View>
-          </LinearGradient>
+          <View style={styles.avatarRing}>
+            {petType ? (
+              <Image source={petImages[petType]} style={styles.avatarImage} resizeMode="cover" />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarText}>{initial}</Text>
+              </View>
+            )}
+          </View>
         </Pressable>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette, cardTheme: CardTheme) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -94,7 +97,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   chipText: {
-    color: '#2B2447',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '800',
   },
@@ -114,12 +117,18 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    padding: 2.5,
+    borderWidth: 2,
+    borderColor: colors.purple,
+    overflow: 'hidden',
   },
-  avatarInner: {
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarFallback: {
     flex: 1,
-    borderRadius: 17,
-    backgroundColor: '#2A1866',
+    borderRadius: 19,
+    backgroundColor: colors.purple,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,7 +8,8 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { ProfileStackParamList } from '../navigation/ProfileStack';
 import { useAppStore } from '../store/useAppStore';
-import { colors } from '../theme/colors';
+import { ColorPalette } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'DailyStreak'>;
 
@@ -21,6 +22,8 @@ export function DailyStreakScreen({ navigation }: Props) {
   const dailyGoalTarget = useAppStore((s) => s.dailyGoalTarget);
   const completedSteps = useAppStore((s) => s.completedSteps);
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const goalPct = dailyGoalTarget > 0 ? (dailyGoalCurrent / dailyGoalTarget) * 100 : 0;
 
@@ -117,7 +120,7 @@ export function DailyStreakScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1 },
   header: {
     flexDirection: 'row',
@@ -183,7 +186,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#ECE9F7',
+    backgroundColor: colors.border,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
@@ -217,7 +220,7 @@ const styles = StyleSheet.create({
   },
   goalTrack: {
     height: 8,
-    backgroundColor: '#ECE9F7',
+    backgroundColor: colors.border,
     borderRadius: 4,
     overflow: 'hidden',
     marginBottom: 16,

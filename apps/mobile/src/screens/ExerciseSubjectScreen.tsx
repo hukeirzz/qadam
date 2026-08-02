@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View, Alert } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { Rank } from '@qadam/business-logic';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
-import { colors, subjectColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { ColorPalette, subjectColors } from '../theme/colors';
 import { subjects } from '../data/subjects';
 import { islandImages } from '../assets/islandImages';
 import { rankImages } from '../assets/rankImages';
@@ -17,6 +18,9 @@ import { ExerciseStackParamList } from '../types/navigation';
 import { SUBJECT_META } from './ExerciseScreen';
 import { SubjectId, Topic } from '../types/subject';
 import { fetchTopicsForSubject } from '../services/topicsService';
+import { getQuestionsForTopic } from '../data/practiceQuestions';
+import { getPracticeResults, PracticeResult } from '../utils/practiceStorage';
+import { QUIZ_COUNT } from './PracticeQuizScreen';
 import { vibrate } from '../services/soundService';
 
 type Props = NativeStackScreenProps<ExerciseStackParamList, 'ExerciseSubject'>;
@@ -57,14 +61,18 @@ export function ExerciseSubjectScreen({ route }: Props) {
   const { subjectId } = route.params;
   const insets = useSafeAreaInsets();
   const completedTopics = useAppStore((s) => s.completedTopics);
-  const premiumUnlocked = useAppStore((s) => s.premiumUnlocked);
+  const topicHearts = useAppStore((s) => s.topicHearts);
   const gems = useAppStore((s) => s.gems);
   const xp = useAppStore((s) => s.xp);
   const rank = useAppStore((s) => s.rank);
   const navigation = useNavigation<any>();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [remoteTopics, setRemoteTopics] = useState<Topic[] | null>(null);
   const [selectedRank, setSelectedRank] = useState<Rank>(rank ?? 'D');
+  const [expandedTopicId, setExpandedTopicId] = useState<string | null>(null);
+  const [practiceResults, setPracticeResults] = useState<Record<string, PracticeResult>>({});
 
   const isPremium = subjectId.endsWith('_premium');
   const baseId = isPremium ? subjectId.replace('_premium', '') : subjectId;
@@ -82,6 +90,20 @@ export function ExerciseSubjectScreen({ route }: Props) {
     }
   }, [subjectId]);
 
+  // Обновляем при каждом возврате на экран — после прохождения практики
+  // (PracticeQuizScreen) счётчик попыток/лучший результат должны обновиться
+  // без перезапуска приложения.
+  useFocusEffect(
+    useCallback(() => {
+      const idSet = new Set<string>();
+      for (const t of subject?.topics ?? []) idSet.add(t.id);
+      for (const t of remoteTopics ?? []) idSet.add(t.id);
+      const ids = Array.from(idSet);
+      if (ids.length === 0) return;
+      getPracticeResults(ids).then(setPracticeResults);
+    }, [subject, remoteTopics]),
+  );
+
   if (!subject || !meta) return null;
 
   const displayTopics: Topic[] = isPremium ? (remoteTopics ?? []) : subject.topics;
@@ -96,15 +118,6 @@ export function ExerciseSubjectScreen({ route }: Props) {
     navigation.navigate('PracticeQuiz', { topicId, topicTitle, subjectId });
   };
 
-  const handlePremiumPress = () => {
-    vibrate();
-    if (premiumUnlocked) {
-      navigation.navigate('PathTab', { screen: 'IslandPath', params: { subjectId: meta.premiumId } });
-    } else {
-      navigation.navigate('Premium');
-    }
-  };
-
   const showRankInfo = () => {
     vibrate();
     Alert.alert(
@@ -113,42 +126,94 @@ export function ExerciseSubjectScreen({ route }: Props) {
     );
   };
 
+  const toggleExpand = (topicId: string) => {
+    vibrate();
+    setExpandedTopicId((cur) => (cur === topicId ? null : topicId));
+  };
+
   const renderTopicCard = (topic: Topic) => {
     const isUnlocked = completedTopics.includes(topic.id);
+    const isExpanded = isUnlocked && expandedTopicId === topic.id;
+    const hearts = topicHearts[topic.id]; // 0–3, undefined = ещё не пройдено
+    const result = practiceResults[topic.id];
+    // PracticeQuizScreen берёт максимум QUIZ_COUNT вопросов из пула —
+    // показываем то же число, что реально увидит ученик, а не размер пула.
+    const questionCount = result?.total ?? Math.min(QUIZ_COUNT, getQuestionsForTopic(topic.id).length);
 
     return (
-      <Pressable
-        key={topic.id}
-        style={[styles.topicCard, !isUnlocked && styles.topicCardLocked]}
-        disabled={!isUnlocked}
-        onPress={() => goToQuiz(topic.id, topic.title)}
-      >
-        <View style={[styles.topicIcon, { backgroundColor: `${palette.primary}26` }]}>
-          <Text style={[styles.topicIconGlyph, { color: palette.primary }]}>{subject.icon}</Text>
-        </View>
-
-        <View style={styles.topicInfo}>
-          <Text style={[styles.topicTitle, !isUnlocked && styles.topicTitleLocked]} numberOfLines={1}>
-            {topic.title}
-          </Text>
-
-          {isUnlocked ? (
-            <Text style={styles.topicSubUnlocked}>Доступно для практики</Text>
-          ) : (
-            <Text style={styles.topicSubLocked}>Сначала пройди на острове</Text>
-          )}
-        </View>
-
-        <View style={styles.topicRight}>
-          <View style={[styles.topicChevronBtn, !isUnlocked && styles.topicChevronBtnLocked]}>
-            <Ionicons
-              name={isUnlocked ? 'chevron-forward' : 'lock-closed'}
-              size={16}
-              color={isUnlocked ? colors.text : colors.textDim}
-            />
+      <View key={topic.id} style={styles.topicCard}>
+        <Pressable
+          style={[styles.topicRow, !isUnlocked && styles.topicRowLocked]}
+          disabled={!isUnlocked}
+          onPress={() => toggleExpand(topic.id)}
+        >
+          <View style={[styles.topicIcon, { backgroundColor: `${palette.primary}26` }]}>
+            <Text style={[styles.topicIconGlyph, { color: palette.primary }]}>{subject.icon}</Text>
           </View>
-        </View>
-      </Pressable>
+
+          <View style={styles.topicInfo}>
+            <View style={styles.topicTitleRow}>
+              <Text style={[styles.topicTitle, !isUnlocked && styles.topicTitleLocked]} numberOfLines={1}>
+                {topic.title}
+              </Text>
+              {isUnlocked && hearts !== undefined && (
+                <View style={styles.topicStarsRow}>
+                  {[0, 1, 2].map((i) => (
+                    <Ionicons
+                      key={i}
+                      name="star"
+                      size={14}
+                      color={i < hearts ? colors.gold : colors.border}
+                    />
+                  ))}
+                </View>
+              )}
+            </View>
+
+            {isUnlocked ? (
+              <Text style={styles.topicSubUnlocked}>Доступно для практики</Text>
+            ) : (
+              <Text style={styles.topicSubLocked}>Сначала пройди на острове</Text>
+            )}
+          </View>
+
+          <View style={styles.topicRight}>
+            <View style={[styles.topicChevronBtn, !isUnlocked && styles.topicChevronBtnLocked]}>
+              <Ionicons
+                name={!isUnlocked ? 'lock-closed' : isExpanded ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color={isUnlocked ? colors.text : colors.textDim}
+              />
+            </View>
+          </View>
+        </Pressable>
+
+        {isExpanded && (
+          <View style={styles.topicExpanded}>
+            <View style={styles.topicStatsRow}>
+              <View style={styles.topicStat}>
+                <Ionicons name="help-circle-outline" size={20} color={colors.purpleGlow} />
+                <Text style={styles.topicStatLabel}>Количество{'\n'}вопросов</Text>
+                <Text style={styles.topicStatValue}>{questionCount}</Text>
+              </View>
+              <View style={styles.topicStat}>
+                <Ionicons name="checkmark-circle-outline" size={20} color={colors.success} />
+                <Text style={styles.topicStatLabel}>Правильные{'\n'}ответы</Text>
+                <Text style={styles.topicStatValue}>{result?.best ?? 0}</Text>
+              </View>
+              <View style={styles.topicStat}>
+                <Ionicons name="repeat" size={20} color="#3B82F6" />
+                <Text style={styles.topicStatLabel}>Попыток</Text>
+                <Text style={styles.topicStatValue}>{result?.attempts ?? 0}</Text>
+              </View>
+            </View>
+
+            <Pressable style={styles.topicPassBtn} onPress={() => goToQuiz(topic.id, topic.title)}>
+              <Text style={styles.topicPassBtnText}>Пройти</Text>
+            </Pressable>
+          </View>
+        )}
+      </View>
     );
   };
 
@@ -232,6 +297,14 @@ export function ExerciseSubjectScreen({ route }: Props) {
                   const rProgress = getRankXpProgress(r, xp);
                   const accent = RANK_ACCENT[r];
 
+                  // Полоска на карточке ранга отражает реальный прогресс по
+                  // пройденным темам этого ранга, а не XP до его открытия —
+                  // иначе D ранг (порог 0 XP) всегда выглядел бы заполненным.
+                  const rTopics = topicsForRank(r, subject.topics);
+                  const rDone = rTopics.filter((t) => completedTopics.includes(t.id)).length;
+                  const rTotal = rTopics.length;
+                  const topicProgressPct = rTotal > 0 ? (rDone / rTotal) * 100 : 0;
+
                   return (
                     <Pressable
                       key={r}
@@ -249,12 +322,12 @@ export function ExerciseSubjectScreen({ route }: Props) {
                       <Image source={rankImages[r]} style={styles.rankImg} resizeMode="contain" />
                       <Text style={styles.rankLabel}>{r} ранг</Text>
                       <Text style={styles.rankXpLabel}>{rankXpLabel(r)}</Text>
-                      {isSelected && (
+                      {isSelected && rTotal > 0 && (
                         <View style={styles.rankMiniTrack}>
                           <View
                             style={[
                               styles.rankMiniFill,
-                              { width: `${rProgress.progressPct}%`, backgroundColor: accent },
+                              { width: `${topicProgressPct}%`, backgroundColor: accent },
                             ]}
                           />
                         </View>
@@ -287,26 +360,13 @@ export function ExerciseSubjectScreen({ route }: Props) {
 
             </>
           )}
-
-          {/* ── Premium banner ── */}
-          {!premiumUnlocked && (
-            <Pressable style={styles.premiumBanner} onPress={handlePremiumPress}>
-              <View style={styles.premiumLock}>
-                <Ionicons name="lock-closed" size={18} color={colors.purpleGlow} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.premiumTitle}>Продвинутый уровень</Text>
-                <Text style={styles.premiumSub}>Открыть за 5000 сом →</Text>
-              </View>
-            </Pressable>
-          )}
         </ScrollView>
       </View>
     </ScreenBackground>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1 },
 
   header: {
@@ -353,7 +413,7 @@ const styles = StyleSheet.create({
   heroProgressCount: { fontSize: 16, fontWeight: '800' },
   heroTrack: {
     height: 7,
-    backgroundColor: '#ECE9F7',
+    backgroundColor: colors.border,
     borderRadius: 4,
     overflow: 'hidden',
     marginBottom: 22,
@@ -420,7 +480,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ECE9F7',
+    backgroundColor: colors.border,
   },
   rankImg: { width: 56, height: 56, marginBottom: 8 },
   rankLabel: { color: colors.text, fontSize: 13, fontWeight: '800', marginBottom: 3 },
@@ -429,7 +489,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#ECE9F7',
+    backgroundColor: colors.border,
     overflow: 'hidden',
     marginTop: 10,
   },
@@ -439,17 +499,20 @@ const styles = StyleSheet.create({
   topicList: { gap: 10, marginBottom: 18 },
 
   topicCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: colors.surfaceGlass,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.borderMuted,
+    overflow: 'hidden',
+  },
+  topicRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 14,
     gap: 12,
   },
-  topicCardLocked: { opacity: 0.55 },
+  topicRowLocked: { opacity: 0.55 },
 
   topicIcon: {
     width: 44,
@@ -462,8 +525,10 @@ const styles = StyleSheet.create({
   topicIconGlyph: { fontSize: 18, fontWeight: '800' },
 
   topicInfo: { flex: 1, minWidth: 0 },
-  topicTitle: { color: colors.text, fontSize: 14.5, fontWeight: '700', marginBottom: 4 },
+  topicTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  topicTitle: { color: colors.text, fontSize: 14.5, fontWeight: '700', flexShrink: 1 },
   topicTitleLocked: { color: colors.textDim },
+  topicStarsRow: { flexDirection: 'row', gap: 2, flexShrink: 0 },
   topicSubLocked: { color: colors.textDim, fontSize: 11 },
   topicSubUnlocked: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
 
@@ -476,7 +541,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(144,71,255,0.18)',
   },
-  topicChevronBtnLocked: { backgroundColor: '#ECE9F7' },
+  topicChevronBtnLocked: { backgroundColor: colors.border },
+
+  topicExpanded: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    gap: 14,
+  },
+  topicStatsRow: {
+    flexDirection: 'row',
+    backgroundColor: colors.purpleDark,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+  },
+  topicStat: { flex: 1, alignItems: 'center', gap: 4 },
+  topicStatLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 14,
+    minHeight: 28,
+  },
+  topicStatValue: { color: colors.text, fontSize: 17, fontWeight: '800', marginTop: 2 },
+  topicPassBtn: {
+    backgroundColor: colors.purple,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  topicPassBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
 
   emptyRankCard: {
     backgroundColor: colors.surfaceGlass,
@@ -487,26 +582,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyRankText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
-
-  /* Premium */
-  premiumBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(144,71,255,0.10)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(144,71,255,0.3)',
-    padding: 14,
-  },
-  premiumLock: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: 'rgba(144,71,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  premiumTitle: { color: colors.text, fontSize: 14, fontWeight: '700' },
-  premiumSub: { color: colors.purpleGlow, fontSize: 13, fontWeight: '600', marginTop: 2 },
 });

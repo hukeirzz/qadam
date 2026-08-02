@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../ui/Text';
 import Animated, { FadeInDown, FadeOutUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import type { Rank } from '@qadam/business-logic';
-import { cardTheme, colors, glow } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { CardTheme, ColorPalette } from '../../theme/colors';
 import { rankAccentColors } from '../../assets/rankIslandImages';
 import { getIslandsForRank } from '../../data/homeIslands';
 import { SubjectId } from '../../types/subject';
@@ -38,6 +39,8 @@ function RankSection({
   onToggle: () => void;
   onIslandPress: (id: SubjectId, rank: Rank) => void;
 }) {
+  const { colors, glow } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const accent = rankAccentColors[rank];
   const islands = empty ? [] : getIslandsForRank(rank);
 
@@ -84,6 +87,9 @@ function RankSection({
 }
 
 function PremiumBanner({ onPress }: { onPress: () => void }) {
+  const { colors, cardTheme, glow } = useTheme();
+  const styles = useMemo(() => createStyles(colors, cardTheme), [colors, cardTheme]);
+
   return (
     <Pressable style={[styles.premiumShadow, { shadowColor: glow.gold }]} onPress={onPress}>
       <View style={styles.premiumRow}>
@@ -105,6 +111,8 @@ function PremiumBanner({ onPress }: { onPress: () => void }) {
 export function RankIslandMap({ onIslandPress, onPremiumPress }: Props) {
   const rank = useAppStore((s) => s.rank) ?? 'D';
   const premiumUnlocked = useAppStore((s) => s.premiumUnlocked);
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   // Текущий ранг открыт по умолчанию, остальные — свёрнуты, пока их не
   // раскроют вручную. Храним только «переопределения» дефолта.
   const [expandedOverrides, setExpandedOverrides] = useState<Partial<Record<Rank, boolean>>>({});
@@ -152,7 +160,7 @@ export function RankIslandMap({ onIslandPress, onPremiumPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette, cardTheme?: CardTheme) => StyleSheet.create({
   card: {
     marginHorizontal: 16,
     marginTop: 16,
@@ -208,7 +216,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     padding: 12,
     borderRadius: 14,
-    backgroundColor: '#F3F1FC',
+    backgroundColor: colors.purpleDark,
   },
   emptyRankText: {
     flex: 1,
@@ -235,7 +243,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 18,
-    backgroundColor: cardTheme.fill,
+    backgroundColor: cardTheme?.fill,
     borderWidth: 1,
     borderColor: 'rgba(255, 209, 102, 0.35)',
   },

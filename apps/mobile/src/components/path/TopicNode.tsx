@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Image, ImageSourcePropType, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../ui/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { Topic } from '../../types/subject';
-import { colors, subjectColors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { ColorPalette, subjectColors } from '../../theme/colors';
 import { SubjectId } from '../../types/subject';
 
 export const ROW_HEIGHT = 148;
@@ -50,6 +51,9 @@ function NodePin({
   locked: boolean;
   completed: boolean;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <View style={styles.pinWrap}>
       <View
@@ -82,6 +86,8 @@ export function TopicNode({
   heartsRemaining,
   onPress,
 }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const palette = subjectColors[subjectId];
   const isLocked = topic.status === 'locked';
   const isCompleted = topic.status === 'completed';
@@ -129,12 +135,12 @@ export function TopicNode({
             {[0, 1, 2].map((i) => (
               <Ionicons
                 key={i}
-                name="heart"
-                size={11}
+                name="star"
+                size={13}
                 color={
                   i < heartsRemaining
-                    ? palette.primary
-                    : '#D9D5EA'
+                    ? colors.gold
+                    : colors.border
                 }
               />
             ))}
@@ -165,7 +171,7 @@ export function TopicNode({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -188,7 +194,7 @@ const styles = StyleSheet.create({
     height: PIN_SIZE,
     borderRadius: PIN_SIZE / 2,
     borderWidth: 3,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#FF4D6D',
@@ -198,11 +204,11 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   pinCircleLocked: {
-    backgroundColor: '#E4E1F0',
+    backgroundColor: colors.border,
     shadowOpacity: 0,
   },
   pinCircleCompleted: {
-    backgroundColor: '#EDE7FB',
+    backgroundColor: colors.purpleDark,
   },
   pinNumber: {
     color: colors.text,
@@ -210,7 +216,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   pinNumberLocked: {
-    color: '#A39EC2',
+    color: colors.textDim,
   },
   pinPointer: {
     width: 0,
@@ -252,12 +258,12 @@ const styles = StyleSheet.create({
     maxWidth: 188,
   },
   labelCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 14,
     paddingVertical: 11,
     paddingHorizontal: 13,
     borderWidth: 1,
-    borderColor: '#ECE9F7',
+    borderColor: colors.border,
     shadowColor: 'rgba(90, 80, 140, 0.25)',
     shadowOpacity: 1,
     shadowRadius: 10,

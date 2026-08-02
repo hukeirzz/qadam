@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,7 +7,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { HeaderBar } from '../components/home/HeaderBar';
 import { PracticeIslandCard } from '../components/practice/PracticeIslandCard';
-import { colors, glow, subjectColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { ColorPalette, subjectColors } from '../theme/colors';
 import { subjects } from '../data/subjects';
 import { islandImages } from '../assets/islandImages';
 import { useAppStore } from '../store/useAppStore';
@@ -30,6 +31,8 @@ export const SUBJECT_META: Record<string, { icon: string; premiumId: string }> =
 };
 
 function SchoolTestsBanner({ count, onPress }: { count: number; onPress: () => void }) {
+  const { colors, glow } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Pressable style={[styles.bannerShadow, { shadowColor: glow.purple }]} onPress={onPress}>
       <View style={styles.banner}>
@@ -44,7 +47,7 @@ function SchoolTestsBanner({ count, onPress }: { count: number; onPress: () => v
             Решай тесты, получай баллы и поднимай рейтинг школы!
           </Text>
 
-          <View style={styles.bannerBtn}>
+          <View style={[styles.bannerBtn, { shadowColor: glow.purple }]}>
             <Text style={styles.bannerBtnText}>Перейти</Text>
           </View>
 
@@ -68,6 +71,8 @@ export function ExerciseScreen() {
   const schoolId = useAppStore((s) => s.schoolId);
   const navigation = useNavigation<NavProp>();
   const [testCount, setTestCount] = useState(0);
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const practiceSubjects = subjects.filter((s) => PRACTICE_IDS.includes(s.id as any));
 
@@ -110,11 +115,7 @@ export function ExerciseScreen() {
 
           {/* ── Разделы ── */}
           <Text style={styles.sectionTitle}>Выбери раздел</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.subjectRow}
-          >
+          <View style={styles.subjectList}>
             {practiceSubjects.map((subject) => {
               const palette = subjectColors[subject.id as keyof typeof subjectColors];
               const completedCount = subject.topics.filter((t) => completedTopics.includes(t.id)).length;
@@ -134,7 +135,7 @@ export function ExerciseScreen() {
                 />
               );
             })}
-          </ScrollView>
+          </View>
 
           {/* ── Тесты партнёрской школы ── */}
           {schoolId ? <SchoolTestsBanner count={testCount} onPress={goToSchoolTests} /> : null}
@@ -144,7 +145,7 @@ export function ExerciseScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1 },
 
   headerBlock: {
@@ -178,8 +179,8 @@ const styles = StyleSheet.create({
     marginTop: 22,
     marginBottom: 12,
   },
-  subjectRow: { gap: 12, paddingBottom: 4 },
-  subjectCell: { width: 132 },
+  subjectList: { gap: 10 },
+  subjectCell: { width: '100%' },
 
   /* School tests banner */
   bannerShadow: {
@@ -244,7 +245,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 11,
     borderRadius: 14,
-    shadowColor: glow.purple,
     shadowOpacity: 1,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },

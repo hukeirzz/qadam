@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Image, ImageSourcePropType, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
 import { Text } from '../ui/Text';
 import { Ionicons } from '@expo/vector-icons';
-import { cardTheme, colors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { CardTheme, ColorPalette } from '../../theme/colors';
 
 interface Props {
   title: string;
@@ -15,16 +16,12 @@ interface Props {
   subtitle?: string;
   locked?: boolean;
   lockedHint?: string;
-  /** Подсвеченная (по центру карусели) карточка — цветная рамка и полная непрозрачность. */
-  featured?: boolean;
-  /** Затемнённая/уменьшенная карточка (соседи в карусели, не в фокусе). */
-  dimmed?: boolean;
-  /** Кружок-стрелка в углу — скрывается в карусели, где нет отдельной кнопки перехода. */
-  showCorner?: boolean;
   onPress?: () => void;
   style?: ViewStyle;
 }
 
+// Строка раздела в вертикальном списке «Практики» — картинка слева,
+// название/прогресс по центру, стрелка справа (как у карточек тем на острове).
 export function PracticeIslandCard({
   title,
   imageSrc,
@@ -35,165 +32,151 @@ export function PracticeIslandCard({
   subtitle,
   locked = false,
   lockedHint = 'Пройди предыдущую тему',
-  featured = false,
-  dimmed = false,
-  showCorner = true,
   onPress,
   style,
 }: Props) {
+  const { colors, cardTheme } = useTheme();
+  const styles = useMemo(() => createStyles(colors, cardTheme), [colors, cardTheme]);
   const progress = totalSteps > 0 ? Math.min(1, currentSteps / totalSteps) : 0;
 
   return (
     <Pressable
       onPress={onPress}
-      style={[
-        styles.shadowWrap,
-        { shadowColor: glowColor, opacity: dimmed ? 0.55 : 1 },
-        dimmed && styles.dimmedScale,
-        style,
-      ]}
+      style={[styles.shadowWrap, { shadowColor: glowColor }, style]}
     >
-      <View style={[styles.card, featured && [styles.cardFeatured, { borderColor: accentColor }]]}>
+      <View style={styles.card}>
         <View style={styles.imageWrap}>
           <Image
             source={imageSrc}
-            style={[styles.image, locked && styles.imageLocked, { shadowColor: glowColor }]}
+            style={[styles.image, locked && styles.imageLocked]}
             resizeMode="contain"
           />
           {locked && (
             <View style={styles.lockBadge}>
-              <Ionicons name="lock-closed" size={16} color="#FFFFFF" />
+              <Ionicons name="lock-closed" size={14} color="#FFFFFF" />
             </View>
           )}
         </View>
 
-        {!locked && showCorner && (
-          <View style={styles.cornerBtn}>
-            <Ionicons name="chevron-forward" size={15} color={colors.text} />
-          </View>
-        )}
-
-        <Text style={styles.title} numberOfLines={2}>
-          {title}
-        </Text>
-
-        {locked ? (
-          <Text style={styles.lockedHint} numberOfLines={2}>
-            {lockedHint}
+        <View style={styles.info}>
+          <Text style={styles.title} numberOfLines={1}>
+            {title}
           </Text>
-        ) : subtitle ? (
-          <Text style={styles.progressText}>{subtitle}</Text>
-        ) : (
-          <>
-            <Text style={styles.progressText}>
-              Решено {currentSteps} / {totalSteps}
+
+          {locked ? (
+            <Text style={styles.lockedHint} numberOfLines={1}>
+              {lockedHint}
             </Text>
-            <View style={styles.track}>
-              <View
-                style={[styles.fill, { width: `${progress * 100}%`, backgroundColor: accentColor }]}
-              />
-            </View>
-          </>
-        )}
+          ) : subtitle ? (
+            <Text style={styles.progressText}>{subtitle}</Text>
+          ) : (
+            <>
+              <Text style={styles.progressText}>
+                Решено {currentSteps} / {totalSteps}
+              </Text>
+              <View style={styles.track}>
+                <View
+                  style={[styles.fill, { width: `${progress * 100}%`, backgroundColor: accentColor }]}
+                />
+              </View>
+            </>
+          )}
+        </View>
+
+        <View style={styles.chevronBtn}>
+          <Ionicons
+            name={locked ? 'lock-closed' : 'chevron-forward'}
+            size={16}
+            color={locked ? colors.textDim : colors.text}
+          />
+        </View>
       </View>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette, cardTheme: CardTheme) => StyleSheet.create({
   shadowWrap: {
-    shadowOpacity: 0.5,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 4,
-  },
-  dimmedScale: {
-    transform: [{ scale: 0.9 }],
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     backgroundColor: cardTheme.fill,
     borderWidth: 1,
     borderColor: cardTheme.border,
-    borderRadius: 24,
-    paddingTop: 14,
-    paddingHorizontal: 10,
-    paddingBottom: 12,
-    position: 'relative',
-  },
-  cardFeatured: {
-    borderWidth: 2,
-    backgroundColor: 'rgba(144,71,255,0.1)',
+    borderRadius: 20,
+    padding: 12,
   },
   imageWrap: {
-    width: '100%',
-    aspectRatio: 1,
+    width: 60,
+    height: 60,
+    flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 0,
   },
   image: {
     width: '100%',
     height: '100%',
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
   },
   imageLocked: {
     opacity: 0.35,
   },
   lockBadge: {
     position: 'absolute',
-    width: 34,
-    height: 34,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 9,
     backgroundColor: 'rgba(124, 58, 237, 0.45)',
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cornerBtn: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F3F1FC',
-    borderWidth: 1,
-    borderColor: cardTheme.border,
+  info: {
+    flex: 1,
+    minWidth: 0,
   },
   title: {
     color: colors.text,
-    fontSize: 13.5,
+    fontSize: 15,
     fontWeight: '800',
-    lineHeight: 17,
-    minHeight: 34,
+    marginBottom: 4,
   },
   progressText: {
     color: colors.textMuted,
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '600',
-    marginTop: 3,
     marginBottom: 6,
   },
   lockedHint: {
     color: colors.textDim,
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '600',
-    marginTop: 3,
-    lineHeight: 14,
   },
   track: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#ECE9F7',
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.border,
     overflow: 'hidden',
   },
   fill: {
     height: '100%',
-    borderRadius: 2,
+    borderRadius: 3,
+  },
+  chevronBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.purpleDark,
+    borderWidth: 1,
+    borderColor: cardTheme.border,
+    flexShrink: 0,
   },
 });

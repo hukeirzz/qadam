@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { Text } from './Text';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
 
 interface Props {
   size?: 'sm' | 'md' | 'lg';
@@ -17,6 +17,7 @@ const sizes = {
 const LOGO = require('../../../assets/icon.png');
 
 export function QadamLogo({ size = 'md', showTagline = false }: Props) {
+  const { colors } = useTheme();
   const s = sizes[size];
 
   return (
@@ -27,7 +28,7 @@ export function QadamLogo({ size = 'md', showTagline = false }: Props) {
         resizeMode="contain"
       />
       {showTagline ? (
-        <Text style={[styles.tagline, { fontSize: s.tagline }]}>
+        <Text style={[styles.tagline, { fontSize: s.tagline, color: colors.textMuted }]}>
           Делай шаги к знаниям каждый день
         </Text>
       ) : null}
@@ -40,7 +41,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tagline: {
-    color: colors.textMuted,
     marginTop: 8,
     lineHeight: 20,
     textAlign: 'center',

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,7 +7,8 @@ import type { Rank } from '@qadam/business-logic';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { RankBadge } from '../components/ui/RankBadge';
 import { RootStackParamList } from '../types/navigation';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { ColorPalette } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { useAppStore } from '../store/useAppStore';
 
@@ -24,6 +25,8 @@ const RANK_BLURB: Record<Rank, string> = {
 export function EntranceTestResultScreen({ navigation, route }: Props) {
   const { score, total, rank } = route.params;
   const setOnboarded = useAppStore((s) => s.setOnboarded);
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const handleContinue = () => {
     setOnboarded(true);
@@ -58,7 +61,7 @@ export function EntranceTestResultScreen({ navigation, route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl },
   title: { color: colors.text, fontSize: 22, fontWeight: '800', marginBottom: 24 },
   badgeWrap: { marginBottom: 20 },

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { TextInput } from '../components/ui/TextInput';
@@ -12,7 +12,8 @@ import { loadUserProfile, loadOnboardingInfo } from '../services/progressService
 import { loadAllTopicsToCache, getCachedSubjectTopicIds } from '../services/topicsService';
 import { useAppStore } from '../store/useAppStore';
 import { RootStackParamList } from '../types/navigation';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { ColorPalette } from '../theme/colors';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -22,6 +23,8 @@ export function LoginScreen({ navigation }: Props) {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const loadProfile = useAppStore((s) => s.loadProfile);
   const setRemoteTopics = useAppStore((s) => s.setRemoteTopics);
@@ -41,7 +44,16 @@ export function LoginScreen({ navigation }: Props) {
     setLoading(true);
     try {
       const { data, error: err } = await signIn(email.trim(), password);
-      if (err || !data.user) { setError(translateError(err?.message ?? '')); return; }
+      if (err || !data.user) {
+        if (err?.message.includes('Email not confirmed')) {
+          navigation.navigate('ConfirmEmail', {
+            email: email.trim(), fullName: email.split('@')[0],
+          });
+          return;
+        }
+        setError(translateError(err?.message ?? ''));
+        return;
+      }
       const displayName = data.user.user_metadata?.name ?? email.split('@')[0];
       await afterLogin(data.user.id, displayName);
     } catch (e) {
@@ -89,8 +101,11 @@ export function LoginScreen({ navigation }: Props) {
     } catch {}
     if (info) setOnboardingInfo(info);
 
-    if (info && !info.pet_name) {
-      navigation.replace('PetName');
+    // info может не прийти (сеть/ещё не готовы колонки) — в этом случае
+    // тоже считаем пользователя новым и лучше лишний раз показать онбординг,
+    // чем случайно пропустить его для реально нового пользователя.
+    if (!info?.pet_name) {
+      navigation.replace('Onboarding');
     } else {
       navigation.replace('Main');
     }
@@ -196,7 +211,7 @@ function translateError(msg: string): string {
   return msg || 'Что-то пошло не так';
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1 },
   scroll: {
     flexGrow: 1,
@@ -207,32 +222,6 @@ const styles = StyleSheet.create({
   logoWrap: {
     alignItems: 'center',
     marginBottom: 28,
-  },
-  tabs: {
-    flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    padding: 4,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 10,
-  },
-  tabActive: {
-    backgroundColor: colors.purple,
-  },
-  tabText: {
-    color: colors.textMuted,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  tabTextActive: {
-    color: '#FFFFFF',
   },
   subtitle: {
     color: colors.textMuted,

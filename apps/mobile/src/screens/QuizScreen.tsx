@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,8 +12,11 @@ import { fetchQuizQuestions } from '../services/questionsService';
 import { getSubjectById } from '../data/subjects';
 import { HomeStackParamList } from '../types/navigation';
 import { AnswerState, QuizQuestion, WrongAnswer } from '../types/quiz';
-import { subjectColors, colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { ColorPalette, subjectColors } from '../theme/colors';
 import { useAppStore } from '../store/useAppStore';
+import { explainPetImages } from '../assets/explainPetImages';
+import { splitExplanationSteps } from '../utils/explanationSteps';
 import { playSound, vibrate } from '../services/soundService';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'Quiz'>;
@@ -25,8 +28,12 @@ export function QuizScreen({ navigation, route }: Props) {
   const subject = getSubjectById(subjectId);
   const palette = subjectColors[subjectId];
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const completedTopics = useAppStore((s) => s.completedTopics);
   const topicHearts = useAppStore((s) => s.topicHearts);
+  const petType = useAppStore((s) => s.petType);
+  const petName = useAppStore((s) => s.petName);
 
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
@@ -47,6 +54,7 @@ export function QuizScreen({ navigation, route }: Props) {
   const [answerState, setAnswerState] = useState<AnswerState>('idle');
   const [lives, setLives] = useState(3);
   const [wrongAnswers, setWrongAnswers] = useState<WrongAnswer[]>([]);
+  const [explanationStep, setExplanationStep] = useState(0);
 
   const parseQuestion = (text: string) => {
     const idx = text.indexOf('\n[img:');
@@ -107,6 +115,7 @@ export function QuizScreen({ navigation, route }: Props) {
     setIndex((i) => i + 1);
     setSelectedId(null);
     setAnswerState('idle');
+    setExplanationStep(0);
   };
 
   if (loadingQuestions) {
@@ -152,9 +161,9 @@ export function QuizScreen({ navigation, route }: Props) {
             {[...Array(3)].map((_, i) => (
               <Ionicons
                 key={i}
-                name="heart"
-                size={18}
-                color={i < lives ? palette.primary : '#E4E1F0'}
+                name="star"
+                size={20}
+                color={i < lives ? colors.gold : colors.border}
               />
             ))}
           </View>
@@ -208,12 +217,35 @@ export function QuizScreen({ navigation, route }: Props) {
             );
           })}
 
-          {answerState !== 'idle' && question.explanation ? (
-            <View style={styles.explanation}>
-              <Text style={styles.explanationTitle}>Объяснение</Text>
-              <Text style={styles.explanationText}>{question.explanation}</Text>
-            </View>
-          ) : null}
+          {answerState !== 'idle' && question.explanation ? (() => {
+            const steps = splitExplanationSteps(question.explanation);
+            const stepText = steps[explanationStep] ?? question.explanation;
+            const hasMoreSteps = explanationStep < steps.length - 1;
+
+            return (
+              <View style={styles.explanationRow}>
+                <Image
+                  source={explainPetImages[petType ?? 'bars']}
+                  style={styles.explanationPetImage}
+                  resizeMode="contain"
+                />
+                <View style={styles.explanationBubble}>
+                  <View style={styles.explanationTag}>
+                    <Text style={styles.explanationTagText}>{petName ?? 'Питомец'} объясняет</Text>
+                  </View>
+                  <Text style={styles.explanationText}>{stepText}</Text>
+                  {hasMoreSteps && (
+                    <Pressable
+                      style={styles.explanationNextBtn}
+                      onPress={() => { vibrate(); setExplanationStep((s) => s + 1); }}
+                    >
+                      <Text style={styles.explanationNextBtnText}>Далее</Text>
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+            );
+          })() : null}
         </ScrollView>
 
         {/* Bottom bar */}
@@ -244,7 +276,7 @@ export function QuizScreen({ navigation, route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1 },
   header: {
     flexDirection: 'row',
@@ -312,24 +344,57 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
   },
-  explanation: {
+  explanationRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
     marginTop: 8,
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: '#F3F1FC',
-    borderWidth: 1,
-    borderColor: colors.border,
   },
-  explanationTitle: {
+  explanationPetImage: {
+    width: 132,
+    height: 132,
+    marginLeft: -12,
+    zIndex: 1,
+  },
+  explanationBubble: {
+    flex: 1,
+    backgroundColor: colors.surfaceGlass,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.borderMuted,
+    padding: 14,
+  },
+  explanationTag: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(144,71,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(144,71,255,0.35)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 8,
+  },
+  explanationTagText: {
     color: colors.purpleGlow,
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 6,
+    fontSize: 11.5,
+    fontWeight: '800',
   },
   explanationText: {
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 20,
+    marginBottom: 10,
+  },
+  explanationNextBtn: {
+    alignSelf: 'flex-end',
+    backgroundColor: colors.purple,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  explanationNextBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
   },
   bottomBar: {
     flexDirection: 'row',

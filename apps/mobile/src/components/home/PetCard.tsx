@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { Text } from '../ui/Text';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { petMoodFromStreak, type PetMood } from '@qadam/business-logic';
 import { useAppStore } from '../../store/useAppStore';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { CardTheme, ColorPalette } from '../../theme/colors';
 import { petImages } from '../../assets/petImages';
 
 const MOOD_LABEL: Record<PetMood, string> = {
@@ -26,6 +27,8 @@ export function PetCard() {
   const petType = useAppStore((s) => s.petType);
   const streak = useAppStore((s) => s.streak);
   const lastActivity = useAppStore((s) => s.lastActivity);
+  const { colors, cardTheme } = useTheme();
+  const styles = useMemo(() => createStyles(colors, cardTheme), [colors, cardTheme]);
 
   if (!petName) return null;
 
@@ -51,7 +54,7 @@ export function PetCard() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette, cardTheme: CardTheme) => StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -60,9 +63,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     padding: 14,
     borderRadius: 18,
-    backgroundColor: colors.surfaceGlass,
+    backgroundColor: cardTheme.fill,
     borderWidth: 1,
-    borderColor: colors.borderMuted,
+    borderColor: cardTheme.border,
     gap: 12,
   },
   emoji: { fontSize: 36 },

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,7 +13,8 @@ import { AnswerCard } from '../components/quiz/AnswerCard';
 import { fetchEntranceTestQuestions, submitEntranceTestResult } from '../services/entranceTestService';
 import { RootStackParamList } from '../types/navigation';
 import { AnswerState } from '../types/quiz';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { ColorPalette } from '../theme/colors';
 import { useAppStore } from '../store/useAppStore';
 import { playSound } from '../services/soundService';
 
@@ -25,6 +26,8 @@ const QUESTION_COUNT = 20;
 export function EntranceTestScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const userId = useAppStore((s) => s.userId);
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [questions, setQuestions] = useState<QuizQuestionDTO[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
@@ -152,7 +155,7 @@ export function EntranceTestScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1 },
   header: { paddingHorizontal: 20, paddingVertical: 12, alignItems: 'center' },
   headerTitle: { color: colors.text, fontSize: 16, fontWeight: '700' },

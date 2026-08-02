@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, ViewProps, ViewStyle } from 'react-native';
-import { cardTheme, glow } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
 
 interface Props extends ViewProps {
   /** Цвет ambient-свечения под карточкой (shadowColor). */
@@ -17,21 +17,29 @@ export function SurfaceCard({
   style,
   contentStyle,
   children,
-  glowColor = glow.purple,
+  glowColor,
   padding = 16,
   radius = 20,
   ...rest
 }: Props) {
+  const { cardTheme, glow } = useTheme();
+  const resolvedGlow = glowColor ?? glow.purple;
+
   return (
     <View
       style={[
         styles.shadowWrap,
-        { borderRadius: radius, shadowColor: glowColor },
+        { borderRadius: radius, shadowColor: resolvedGlow },
         style,
       ]}
       {...rest}
     >
-      <View style={[styles.fill, { borderRadius: radius, padding }]}>
+      <View
+        style={[
+          styles.fill,
+          { borderRadius: radius, padding, backgroundColor: cardTheme.fill, borderColor: cardTheme.border },
+        ]}
+      >
         <View style={contentStyle}>{children}</View>
       </View>
     </View>
@@ -46,9 +54,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   fill: {
-    backgroundColor: cardTheme.fill,
     borderWidth: 1,
-    borderColor: cardTheme.border,
     overflow: 'hidden',
   },
 });

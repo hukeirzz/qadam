@@ -17,7 +17,8 @@ import { dateKey, useAppStore } from '../store/useAppStore';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { SurfaceCard } from '../components/ui/SurfaceCard';
 import { RankBadge } from '../components/ui/RankBadge';
-import { colors, glow, subjectColors } from '../theme/colors';
+import { ColorPalette, subjectColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { getTopicIds, subjects } from '../data/subjects';
 import { vibrate } from '../services/soundService';
 
@@ -107,6 +108,8 @@ function ActivityChart({
   max: number;
 }) {
   const { width } = useWindowDimensions();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const chartW = width - 32 - 36 - Y_AXIS_W - 8; // экран - паддинг скролла - паддинг карточки - ось Y - зазор
   const niceMax = Math.max(1, max);
   const n = data.length;
@@ -147,7 +150,7 @@ function ActivityChart({
               <SvgLine
                 key={k}
                 x1={0} y1={y} x2={chartW} y2={y}
-                stroke="#ECE9F7"
+                stroke={colors.border}
                 strokeWidth={1}
                 strokeDasharray="4 4"
               />
@@ -185,6 +188,8 @@ function ActivityChart({
 
 export function StatsScreen() {
   const insets = useSafeAreaInsets();
+  const { colors, glow } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const completedTopics = useAppStore((s) => s.completedTopics);
   const dailySteps = useAppStore((s) => s.dailySteps);
@@ -325,7 +330,7 @@ export function StatsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   scroll: { paddingHorizontal: 16 },
   header: {
     alignItems: 'center',
@@ -489,7 +494,7 @@ const styles = StyleSheet.create({
   subjectTrack: {
     flex: 1,
     height: 6,
-    backgroundColor: '#ECE9F7',
+    backgroundColor: colors.border,
     borderRadius: 3,
     overflow: 'hidden',
   },

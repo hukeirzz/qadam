@@ -7,11 +7,12 @@ import { SchoolTestsScreen } from '../screens/SchoolTestsScreen';
 import { SchoolTestQuizScreen } from '../screens/SchoolTestQuizScreen';
 import { PremiumScreen } from '../screens/PremiumScreen';
 import { ExerciseStackParamList } from '../types/navigation';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 
 const Stack = createNativeStackNavigator<ExerciseStackParamList>();
 
 export function ExerciseStack() {
+  const { colors } = useTheme();
   return (
     <Stack.Navigator
       screenOptions={{

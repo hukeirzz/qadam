@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Alert, Image, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { TextInput } from '../components/ui/TextInput';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,10 +8,12 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { PetType } from '@qadam/types';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { ProfileStackParamList } from '../navigation/ProfileStack';
-import { colors } from '../theme/colors';
+import { ColorPalette } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { useAppStore } from '../store/useAppStore';
 import { petImages } from '../assets/petImages';
 import { signOut, deleteAccount, getSession } from '../services/authService';
+import { clearAllPracticeResults } from '../utils/practiceStorage';
 import { saveOnboarding, saveProfileProgress } from '../services/progressService';
 import { fetchClassById, findClassByCode } from '../services/schoolsService';
 import { vibrate } from '../services/soundService';
@@ -32,6 +34,8 @@ const PET_TYPE_LABELS: Record<PetType, string> = {
 
 export function SettingsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { colors, mode, toggleMode } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const userId = useAppStore((s) => s.userId);
   const userName = useAppStore((s) => s.userName);
@@ -160,7 +164,13 @@ export function SettingsScreen({ navigation }: Props) {
             const { error } = await deleteAccount();
             if (error) {
               Alert.alert('Ошибка', error.message ?? 'Не удалось удалить аккаунт');
+              return;
             }
+            // Результаты практики лежат в AsyncStorage без привязки к userId —
+            // при обычном выходе их нужно сохранить (тот же аккаунт войдёт
+            // снова), а вот при удалении аккаунта они должны стереться, иначе
+            // достанутся следующему, кто зарегистрируется на этом устройстве.
+            clearAllPracticeResults().catch(console.warn);
           },
         },
       ],
@@ -243,6 +253,23 @@ export function SettingsScreen({ navigation }: Props) {
             isLast
             onPress={openClassCodeModal}
           />
+        </View>
+
+        {/* Оформление */}
+        <Text style={styles.sectionTitle}>Оформление</Text>
+        <View style={styles.card}>
+          <View style={styles.row}>
+            <View style={styles.rowIconWrap}>
+              <Ionicons name="moon" size={17} color={colors.purpleGlow} />
+            </View>
+            <Text style={[styles.rowLabel, { flex: 1 }]} numberOfLines={1}>Тёмная тема</Text>
+            <Switch
+              value={mode === 'dark'}
+              onValueChange={() => { vibrate(); toggleMode(); }}
+              trackColor={{ false: colors.borderMuted, true: colors.purple }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
         </View>
 
         {/* Другое */}
@@ -358,6 +385,8 @@ function Row({
 }) {
   const IconComp = iconSet === 'material' ? MaterialCommunityIcons : Ionicons;
   const Wrapper: any = onPress ? Pressable : View;
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Wrapper
       style={[styles.row, !isLast && styles.rowDivider, bare && styles.rowBare]}
@@ -373,7 +402,7 @@ function Row({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1 },
   header: {
     flexDirection: 'row',

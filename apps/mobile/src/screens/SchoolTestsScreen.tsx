@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,8 +7,10 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
-import { colors, subjectColors, glow } from '../theme/colors';
+import { ColorPalette, subjectColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { useAppStore } from '../store/useAppStore';
+import { petImages } from '../assets/petImages';
 import { ExerciseStackParamList, MainTabParamList } from '../types/navigation';
 import { BaseSubjectId } from '../types/subject';
 import { SUBJECT_META } from './ExerciseScreen';
@@ -35,19 +37,19 @@ const SUBJECT_LABELS: Record<string, string> = {
   reading: 'Чтение', grammar: 'Грамматика',
 };
 
-const FALLBACK_PALETTE = { primary: colors.purple, glow: glow.purple };
-
 type SchoolTestRow = Awaited<ReturnType<typeof fetchSchoolTests>>[number];
 
 export function SchoolTestsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const userName = useAppStore((s) => s.userName);
+  const { colors, glow } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const FALLBACK_PALETTE = useMemo(() => ({ primary: colors.purple, glow: glow.purple }), [colors, glow]);
+  const petType = useAppStore((s) => s.petType);
   const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const [filter, setFilter] = useState<FilterId>('all');
   const [tests, setTests] = useState<SchoolTestRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const initial = userName ? userName.charAt(0).toUpperCase() : '?';
   const filteredTests = tests.filter((t) => filter === 'all' || t.subjectId === filter);
 
   // Загружаем при каждом возврате на экран — после прохождения теста
@@ -85,7 +87,11 @@ export function SchoolTestsScreen({ navigation }: Props) {
               style={styles.avatarBadge}
               onPress={() => { vibrate(); tabNavigation.navigate('ProfileTab'); }}
             >
-              <Text style={styles.avatarText}>{initial}</Text>
+              {petType ? (
+                <Image source={petImages[petType]} style={styles.avatarImage} resizeMode="cover" />
+              ) : (
+                <Ionicons name="person" size={20} color={colors.purpleGlow} />
+              )}
             </Pressable>
           </View>
 
@@ -180,7 +186,7 @@ export function SchoolTestsScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1 },
   scroll: { paddingHorizontal: 16, paddingTop: 8 },
 
@@ -208,9 +214,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.surfaceGlass,
     borderWidth: 1.5,
-    borderColor: colors.purple,
+    borderColor: colors.purpleGlow,
+    overflow: 'hidden',
   },
-  avatarText: { color: colors.text, fontSize: 15, fontWeight: '800' },
+  avatarImage: { width: '100%', height: '100%' },
 
   heroRow: {
     flexDirection: 'row',
@@ -244,7 +251,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 999,
-    backgroundColor: '#F3F1FC',
+    backgroundColor: colors.purpleDark,
     borderWidth: 1,
     borderColor: colors.border,
   },

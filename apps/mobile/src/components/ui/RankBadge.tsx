@@ -2,7 +2,7 @@ import React from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Text';
 import type { Rank } from '@qadam/business-logic';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
 import { rankImages } from '../../assets/rankImages';
 
 interface Props {
@@ -15,13 +15,18 @@ interface Props {
 const SIZES = { sm: 36, md: 56, lg: 96 };
 
 export function RankBadge({ rank, size = 'md', onPressCta }: Props) {
+  const { colors } = useTheme();
   const dim = SIZES[size];
 
   if (!rank) {
     if (!onPressCta) return null;
     return (
-      <Pressable style={styles.cta} onPress={onPressCta} hitSlop={6}>
-        <Text style={styles.ctaText}>Пройти тест на ранг</Text>
+      <Pressable
+        style={[styles.cta, { borderColor: colors.purple }]}
+        onPress={onPressCta}
+        hitSlop={6}
+      >
+        <Text style={[styles.ctaText, { color: colors.purpleGlow }]}>Пройти тест на ранг</Text>
       </Pressable>
     );
   }
@@ -53,10 +58,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: 'rgba(144,71,255,0.15)',
     borderWidth: 1,
-    borderColor: colors.purple,
   },
   ctaText: {
-    color: colors.purpleGlow,
     fontSize: 12,
     fontWeight: '700',
   },

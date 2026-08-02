@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { createBottomTabNavigator, BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
+import { CommonActions, getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { HomeStack } from './HomeStack';
 import { ExerciseStack } from './ExerciseStack';
@@ -10,7 +10,8 @@ import { PracticeScreen } from '../screens/PracticeScreen';
 import { StatsScreen } from '../screens/StatsScreen';
 import { ProfileStack } from './ProfileStack';
 import { MainTabParamList } from '../types/navigation';
-import { colors, glow } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { ColorPalette } from '../theme/colors';
 import { vibrate } from '../services/soundService';
 import { useAppStore } from '../store/useAppStore';
 import { petImages } from '../assets/petImages';
@@ -44,6 +45,8 @@ const HIDDEN_TABBAR_ROUTES: Record<string, string[]> = {
 
 function CustomTabBar({ state, navigation, descriptors }: BottomTabBarProps) {
   const petType = useAppStore((s) => s.petType);
+  const { colors, glow } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const focusedRoute = state.routes[state.index];
   const focusedOptions = descriptors[focusedRoute.key].options;
   if ((focusedOptions.tabBarStyle as { display?: string } | undefined)?.display === 'none') {
@@ -64,8 +67,24 @@ function CustomTabBar({ state, navigation, descriptors }: BottomTabBarProps) {
               target: route.key,
               canPreventDefault: true,
             });
-            if (!focused && !event.defaultPrevented) {
+            if (event.defaultPrevented) return;
+
+            if (!focused) {
               navigation.navigate(route.name);
+            }
+
+            // Любое нажатие на таб — даже уже активный — возвращает его
+            // вложенный стек на первый экран (initialRouteName), а не туда,
+            // где пользователь остановился в прошлый раз.
+            const tabState = (route as any).state;
+            if (tabState && tabState.index !== 0) {
+              navigation.dispatch({
+                ...CommonActions.reset({
+                  index: 0,
+                  routes: [tabState.routes[0]],
+                }),
+                target: tabState.key,
+              });
             }
           };
 
@@ -115,7 +134,6 @@ export function MainTabs() {
         component={HomeStack}
         options={({ route }) => ({
           title: 'Главная',
-          popToTopOnBlur: true,
           tabBarStyle: HIDDEN_TABBAR_ROUTES.PathTab.includes(getFocusedRouteNameFromRoute(route) ?? '')
             ? { display: 'none' }
             : undefined,
@@ -126,7 +144,6 @@ export function MainTabs() {
         component={ExerciseStack}
         options={({ route }) => ({
           title: 'Практика',
-          popToTopOnBlur: true,
           tabBarStyle: HIDDEN_TABBAR_ROUTES.ExerciseTab.includes(getFocusedRouteNameFromRoute(route) ?? '')
             ? { display: 'none' }
             : undefined,
@@ -135,13 +152,13 @@ export function MainTabs() {
       <Tab.Screen
         name="ProfileTab"
         component={ProfileStack}
-        options={{ title: 'Профиль', popToTopOnBlur: true }}
+        options={{ title: 'Профиль' }}
       />
     </Tab.Navigator>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   tabBarShadow: {
     position: 'absolute',
     left: 10,

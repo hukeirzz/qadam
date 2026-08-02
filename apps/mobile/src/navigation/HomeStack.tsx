@@ -8,11 +8,12 @@ import { QuizScreen } from '../screens/QuizScreen';
 import { CorrectAnswerScreen } from '../screens/CorrectAnswerScreen';
 import { MistakesReviewScreen } from '../screens/MistakesReviewScreen';
 import { HomeStackParamList } from '../types/navigation';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
 export function HomeStack() {
+  const { colors } = useTheme();
   return (
     <Stack.Navigator
       screenOptions={{

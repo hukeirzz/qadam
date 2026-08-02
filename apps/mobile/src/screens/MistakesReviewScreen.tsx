@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,7 +7,8 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { AnswerCard } from '../components/quiz/AnswerCard';
 import { HomeStackParamList } from '../types/navigation';
-import { subjectColors, colors } from '../theme/colors';
+import { subjectColors, ColorPalette } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { vibrate } from '../services/soundService';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'MistakesReview'>;
@@ -18,6 +19,8 @@ export function MistakesReviewScreen({ navigation, route }: Props) {
   const { subjectId, mistakes } = route.params;
   const palette = subjectColors[subjectId];
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <ScreenBackground accentColor={palette.primary}>
@@ -73,7 +76,7 @@ export function MistakesReviewScreen({ navigation, route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1 },
   header: {
     flexDirection: 'row',
@@ -119,7 +122,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     padding: 14,
     borderRadius: 14,
-    backgroundColor: '#F3F1FC',
+    backgroundColor: colors.purpleDark,
     borderWidth: 1,
     borderColor: colors.border,
   },

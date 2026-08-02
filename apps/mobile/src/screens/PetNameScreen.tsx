@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { TextInput } from '../components/ui/TextInput';
@@ -10,17 +10,18 @@ import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { saveOnboarding } from '../services/progressService';
 import { useAppStore } from '../store/useAppStore';
 import { RootStackParamList } from '../types/navigation';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { ColorPalette } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PetName'>;
 
 const PET_OPTIONS: { type: PetType; label: string; image: any; defaultName: string }[] = [
-  { type: 'bars', label: 'Снежный барс', image: require('../../assets/bars.png'), defaultName: 'Барсик' },
-  { type: 'cat', label: 'Кот', image: require('../../assets/cat.png'), defaultName: 'Барсик' },
-  { type: 'dog', label: 'Пёс', image: require('../../assets/dog.png'), defaultName: 'Барсик' },
-  { type: 'eagle', label: 'Орёл', image: require('../../assets/eagle.png'), defaultName: 'Барсик' },
-  { type: 'penguin', label: 'Пингвин', image: require('../../assets/penguin.png'), defaultName: 'Барсик' },
+  { type: 'bars', label: 'Снежный барс', image: require('../../assets/petbars.png'), defaultName: 'Барсик' },
+  { type: 'cat', label: 'Кот', image: require('../../assets/petcat.png'), defaultName: 'Барсик' },
+  { type: 'dog', label: 'Пёс', image: require('../../assets/petdog.png'), defaultName: 'Барсик' },
+  { type: 'eagle', label: 'Орёл', image: require('../../assets/peteagle.png'), defaultName: 'Барсик' },
+  { type: 'penguin', label: 'Пингвин', image: require('../../assets/petpenguin.png'), defaultName: 'Барсик' },
 ];
 
 export function PetNameScreen({ navigation }: Props) {
@@ -33,6 +34,8 @@ export function PetNameScreen({ navigation }: Props) {
   const rank = useAppStore((s) => s.rank);
   const schoolId = useAppStore((s) => s.schoolId);
   const classId = useAppStore((s) => s.classId);
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const selected = PET_OPTIONS[index];
 
@@ -70,8 +73,7 @@ export function PetNameScreen({ navigation }: Props) {
             </Pressable>
 
             <View style={styles.mascotWrap}>
-              <View style={styles.mascotGlow} />
-              <Image source={selected.image} style={styles.mascot} resizeMode="cover" />
+              <Image source={selected.image} style={styles.mascot} resizeMode="contain" />
             </View>
 
             <Pressable
@@ -108,7 +110,7 @@ export function PetNameScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1 },
   content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl },
   title: { color: colors.text, fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 20 },
@@ -117,24 +119,10 @@ const styles = StyleSheet.create({
   mascotWrap: {
     width: 160,
     height: 160,
-    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
   },
-  mascotGlow: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: colors.purple,
-    opacity: 0.35,
-    shadowColor: colors.purple,
-    shadowOpacity: 0.9,
-    shadowRadius: 40,
-    shadowOffset: { width: 0, height: 0 },
-  },
-  mascot: { width: 160, height: 160, borderRadius: 24 },
+  mascot: { width: 160, height: 160 },
   petLabel: { color: colors.textMuted, fontSize: 13, fontWeight: '600', marginBottom: 20 },
   subtitle: { color: colors.textMuted, fontSize: 14, textAlign: 'center', marginBottom: 24 },
   input: {

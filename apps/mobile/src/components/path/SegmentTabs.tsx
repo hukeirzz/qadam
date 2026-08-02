@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../ui/Text';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { ColorPalette } from '../../theme/colors';
 import { vibrate } from '../../services/soundService';
 
 export type PathTab = 'path' | 'info';
@@ -13,6 +14,8 @@ interface Props {
 }
 
 export function SegmentTabs({ active, onChange, accentColor }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const activePill = `${accentColor}33`;
 
   return (
@@ -37,16 +40,16 @@ export function SegmentTabs({ active, onChange, accentColor }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   wrap: {
     flexDirection: 'row',
     marginHorizontal: 20,
     marginTop: 12,
-    backgroundColor: '#F3F1FC',
+    backgroundColor: colors.purpleDark,
     borderRadius: 28,
     padding: 5,
     borderWidth: 1,
-    borderColor: '#ECE9F7',
+    borderColor: colors.border,
   },
   tab: {
     flex: 1,

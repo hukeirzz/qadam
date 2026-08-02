@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,7 +10,8 @@ import type { Rank } from '@qadam/business-logic';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
 import { RankBadge } from '../components/ui/RankBadge';
 import { ProfileStackParamList } from '../navigation/ProfileStack';
-import { colors } from '../theme/colors';
+import { ColorPalette } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { useAppStore } from '../store/useAppStore';
 import { vibrate } from '../services/soundService';
 
@@ -23,7 +24,7 @@ const FEATURES = [
   'Реальные вопросы ОРТ',
 ];
 
-const PREMIUM_RANKS: Rank[] = ['C', 'B', 'A', 'S'];
+const PREMIUM_RANKS: Rank[] = ['B', 'A', 'S'];
 const premiumPetImage = require('../../assets/premiumpet.png');
 
 const REFERRAL_GOAL = 4;
@@ -36,6 +37,8 @@ const PREMIUM_PRICE = '5000 сом';
 
 export function PremiumScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const premiumUnlocked = useAppStore((s) => s.premiumUnlocked);
   const gems = useAppStore((s) => s.gems);
   const unlockPremiumWithGems = useAppStore((s) => s.unlockPremiumWithGems);
@@ -160,7 +163,7 @@ export function PremiumScreen({ navigation }: Props) {
                 <View style={styles.priceRow}>
                   <View>
                     <Text style={styles.priceLabel}>Подписка на 1 год</Text>
-                    <Text style={styles.priceSub}>Доступ ко всем 4 рангам</Text>
+                    <Text style={styles.priceSub}>Доступ ко всем 3 рангам</Text>
                   </View>
                   <Text style={styles.price}>{PREMIUM_PRICE}</Text>
                 </View>
@@ -265,7 +268,7 @@ export function PremiumScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1 },
   header: {
     flexDirection: 'row',

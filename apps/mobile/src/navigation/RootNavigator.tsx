@@ -4,15 +4,17 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View } from 'react-native';
 import * as Linking from 'expo-linking';
 import { SplashScreen } from '../screens/SplashScreen';
+import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
+import { ConfirmEmailScreen } from '../screens/ConfirmEmailScreen';
 import { PetNameScreen } from '../screens/PetNameScreen';
 import { EntranceTestScreen } from '../screens/EntranceTestScreen';
 import { EntranceTestResultScreen } from '../screens/EntranceTestResultScreen';
 import { ResetPasswordScreen } from '../screens/ResetPasswordScreen';
 import { MainTabs } from './MainTabs';
 import { RootStackParamList } from '../types/navigation';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { loadUserProfile, loadOnboardingInfo } from '../services/progressService';
 import { loadAllTopicsToCache, getCachedSubjectTopicIds } from '../services/topicsService';
@@ -50,19 +52,19 @@ async function applyRecoveryLink(url: string | null): Promise<boolean> {
   return false;
 }
 
-const navTheme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    background: colors.background,
-    card: colors.background,
-    text: colors.text,
-    border: colors.border,
-    primary: colors.purple,
-  },
-};
-
 export function RootNavigator() {
+  const { colors } = useTheme();
+  const navTheme = {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      background: colors.background,
+      card: colors.background,
+      text: colors.text,
+      border: colors.border,
+      primary: colors.purple,
+    },
+  };
   const [initialRoute, setInitialRoute] =
     useState<keyof RootStackParamList>('Splash');
   const [checking, setChecking] = useState(true);
@@ -114,7 +116,7 @@ export function RootNavigator() {
           onboardingInfo = await loadOnboardingInfo(session.user.id);
         } catch {}
         if (onboardingInfo) setOnboardingInfo(onboardingInfo);
-        setInitialRoute(onboardingInfo && !onboardingInfo.pet_name ? 'PetName' : 'Main');
+        setInitialRoute(onboardingInfo && !onboardingInfo.pet_name ? 'Onboarding' : 'Main');
       } else {
         setInitialRoute('Splash');
       }
@@ -158,8 +160,10 @@ export function RootNavigator() {
         }}
       >
         <Stack.Screen name="Splash" component={SplashScreen} />
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen name="ConfirmEmail" component={ConfirmEmailScreen} />
         <Stack.Screen name="PetName" component={PetNameScreen} />
         <Stack.Screen name="EntranceTest" component={EntranceTestScreen} />
         <Stack.Screen name="EntranceTestResult" component={EntranceTestResultScreen} />

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View, Image } from 'react-native';
+import React, { useMemo } from 'react';
+import { Pressable, ScrollView, StyleSheet, View, Image } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -10,19 +10,20 @@ import { SurfaceCard } from '../components/ui/SurfaceCard';
 import { RankBadge } from '../components/ui/RankBadge';
 import { ProfileStackParamList } from '../navigation/ProfileStack';
 import { useAppStore } from '../store/useAppStore';
-import { colors, glow, subjectColors } from '../theme/colors';
+import { ColorPalette, subjectColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { subjects, getTopicIds } from '../data/subjects';
 import { RANK_ORDER, getRankXpProgress } from '../data/rankProgress';
 import { petImages } from '../assets/petImages';
-import { loadAverageMockScore } from '../services/progressService';
 import { vibrate } from '../services/soundService';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'Profile'>;
 
 export function ProfileScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { colors, glow } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const userId = useAppStore((s) => s.userId);
   const userName = useAppStore((s) => s.userName);
   const classLabel = useAppStore((s) => s.classLabel);
   const petName = useAppStore((s) => s.petName);
@@ -39,16 +40,6 @@ export function ProfileScreen({ navigation }: Props) {
   const nextRank = rankIdx < RANK_ORDER.length - 1 ? RANK_ORDER[rankIdx + 1] : null;
   const rankProgress = nextRank ? getRankXpProgress(nextRank, xp) : null;
 
-  // Средний балл ОРТ считается не в приложении, а на стороне партнёрской
-  // школы: координатор ОРТ вносит баллы пробных экзаменов в school-web
-  // (mock_results), здесь просто читаем среднее. Для учеников без школы
-  // или пока координатор ничего не внёс — average остаётся null → «—».
-  const [mockScore, setMockScore] = useState<{ average: number | null; count: number } | null>(null);
-  useEffect(() => {
-    if (!userId) return;
-    loadAverageMockScore(userId).then(setMockScore).catch(console.warn);
-  }, [userId]);
-
   const subjectStats = subjects.map((subject) => {
     const ids = remoteTopicIds[subject.id]?.length ? remoteTopicIds[subject.id] : getTopicIds(subject.id);
     const total = ids.length;
@@ -59,13 +50,6 @@ export function ProfileScreen({ navigation }: Props) {
   });
 
   const openSettings = () => { vibrate(); navigation.navigate('Settings'); };
-  const showStatsInfo = () => {
-    vibrate();
-    Alert.alert(
-      'Как считаются показатели',
-      '«Тестов пройдено» — количество завершённых тем.\n\n«Средний балл ОРТ» — средний балл пробных экзаменов ОРТ, которые вносит координатор ОРТ твоей партнёрской школы. Если школа не подключена к партнёрской программе или баллы ещё не внесены, показывается «—».',
-    );
-  };
 
   return (
     <ScreenBackground>
@@ -155,28 +139,19 @@ export function ProfileScreen({ navigation }: Props) {
               <View style={styles.statCol}>
                 <MaterialCommunityIcons name="target" size={18} color={colors.success} />
               </View>
-              <View style={styles.statCol}>
-                <MaterialCommunityIcons name="chart-bar" size={18} color={colors.purpleGlow} />
-              </View>
             </View>
 
             <View style={styles.statValuesRow}>
               <Text style={[styles.statVal, styles.statCol]}>{xp}</Text>
               <Text style={[styles.statVal, styles.statCol]}>{streak}</Text>
               <Text style={[styles.statVal, styles.statCol]}>{completedSteps}</Text>
-              <Text style={[styles.statVal, styles.statCol]}>{mockScore?.average ?? '—'}</Text>
             </View>
 
             <View style={styles.statLabelsRow}>
               <Text style={[styles.statLbl, styles.statCol]}>XP</Text>
               <Text style={[styles.statLbl, styles.statCol]}>Серия дней</Text>
               <Text style={[styles.statLbl, styles.statCol]}>Тестов пройдено</Text>
-              <Text style={[styles.statLbl, styles.statCol]}>Средний балл ОРТ</Text>
             </View>
-
-            <Pressable style={styles.statInfoBtn} onPress={showStatsInfo} hitSlop={8}>
-              <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
-            </Pressable>
           </View>
         </SurfaceCard>
 
@@ -205,7 +180,7 @@ export function ProfileScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   scroll: { paddingHorizontal: 16 },
   header: {
     flexDirection: 'row',
@@ -287,7 +262,7 @@ const styles = StyleSheet.create({
   xpTrophyText: { color: colors.text, fontSize: 13, fontWeight: '700' },
   rankTrack: {
     height: 10,
-    backgroundColor: '#ECE9F7',
+    backgroundColor: colors.border,
     borderRadius: 5,
     overflow: 'hidden',
     marginBottom: 6,
@@ -298,7 +273,6 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: colors.borderMuted,
-    position: 'relative',
   },
   statIconsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
   statValuesRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
@@ -306,7 +280,6 @@ const styles = StyleSheet.create({
   statCol: { flex: 1, alignItems: 'center', textAlign: 'center' },
   statVal: { color: colors.text, fontSize: 18, fontWeight: '800' },
   statLbl: { color: colors.textMuted, fontSize: 10.5, fontWeight: '600' },
-  statInfoBtn: { position: 'absolute', top: -8, right: -4 },
   sectionTitle: { color: colors.text, fontSize: 17, fontWeight: '800', marginBottom: 12 },
   subjectRow: {
     flexDirection: 'row',
@@ -331,7 +304,7 @@ const styles = StyleSheet.create({
   subjectTrack: {
     flex: 1,
     height: 6,
-    backgroundColor: '#ECE9F7',
+    backgroundColor: colors.border,
     borderRadius: 3,
     overflow: 'hidden',
   },
