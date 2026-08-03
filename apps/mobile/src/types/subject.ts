@@ -39,6 +39,7 @@ export interface Topic {
   title: string;
   status: TopicStatus;
   stars?: number;
+  rank?: string;
 }
 
 export interface Subject {

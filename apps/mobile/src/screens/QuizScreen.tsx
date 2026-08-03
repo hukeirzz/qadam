@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
+import { RoundedStar } from '../components/ui/RoundedStar';
 import { QuizProgressBar } from '../components/quiz/QuizProgressBar';
 import { AnswerCard } from '../components/quiz/AnswerCard';
 import { fetchQuizQuestions } from '../services/questionsService';
@@ -159,12 +160,7 @@ export function QuizScreen({ navigation, route }: Props) {
           </View>
           <View style={styles.lives}>
             {[...Array(3)].map((_, i) => (
-              <Ionicons
-                key={i}
-                name="star"
-                size={20}
-                color={i < lives ? colors.gold : colors.border}
-              />
+              <RoundedStar key={i} size={22} color={i < lives ? colors.gold : colors.border} />
             ))}
           </View>
         </View>

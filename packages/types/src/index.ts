@@ -33,6 +33,7 @@ export interface TopicRow {
   title: string;
   order_num: number;
   xp_reward: number;
+  rank?: string;
 }
 
 export interface OptionRow {

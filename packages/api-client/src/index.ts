@@ -356,6 +356,22 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       return topicsCache?.get(subjectId) ?? null;
     },
 
+    /**
+     * Rank-aware topics for one subject (selects the `rank` column, uncached).
+     * Returns null if the column doesn't exist yet (seed migration not applied)
+     * — callers then simply show no per-rank topics, without breaking the main
+     * (rank-less) topics cache used by the island flow.
+     */
+    async fetchWithRank(subjectId: string): Promise<TopicRow[] | null> {
+      const { data, error } = await supabase
+        .from('topics')
+        .select('id, subject_id, title, order_num, xp_reward, rank')
+        .eq('subject_id', subjectId)
+        .order('order_num', { ascending: true });
+      if (error || !data) return null;
+      return data as TopicRow[];
+    },
+
     /** Warms the in-memory cache; call once at app startup so subsequent per-subject reads are instant. */
     async loadAllToCache(): Promise<void> {
       if (topicsCache && Date.now() - topicsCacheTime < TOPICS_CACHE_TTL) return; // already warm

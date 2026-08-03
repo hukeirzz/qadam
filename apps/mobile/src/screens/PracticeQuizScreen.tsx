@@ -1,14 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Animated, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
+import { RoundedStar } from '../components/ui/RoundedStar';
+import { computeStars } from '../utils/stars';
 import { useTheme } from '../theme/ThemeContext';
 import { ColorPalette } from '../theme/colors';
 import { ExerciseStackParamList } from '../types/navigation';
-import { getQuestionsForTopic } from '../data/practiceQuestions';
+import { fetchPracticeQuestions } from '../services/questionsService';
 import { PracticeQuestion, OptionKey } from '../data/practiceQuestions/types';
 import { savePracticeResult } from '../utils/practiceStorage';
 import { happyPetImages } from '../assets/happyPetImages';
@@ -53,8 +55,8 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
-  const buildQuestions = useCallback(() => {
-    const pool = getQuestionsForTopic(topicId);
+  const buildQuestions = useCallback(async () => {
+    const pool = await fetchPracticeQuestions(topicId, QUIZ_COUNT);
     const taken = shuffle(pool).slice(0, QUIZ_COUNT);
     setQuestions(taken);
     setIndex(0);
@@ -124,6 +126,7 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
   if (phase === 'result') {
     const total = questions.length;
     const pct = Math.round((correctCount / total) * 100);
+    const stars = computeStars(correctCount, total);
     const isGreat = pct >= 60;
     const petImage = (isGreat ? happyPetImages : sadPetImages)[petType ?? 'bars'];
 
@@ -142,6 +145,13 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
 
         <View style={[styles.resultContent, { paddingBottom: insets.bottom + 20 }]}>
           <Text style={styles.resultTitle}>{isGreat ? 'Отличная работа!' : 'Есть куда расти!'}</Text>
+
+          <View style={styles.resultStarsRow}>
+            {[0, 1, 2].map((i) => (
+              <RoundedStar key={i} size={44} color={i < stars ? colors.gold : colors.border} />
+            ))}
+          </View>
+
           <Text style={styles.resultXp}>+{xpEarned} XP</Text>
           <Text style={styles.resultPct}>{pct}%</Text>
 
@@ -169,7 +179,15 @@ export function PracticeQuizScreen({ route, navigation }: Props) {
     );
   }
 
-  if (!current) return null;
+  if (!current) {
+    return (
+      <ScreenBackground accentColor={colors.purple}>
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={colors.purple} />
+        </View>
+      </ScreenBackground>
+    );
+  }
 
   const progress = questions.length > 0 ? (index / questions.length) : 0;
 
@@ -425,6 +443,7 @@ const createStyles = (colors: ColorPalette) => StyleSheet.create({
 
   // Result screen styles
   resultRoot: { flex: 1 },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   resultBackBtn: {
     position: 'absolute',
     left: 8,
@@ -450,7 +469,8 @@ const createStyles = (colors: ColorPalette) => StyleSheet.create({
     gap: 10,
   },
   resultTitle: { color: colors.text, fontSize: 26, fontWeight: '800', textAlign: 'center' },
-  resultXp: { color: colors.gold, fontSize: 15, fontWeight: '800', textAlign: 'center', marginTop: 2 },
+  resultStarsRow: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 10 },
+  resultXp: { color: colors.gold, fontSize: 15, fontWeight: '800', textAlign: 'center', marginTop: 8 },
   resultPct: { color: colors.gold, fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 6 },
   resultStatsRow: { flexDirection: 'row', justifyContent: 'center', gap: 20, marginBottom: 18 },
   resultStat: { flexDirection: 'row', alignItems: 'center', gap: 6 },

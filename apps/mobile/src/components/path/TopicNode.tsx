@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Image, ImageSourcePropType, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../ui/Text';
 import { Ionicons } from '@expo/vector-icons';
+import { RoundedStar } from '../ui/RoundedStar';
 import { Topic } from '../../types/subject';
 import { useTheme } from '../../theme/ThemeContext';
 import { ColorPalette, subjectColors } from '../../theme/colors';
@@ -133,15 +134,10 @@ export function TopicNode({
         {isCompleted && heartsRemaining !== undefined && (
           <View style={styles.heartsRow}>
             {[0, 1, 2].map((i) => (
-              <Ionicons
+              <RoundedStar
                 key={i}
-                name="star"
-                size={13}
-                color={
-                  i < heartsRemaining
-                    ? colors.gold
-                    : colors.border
-                }
+                size={15}
+                color={i < heartsRemaining ? colors.gold : colors.border}
               />
             ))}
           </View>

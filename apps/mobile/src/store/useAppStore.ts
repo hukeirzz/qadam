@@ -9,6 +9,7 @@ import {
 import type { PetType } from '@qadam/types';
 import { getTopicIds } from '../data/subjects';
 import { playSound } from '../services/soundService';
+import { computeStars } from '../utils/stars';
 
 export {
   xpForLevel,
@@ -42,6 +43,8 @@ interface AppState {
   completedTopics: string[];
   /** topicId → best hearts remaining (0–3) */
   topicHearts: Record<string, number>;
+  /** Ranks the player has opened (tapped «Открыть»); D is always present. */
+  unlockedRanks: Rank[];
   completedSteps: number;
   totalSteps: number;
   overallProgress: number;
@@ -88,6 +91,10 @@ interface AppState {
   ) => void;
   /** Spend 200 gems to unlock premium. Returns true if successful. */
   unlockPremiumWithGems: () => boolean;
+  /** Load opened ranks from local storage (call once at startup). */
+  hydrateUnlocks: () => void;
+  /** Mark a rank as opened after the «Открыть» celebration, and persist it. */
+  openRank: (rank: Rank) => void;
   /**
    * Awards XP outside the completeQuiz flow (e.g. Практика retries) — just
    * XP + level-up sound, no streak/topic/heart bookkeeping.
@@ -107,12 +114,12 @@ interface AppState {
 }
 
 const FRESH: Omit<AppState,
-  'loadProfile' | 'setOnboardingInfo' | 'completeQuiz' | 'unlockPremiumWithGems' | 'addXp' | 'setRemoteTopics' | 'setOnboarded' | 'setAuthenticated' | 'setPremium' | 'setUserName' | 'logout'
+  'loadProfile' | 'setOnboardingInfo' | 'completeQuiz' | 'unlockPremiumWithGems' | 'hydrateUnlocks' | 'openRank' | 'addXp' | 'setRemoteTopics' | 'setOnboarded' | 'setAuthenticated' | 'setPremium' | 'setUserName' | 'logout'
 > = {
   userId: null, userName: '', isAuthenticated: false, hasOnboarded: false,
   petName: null, petType: null, rank: null, schoolId: null, classId: null, classLabel: null,
   xp: 0, gems: 0, streak: 0, lastActivity: null,
-  completedTopics: [], topicHearts: {},
+  completedTopics: [], topicHearts: {}, unlockedRanks: ['D'],
   completedSteps: 0, totalSteps: TOTAL_STEPS, overallProgress: 0,
   premiumUnlocked: false, dailyGoalTarget: 5, dailyGoalCurrent: 0,
   weekActivity: Array(7).fill(false),
@@ -179,13 +186,18 @@ export const useAppStore = create<AppState>((set, get) => ({
       weeklySteps, weekStart: currentWeekStart, weekActivity,
       dailyGoalCurrent: weeklySteps[dayIdx] ?? 0,
     });
+    get().hydrateUnlocks();
   },
 
   completeQuiz: (topicId, correctCount, total, xpReward, livesRemaining) => {
     const s = get();
     const alreadyDone = s.completedTopics.includes(topicId);
     const prevHearts = s.topicHearts[topicId] ?? 0;
-    const newBestHearts = Math.max(prevHearts, livesRemaining);
+    // Star rating now reflects how much of the topic was solved (1/3 → 1★,
+    // 2/3 → 2★, all or ≤2 mistakes → 3★) rather than lives left. `void`s the
+    // now-unused livesRemaining so the signature stays compatible with callers.
+    void livesRemaining;
+    const newBestHearts = Math.max(prevHearts, computeStars(correctCount, total));
 
     // xpReward is already the correct differential amount (calculated in QuizScreen)
     const earnedXp = Math.max(0, xpReward);
@@ -268,6 +280,21 @@ export const useAppStore = create<AppState>((set, get) => ({
       ).catch(console.warn);
     }
     return true;
+  },
+
+  hydrateUnlocks: () => {
+    import('../utils/unlockStorage').then((m) =>
+      m.loadUnlockedRanks().then((ranks) => set({ unlockedRanks: ranks }))
+    ).catch(() => {});
+  },
+
+  openRank: (rank) => {
+    const s = get();
+    if (s.unlockedRanks.includes(rank)) return;
+    const next = [...s.unlockedRanks, rank];
+    set({ unlockedRanks: next });
+    playSound('unlock');
+    import('../utils/unlockStorage').then((m) => m.saveUnlockedRanks(next)).catch(() => {});
   },
 
   addXp: (amount) => {

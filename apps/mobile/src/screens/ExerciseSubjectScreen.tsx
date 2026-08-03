@@ -7,6 +7,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { Rank } from '@qadam/business-logic';
 import { ScreenBackground } from '../components/ui/ScreenBackground';
+import { RoundedStar } from '../components/ui/RoundedStar';
 import { useTheme } from '../theme/ThemeContext';
 import { ColorPalette, subjectColors } from '../theme/colors';
 import { subjects } from '../data/subjects';
@@ -17,7 +18,7 @@ import { useAppStore } from '../store/useAppStore';
 import { ExerciseStackParamList } from '../types/navigation';
 import { SUBJECT_META } from './ExerciseScreen';
 import { SubjectId, Topic } from '../types/subject';
-import { fetchTopicsForSubject } from '../services/topicsService';
+import { fetchTopicsForSubject, fetchTopicsWithRank } from '../services/topicsService';
 import { getQuestionsForTopic } from '../data/practiceQuestions';
 import { getPracticeResults, PracticeResult } from '../utils/practiceStorage';
 import { QUIZ_COUNT } from './PracticeQuizScreen';
@@ -49,12 +50,29 @@ function rankXpLabel(rank: Rank): string {
 }
 
 /**
- * Темы предмета (subject.topics) — это контент D ранга, единственного острова
- * с реально составленными темами на сегодня. Остальные ранги показывают свои
- * будущие острова пустыми, а не «раздёргивают» тему D ранга по кусочкам.
+ * D ранг — реально составленные темы (статический `subject.topics`). Остальные
+ * ранги берут свои темы из БД (сид-миграция 20260729000008, фильтр по rank).
+ * Пока сид не применён / нет сети — dbTopics пуст, и C–S показываются пустыми,
+ * как и было раньше.
  */
-function topicsForRank(rank: Rank, topics: Topic[]): Topic[] {
-  return rank === RANK_ORDER[0] ? topics : [];
+function topicsForRank(rank: Rank, staticTopics: Topic[], dbTopics: Topic[]): Topic[] {
+  if (rank === RANK_ORDER[0]) return staticTopics;
+  return dbTopics.filter((t) => t.rank === rank);
+}
+
+type RankState = 'locked' | 'openable' | 'unlocked';
+
+/**
+ * locked   — не хватает XP (или премиума для B/A/S): справа замок.
+ * openable — условия выполнены, но ранг ещё не открыт: справа кнопка «Открыть».
+ * unlocked — ранг открыт (нажали «Открыть»): «Доступно», контент виден.
+ * D всегда unlocked (лежит в unlockedRanks с самого начала).
+ */
+function rankState(rank: Rank, xp: number, premium: boolean, unlocked: Rank[]): RankState {
+  if (unlocked.includes(rank)) return 'unlocked';
+  const xpOk = getRankXpProgress(rank, xp).achieved;
+  const premiumOk = rank === 'C' ? true : premium; // C — по XP; B/A/S — только с премиумом
+  return xpOk && premiumOk ? 'openable' : 'locked';
 }
 
 export function ExerciseSubjectScreen({ route }: Props) {
@@ -65,11 +83,14 @@ export function ExerciseSubjectScreen({ route }: Props) {
   const gems = useAppStore((s) => s.gems);
   const xp = useAppStore((s) => s.xp);
   const rank = useAppStore((s) => s.rank);
+  const premiumUnlocked = useAppStore((s) => s.premiumUnlocked);
+  const unlockedRanks = useAppStore((s) => s.unlockedRanks);
   const navigation = useNavigation<any>();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [remoteTopics, setRemoteTopics] = useState<Topic[] | null>(null);
+  const [rankDbTopics, setRankDbTopics] = useState<Topic[]>([]);
   const [selectedRank, setSelectedRank] = useState<Rank>(rank ?? 'D');
   const [expandedTopicId, setExpandedTopicId] = useState<string | null>(null);
   const [practiceResults, setPracticeResults] = useState<Record<string, PracticeResult>>({});
@@ -89,6 +110,14 @@ export function ExerciseSubjectScreen({ route }: Props) {
       });
     }
   }, [subjectId]);
+
+  // Темы рангов C–S берём из БД (rank-aware запрос, потом фильтр по рангу).
+  useEffect(() => {
+    if (!subject) return;
+    fetchTopicsWithRank(baseId as SubjectId).then((fetched) => {
+      if (fetched) setRankDbTopics(fetched);
+    });
+  }, [baseId]);
 
   // Обновляем при каждом возврате на экран — после прохождения практики
   // (PracticeQuizScreen) счётчик попыток/лучший результат должны обновиться
@@ -111,7 +140,7 @@ export function ExerciseSubjectScreen({ route }: Props) {
   const total = displayTopics.length;
   const progress = total > 0 ? unlockedCount / total : 0;
 
-  const rankTopics = topicsForRank(selectedRank, subject.topics);
+  const rankTopics = topicsForRank(selectedRank, subject.topics, rankDbTopics);
 
   const goToQuiz = (topicId: string, topicTitle: string) => {
     vibrate();
@@ -138,7 +167,10 @@ export function ExerciseSubjectScreen({ route }: Props) {
     const result = practiceResults[topic.id];
     // PracticeQuizScreen берёт максимум QUIZ_COUNT вопросов из пула —
     // показываем то же число, что реально увидит ученик, а не размер пула.
-    const questionCount = result?.total ?? Math.min(QUIZ_COUNT, getQuestionsForTopic(topic.id).length);
+    // Число вопросов: у D-тем из локального пула, у тем из БД (C–S) локального
+    // пула нет — показываем номинальные QUIZ_COUNT (реальный набор придёт из БД).
+    const localCount = getQuestionsForTopic(topic.id).length;
+    const questionCount = result?.total ?? Math.min(QUIZ_COUNT, localCount || QUIZ_COUNT);
 
     return (
       <View key={topic.id} style={styles.topicCard}>
@@ -159,12 +191,7 @@ export function ExerciseSubjectScreen({ route }: Props) {
               {isUnlocked && hearts !== undefined && (
                 <View style={styles.topicStarsRow}>
                   {[0, 1, 2].map((i) => (
-                    <Ionicons
-                      key={i}
-                      name="star"
-                      size={14}
-                      color={i < hearts ? colors.gold : colors.border}
-                    />
+                    <RoundedStar key={i} size={15} color={i < hearts ? colors.gold : colors.border} />
                   ))}
                 </View>
               )}
@@ -294,13 +321,12 @@ export function ExerciseSubjectScreen({ route }: Props) {
               >
                 {RANK_ORDER.map((r) => {
                   const isSelected = r === selectedRank;
-                  const rProgress = getRankXpProgress(r, xp);
                   const accent = RANK_ACCENT[r];
 
                   // Полоска на карточке ранга отражает реальный прогресс по
                   // пройденным темам этого ранга, а не XP до его открытия —
                   // иначе D ранг (порог 0 XP) всегда выглядел бы заполненным.
-                  const rTopics = topicsForRank(r, subject.topics);
+                  const rTopics = topicsForRank(r, subject.topics, rankDbTopics);
                   const rDone = rTopics.filter((t) => completedTopics.includes(t.id)).length;
                   const rTotal = rTopics.length;
                   const topicProgressPct = rTotal > 0 ? (rDone / rTotal) * 100 : 0;
@@ -314,11 +340,16 @@ export function ExerciseSubjectScreen({ route }: Props) {
                       ]}
                       onPress={() => { vibrate(); setSelectedRank(r); }}
                     >
-                      {!rProgress.achieved && (
-                        <View style={styles.rankLockBadge}>
-                          <Ionicons name="lock-closed" size={10} color={colors.textMuted} />
-                        </View>
-                      )}
+                      {(() => {
+                        const st = rankState(r, xp, premiumUnlocked, unlockedRanks);
+                        const icon = st === 'unlocked' ? 'checkmark' : st === 'openable' ? 'lock-open' : 'lock-closed';
+                        const tint = st === 'unlocked' ? colors.success : st === 'openable' ? colors.gold : colors.textMuted;
+                        return (
+                          <View style={styles.rankLockBadge}>
+                            <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={10} color={tint} />
+                          </View>
+                        );
+                      })()}
                       <Image source={rankImages[r]} style={styles.rankImg} resizeMode="contain" />
                       <Text style={styles.rankLabel}>{r} ранг</Text>
                       <Text style={styles.rankXpLabel}>{rankXpLabel(r)}</Text>
@@ -349,13 +380,40 @@ export function ExerciseSubjectScreen({ route }: Props) {
               </View>
 
               <View style={styles.topicList}>
-                {rankTopics.length > 0 ? (
-                  rankTopics.map((topic) => renderTopicCard(topic))
-                ) : (
-                  <View style={styles.emptyRankCard}>
-                    <Text style={styles.emptyRankText}>Темы этого острова скоро появятся</Text>
-                  </View>
-                )}
+                {(() => {
+                  const st = rankState(selectedRank, xp, premiumUnlocked, unlockedRanks);
+                  if (st === 'locked') {
+                    const needPremium = selectedRank !== 'C' && !premiumUnlocked;
+                    return (
+                      <View style={styles.emptyRankCard}>
+                        <Ionicons name="lock-closed" size={30} color={colors.textMuted} />
+                        <Text style={styles.emptyRankText}>
+                          {needPremium
+                            ? `Ранг ${selectedRank} открывается только с премиумом и достаточным опытом.`
+                            : `Набери ${RANK_XP_THRESHOLDS[selectedRank]} XP, чтобы открыть ранг ${selectedRank}.`}
+                        </Text>
+                      </View>
+                    );
+                  }
+                  if (st === 'openable') {
+                    return (
+                      <Pressable
+                        style={styles.openRankBtn}
+                        onPress={() => { vibrate(); navigation.navigate('RankUnlock', { rank: selectedRank }); }}
+                      >
+                        <Ionicons name="lock-open" size={20} color="#fff" />
+                        <Text style={styles.openRankBtnText}>Открыть ранг {selectedRank}</Text>
+                      </Pressable>
+                    );
+                  }
+                  return rankTopics.length > 0 ? (
+                    rankTopics.map((topic) => renderTopicCard(topic))
+                  ) : (
+                    <View style={styles.emptyRankCard}>
+                      <Text style={styles.emptyRankText}>Темы этого острова скоро появятся</Text>
+                    </View>
+                  );
+                })()}
               </View>
 
             </>
@@ -579,7 +637,19 @@ const createStyles = (colors: ColorPalette) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderMuted,
     paddingVertical: 22,
+    paddingHorizontal: 20,
     alignItems: 'center',
+    gap: 10,
   },
-  emptyRankText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
+  emptyRankText: { color: colors.textMuted, fontSize: 13, fontWeight: '600', textAlign: 'center', lineHeight: 19 },
+  openRankBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: colors.purple,
+    borderRadius: 18,
+    paddingVertical: 18,
+  },
+  openRankBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
 });

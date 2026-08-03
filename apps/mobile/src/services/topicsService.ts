@@ -1,12 +1,18 @@
 import { topics } from '../lib/supabase';
 import { Topic, SubjectId } from '../types/subject';
 
-function toTopic(row: { id: string; title: string }): Topic {
-  return { id: row.id, title: row.title, status: 'locked' };
+function toTopic(row: { id: string; title: string; rank?: string }): Topic {
+  return { id: row.id, title: row.title, status: 'locked', rank: row.rank };
 }
 
 export async function fetchTopicsForSubject(subjectId: SubjectId): Promise<Topic[] | null> {
   const rows = await topics.fetchForSubject(subjectId);
+  return rows ? rows.map(toTopic) : null;
+}
+
+/** Rank-aware topics for a subject (each Topic carries its `rank`). */
+export async function fetchTopicsWithRank(subjectId: SubjectId): Promise<Topic[] | null> {
+  const rows = await topics.fetchWithRank(subjectId);
   return rows ? rows.map(toTopic) : null;
 }
 
