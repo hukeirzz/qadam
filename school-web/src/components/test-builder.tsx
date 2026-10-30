@@ -5,41 +5,45 @@ import { Card } from '@/components/ui';
 import { SparkleIcon } from '@/components/icons';
 import { createBrowserApi } from '@/lib/supabase/client';
 import * as agg from '@/lib/aggregate';
+import { TEST_LEVELS, type TestLevel } from '@qadam/api-client';
 
 type Topic = { id: string; subject_id: string; title: string; order_num: number };
 type ClassRow = { id: string; name: string };
-type Student = { id: string; name: string; class_id: string | null; rank: string };
+type Student = { id: string; name: string; class_id: string | null };
 type TStat = { student_id: string; topic_id: string; correct_first: number; answered: number };
 type Question = { id: string; text: string; options: string[]; correct: number };
 
-const RANKS = ['D', 'C', 'B', 'A', 'S'];
 const COUNTS = [5, 10, 15, 20];
-const SECTIONS = agg.SUBJECTS.map((s) => ({ id: s.id, name: agg.SUBJECT_LABELS[s.id] }));
+function sectionName(id: string) {
+  return agg.SUBJECT_LABELS[id] ?? id;
+}
 const REC_THRESHOLD = 65;
 const ALL_CLASSES = '__all__';
 
 function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
 }
-const RANK_BADGE: Record<string, string> = {
-  S: 'bg-blue-100 text-blue-700', A: 'bg-emerald-100 text-emerald-700',
-  B: 'bg-amber-100 text-amber-700', C: 'bg-red-100 text-red-700', D: 'bg-violet-100 text-violet-700',
-};
-
 export function TestBuilder({
-  schoolId, topics, classes, students, topicStats, onDone, onCancel,
+  schoolId, topics, topicLevels, classes, students, topicStats, onDone, onCancel,
 }: {
   schoolId: string;
-  topics: Topic[]; classes: ClassRow[]; students: Student[]; topicStats: TStat[];
+  topics: Topic[]; topicLevels: { topic_id: string; level: TestLevel }[]; classes: ClassRow[]; students: Student[]; topicStats: TStat[];
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const firstTopic = (subj: string) => topics.find((t) => t.subject_id === subj)?.id ?? '';
+  const topicsFor = (lvl: TestLevel) => {
+    const allowed = new Set(topicLevels.filter((l) => l.level === lvl).map((l) => l.topic_id));
+    return topics.filter((t) => allowed.has(t.id));
+  };
+  const firstTopic = (subj: string, lvl: TestLevel) => topicsFor(lvl).find((t) => t.subject_id === subj)?.id ?? '';
 
   const [step, setStep] = useState(1);
-  const [rank, setRank] = useState('B');
-  const [subjectId, setSubjectId] = useState(SECTIONS[0]?.id ?? '');
-  const [topicId, setTopicId] = useState(firstTopic(SECTIONS[0]?.id ?? ''));
+  const [level, setLevel] = useState<TestLevel>('medium');
+  // Разделы — это разделы тем выбранного уровня а не фиксированный список.
+  const sectionsFor = (lvl: TestLevel) =>
+    [...new Set(topicsFor(lvl).map((t) => t.subject_id))].sort().map((id) => ({ id, name: sectionName(id) }));
+  const [subjectId, setSubjectId] = useState(sectionsFor('medium')[0]?.id ?? '');
+  const [topicId, setTopicId] = useState(firstTopic(sectionsFor('medium')[0]?.id ?? '', 'medium'));
   const [count, setCount] = useState(10);
   const [generating, setGenerating] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -48,9 +52,10 @@ export function TestBuilder({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const sectionTopics = topics.filter((t) => t.subject_id === subjectId);
+  const sectionTopics = topicsFor(level).filter((t) => t.subject_id === subjectId);
   const topicTitle = topics.find((t) => t.id === topicId)?.title ?? '';
-  const subjectName = SECTIONS.find((s) => s.id === subjectId)?.name ?? '';
+  const sections = sectionsFor(level);
+  const subjectName = sections.find((s) => s.id === subjectId)?.name ?? '';
 
   const statMap = new Map(topicStats.map((s) => [`${s.student_id}:${s.topic_id}`, s]));
   const topicAcc = (studentId: string): number | null => {
@@ -60,7 +65,12 @@ export function TestBuilder({
   const classStudents = selClass === ALL_CLASSES ? students : students.filter((s) => s.class_id === selClass);
   const recommended = new Set(classStudents.filter((s) => { const a = topicAcc(s.id); return a != null && a < REC_THRESHOLD; }).map((s) => s.id));
 
-  function changeSubject(v: string) { setSubjectId(v); setTopicId(firstTopic(v)); }
+  function changeSubject(v: string) { setSubjectId(v); setTopicId(firstTopic(v, level)); }
+  function changeLevel(l: TestLevel) {
+    const secs = sectionsFor(l);
+    const subj = secs.some((x) => x.id === subjectId) ? subjectId : (secs[0]?.id ?? '');
+    setLevel(l); setSubjectId(subj); setTopicId(firstTopic(subj, l));
+  }
 
   function generate() {
     setGenerating(true);
@@ -114,7 +124,7 @@ export function TestBuilder({
       sess.user?.id ?? '',
       {
         title: subjectName ? `${subjectName}: ${topicTitle}` : topicTitle,
-        targetRank: rank,
+        level,
         subjectId: subjectId || null,
         topicId: topicId || null,
         studentIds: [...selStudents],
@@ -154,11 +164,11 @@ export function TestBuilder({
       {step === 1 && (
         <Card className="space-y-5">
           <div>
-            <label className="text-sm font-medium text-slate-600">Уровень сложности (ранг)</label>
+            <label className="text-sm font-medium text-slate-600">Уровень сложности</label>
             <div className="mt-2 flex flex-wrap gap-2">
-              {RANKS.map((r) => (
-                <button key={r} onClick={() => setRank(r)}
-                  className={`h-10 w-10 rounded-xl text-sm font-bold transition ${rank === r ? 'bg-brand text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{r}</button>
+              {TEST_LEVELS.map((l) => (
+                <button key={l.id} onClick={() => changeLevel(l.id)}
+                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${level === l.id ? 'bg-brand text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{l.label}</button>
               ))}
             </div>
           </div>
@@ -168,7 +178,7 @@ export function TestBuilder({
               <label className="text-sm font-medium text-slate-600">Раздел</label>
               <select value={subjectId} onChange={(e) => changeSubject(e.target.value)}
                 className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-brand">
-                {SECTIONS.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
+                {sections.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
               </select>
             </div>
             <div>
@@ -207,7 +217,7 @@ export function TestBuilder({
         <div className="space-y-4">
           <Card className="flex flex-wrap items-center justify-between gap-2 !py-4">
             <p className="text-sm text-slate-600">
-              <b className="font-semibold text-slate-800">{subjectName} · {topicTitle}</b> · уровень {rank} · {questions.length} вопросов
+              <b className="font-semibold text-slate-800">{subjectName} · {topicTitle}</b> · {questions.length} вопросов
             </p>
             <button onClick={addQ} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">+ Добавить вопрос</button>
           </Card>
@@ -282,7 +292,6 @@ export function TestBuilder({
                           <span className="text-xs text-slate-400">{acc != null ? `точность ${acc}%` : 'нет данных'}</span>
                         </div>
                       </div>
-                      <span className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[11px] font-bold ${RANK_BADGE[s.rank] ?? 'bg-slate-100 text-slate-600'}`}>{s.rank}</span>
                     </label>
                   </li>
                 );
@@ -312,7 +321,7 @@ export function TestBuilder({
           <div>
             <h2 className="text-xl font-bold text-slate-800">Тест отправлен</h2>
             <p className="mt-1 text-sm text-slate-500">
-              «{topicTitle}» · {questions.length} вопросов · уровень {rank} — отправлен {selStudents.size} ученикам.
+              «{topicTitle}» · {questions.length} вопросов — отправлен {selStudents.size} ученикам.
             </p>
           </div>
           <div className="flex gap-3">

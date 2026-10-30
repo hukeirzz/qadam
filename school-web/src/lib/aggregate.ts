@@ -3,7 +3,7 @@
 
 export type Student = {
   id: string; name: string; class_id: string | null; xp: number;
-  rank: string; premium_source: string; streak: number; max_streak: number; last_activity: string | null;
+  last_activity: string | null;
 };
 
 /** "Сегодня" / "Вчера" / "N дней назад" from an ISO date (yyyy-mm-dd). */
@@ -23,7 +23,6 @@ export type Exam = { id: string; name: string; exam_date: string | null };
 export type Result = { exam_id: string; student_id: string; total: number };
 export type Stat = { student_id: string; subject_id: string; correct_first: number; answered: number };
 
-export const RANKS = ['D', 'C', 'B', 'A', 'S'] as const;
 export const SUBJECTS = [
   { id: 'math', label: 'Мат' },
   { id: 'geometry', label: 'Гео' },
@@ -47,17 +46,28 @@ export function latestMockByStudent(exams: Exam[], results: Result[]): Map<strin
   return new Map([...best].map(([k, v]) => [k, v.total]));
 }
 
-export function rankDistribution(students: Student[]) {
-  const counts: Record<string, number> = { D: 0, C: 0, B: 0, A: 0, S: 0 };
-  for (const s of students) counts[s.rank] = (counts[s.rank] ?? 0) + 1;
-  return counts;
+type TopicRow = { student_id: string; correct_first: number; answered: number };
+
+/** Per-student first-try accuracy (0–100, pooled over all topics). */
+export function studentAccuracy(stats: TopicRow[]) {
+  const acc = new Map<string, { c: number; a: number }>();
+  for (const st of stats) {
+    const cur = acc.get(st.student_id) ?? { c: 0, a: 0 };
+    cur.c += st.correct_first; cur.a += st.answered; acc.set(st.student_id, cur);
+  }
+  return new Map([...acc].filter(([, v]) => v.a > 0).map(([k, v]) => [k, round((100 * v.c) / v.a)]));
 }
 
-export function avgRankLetter(students: Student[]): string {
-  if (!students.length) return '—';
-  const nums = students.map((s) => RANKS.indexOf(s.rank as (typeof RANKS)[number]) + 1).filter((n) => n > 0);
-  const a = avg(nums);
-  return RANKS[Math.min(RANKS.length - 1, Math.max(0, Math.round(a) - 1))];
+/** Students whose first-try accuracy is above `bar`% on every topic they have answered. */
+export function allTopicsAbove(stats: TopicRow[], bar: number): Set<string> {
+  const seen = new Set<string>();
+  const failed = new Set<string>();
+  for (const st of stats) {
+    if (!st.answered) continue;
+    seen.add(st.student_id);
+    if ((100 * st.correct_first) / st.answered <= bar) failed.add(st.student_id);
+  }
+  return new Set([...seen].filter((id) => !failed.has(id)));
 }
 
 export function schoolAvgMock(exams: Exam[], results: Result[]): number {
@@ -199,4 +209,115 @@ export function needsSupport(students: Student[], n: number, classId?: string) {
   if (!pool.length) return [];
   const mean = avg(pool.map((s) => s.xp));
   return pool.filter((s) => s.xp < mean).sort((a, b) => a.xp - b.xp).slice(0, n);
+}
+
+/** Change between a student's last two mock totals (by exam order); undefined if fewer than two. */
+export function mockDeltaByStudent(exams: Exam[], results: Result[]): Map<string, number> {
+  const order = new Map(exams.map((e, i) => [e.id, i]));
+  const by = new Map<string, { i: number; total: number }[]>();
+  for (const r of results) {
+    if (!by.has(r.student_id)) by.set(r.student_id, []);
+    by.get(r.student_id)!.push({ i: order.get(r.exam_id) ?? -1, total: r.total });
+  }
+  const out = new Map<string, number>();
+  for (const [id, xs] of by) {
+    if (xs.length < 2) continue;
+    xs.sort((a, b) => a.i - b.i);
+    out.set(id, xs[xs.length - 1].total - xs[xs.length - 2].total);
+  }
+  return out;
+}
+
+/** Titles of the student's weakest topics (first-try accuracy below `bar`%), weakest first. */
+export function weakTopicTitles(
+  stats: { student_id: string; topic_id: string; correct_first: number; answered: number }[],
+  topics: { id: string; title: string }[],
+  bar: number,
+  limit: number,
+): Map<string, string[]> {
+  const title = new Map(topics.map((t) => [t.id, t.title]));
+  const by = new Map<string, { acc: number; title: string }[]>();
+  for (const st of stats) {
+    const t = title.get(st.topic_id);
+    if (!t || !st.answered) continue;
+    const acc = (100 * st.correct_first) / st.answered;
+    if (acc >= bar) continue;
+    if (!by.has(st.student_id)) by.set(st.student_id, []);
+    by.get(st.student_id)!.push({ acc, title: t });
+  }
+  return new Map([...by].map(([id, xs]) => [id, xs.sort((a, b) => a.acc - b.acc).slice(0, limit).map((x) => x.title)]));
+}
+
+/** Score buckets for one exam's results (max 245, pass mark 110). */
+export function scoreBuckets(totals: number[]) {
+  const defs = [
+    { label: '200–245', color: '#22c55e', test: (v: number) => v >= 200 },
+    { label: '150–199', color: '#3b82f6', test: (v: number) => v >= 150 && v < 200 },
+    { label: '110–149', color: '#f59e0b', test: (v: number) => v >= 110 && v < 150 },
+    { label: 'менее 110', color: '#ef4444', test: (v: number) => v < 110 },
+  ];
+  return defs.map((d) => ({ label: d.label, color: d.color, value: totals.filter(d.test).length }));
+}
+
+export type TestLevelId = 'basic' | 'medium' | 'high';
+export type LevelHeatmapGroup = { id: string; label: string; topics: { title: string; acc: number | null; tests: number }[] };
+
+/**
+ * Per-level topic heatmap for one student, from their school-test results.
+ * Which topics belong to a level comes from topic_levels (a topic may be in
+ * only some levels); accuracy is score/total pooled over that student's tests
+ * of this level on that topic, null when the student hasn't taken one yet.
+ */
+export function levelHeatmap(
+  level: TestLevelId,
+  testResults: { score: number; total: number; school_tests: { level: TestLevelId; topic_id: string | null } }[],
+  topicLevels: { topic_id: string; level: TestLevelId }[],
+  topics: { id: string; subject_id: string; title: string; order_num: number }[],
+): LevelHeatmapGroup[] {
+  const inLevel = new Set(topicLevels.filter((l) => l.level === level).map((l) => l.topic_id));
+  const acc = new Map<string, { s: number; t: number; n: number }>();
+  for (const r of testResults) {
+    if (r.school_tests.level !== level || !r.school_tests.topic_id) continue;
+    const cur = acc.get(r.school_tests.topic_id) ?? { s: 0, t: 0, n: 0 };
+    cur.s += r.score; cur.t += r.total; cur.n += 1; acc.set(r.school_tests.topic_id, cur);
+  }
+  const by = new Map<string, LevelHeatmapGroup>();
+  for (const t of [...topics].filter((x) => inLevel.has(x.id)).sort((a, b) => a.order_num - b.order_num)) {
+    if (!by.has(t.subject_id)) by.set(t.subject_id, { id: t.subject_id, label: SUBJECT_LABELS[t.subject_id] ?? t.subject_id, topics: [] });
+    const v = acc.get(t.id);
+    by.get(t.subject_id)!.topics.push({ title: t.title, acc: v && v.t ? Math.round((100 * v.s) / v.t) : null, tests: v?.n ?? 0 });
+  }
+  return [...by.values()].sort((a, b) => a.id.localeCompare(b.id));
+}
+
+/**
+ * Школьная успеваемость по темам из результатов тестов: общая точность по теме
+ * и динамика — точность последнего теста по теме минус предыдущего (пункты %).
+ * Динамика null, пока по теме меньше двух тестов.
+ */
+export function topicTestProgress(
+  results: { test_id: string; score: number; total: number; created_at: string; school_tests: { topic_id: string | null } }[],
+) {
+  type T = { s: number; t: number; last: string };
+  const by = new Map<string, Map<string, T>>(); // topic -> test -> sums
+  for (const r of results) {
+    const topic = r.school_tests.topic_id;
+    if (!topic) continue;
+    if (!by.has(topic)) by.set(topic, new Map());
+    const tests = by.get(topic)!;
+    const cur = tests.get(r.test_id) ?? { s: 0, t: 0, last: r.created_at };
+    cur.s += r.score; cur.t += r.total;
+    if (r.created_at > cur.last) cur.last = r.created_at;
+    tests.set(r.test_id, cur);
+  }
+  return new Map(
+    [...by].flatMap(([topic, tests]) => {
+      const list = [...tests.values()].filter((x) => x.t > 0).sort((a, b) => a.last.localeCompare(b.last));
+      if (!list.length) return [];
+      const pct = (x: T) => (100 * x.s) / x.t;
+      const all = list.reduce((a, x) => ({ s: a.s + x.s, t: a.t + x.t }), { s: 0, t: 0 });
+      const delta = list.length >= 2 ? round(pct(list[list.length - 1]) - pct(list[list.length - 2])) : null;
+      return [[topic, { acc: round((100 * all.s) / all.t), delta, tests: list.length }] as const];
+    }),
+  );
 }

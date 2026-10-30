@@ -10,11 +10,12 @@ export default async function TestsPage() {
 
   const api = await getServerApi();
 
-  const [classes, tests, students, topics, topicStats] = await Promise.all([
+  const [classes, tests, students, topics, topicLevels, topicStats] = await Promise.all([
     api.staffData.classes(schoolId),
     api.staffData.schoolTests(schoolId),
     api.staffData.students(schoolId),
     api.staffData.topics(),
+    api.staffData.topicLevels(),
     api.staffData.topicStats(schoolId),
   ]);
 
@@ -25,6 +26,7 @@ export default async function TestsPage() {
       tests={tests}
       students={students}
       topics={topics}
+      topicLevels={topicLevels}
       topicStats={topicStats}
     />
   );

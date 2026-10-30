@@ -3,18 +3,19 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Card, RankBadge } from '@/components/ui';
+import { Card } from '@/components/ui';
 import { TestsIcon, PlusIcon } from '@/components/icons';
 import { createBrowserApi } from '@/lib/supabase/client';
 import { TestBuilder } from '@/components/test-builder';
+import { TEST_LEVELS, type TestLevel } from '@qadam/api-client';
 
 type ClassRow = { id: string; name: string; promo_code: string | null };
-type StudentRow = { id: string; name: string; class_id: string | null; rank: string };
+type StudentRow = { id: string; name: string; class_id: string | null };
 type TopicRow = { id: string; subject_id: string; title: string; order_num: number };
 type TopicStatRow = { student_id: string; topic_id: string; subject_id: string; correct_first: number; answered: number };
 type TestRow = {
-  id: string; title: string; description: string | null;
-  target_rank: string | null; subject_id: string | null; topic_id: string | null;
+  id: string; title: string; description: string | null; level: TestLevel;
+  subject_id: string | null; topic_id: string | null;
   published: boolean; created_at: string;
   school_test_students: { student_id: string }[];
   school_test_questions: { id: string }[];
@@ -22,13 +23,14 @@ type TestRow = {
 };
 
 export function TestsManager({
-  schoolId, classes, tests, students, topics, topicStats,
+  schoolId, classes, tests, students, topics, topicLevels, topicStats,
 }: {
   schoolId: string;
   classes: ClassRow[];
   tests: TestRow[];
   students: StudentRow[];
   topics: TopicRow[];
+  topicLevels: { topic_id: string; level: TestLevel }[];
   topicStats: TopicStatRow[];
 }) {
   const router = useRouter();
@@ -72,6 +74,7 @@ export function TestsManager({
           classes={classes}
           students={students}
           topics={topics}
+          topicLevels={topicLevels}
           topicStats={topicStats}
           onDone={() => { setCreating(false); router.refresh(); }}
           onCancel={() => setCreating(false)}
@@ -89,7 +92,7 @@ export function TestsManager({
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="font-semibold text-slate-800">{t.title}</h2>
-                      {t.target_rank && <RankBadge rank={t.target_rank} />}
+                      <span className="rounded-md bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">{TEST_LEVELS.find((l) => l.id === t.level)?.label}</span>
                     </div>
                     {t.description && <p className="mt-1 text-sm text-slate-500">{t.description}</p>}
                     <p className="mt-2 text-xs text-slate-400">

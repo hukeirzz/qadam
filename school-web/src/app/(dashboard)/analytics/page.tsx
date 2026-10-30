@@ -10,12 +10,14 @@ export default async function AnalyticsPage() {
 
   const api = await getServerApi();
 
-  const [classes, students, exams, results, stats] = await Promise.all([
+  const [classes, students, exams, results, stats, topics, topicResults] = await Promise.all([
     api.staffData.classes(schoolId),
     api.staffData.students(schoolId),
     api.staffData.mockExams(schoolId),
     api.staffData.mockResults(schoolId),
     api.staffData.topicStats(schoolId),
+    api.staffData.topics(),
+    api.staffData.schoolTopicResults(schoolId),
   ]);
 
   return (
@@ -25,6 +27,8 @@ export default async function AnalyticsPage() {
       exams={exams}
       results={results}
       stats={stats}
+      topics={topics}
+      topicResults={topicResults}
     />
   );
 }

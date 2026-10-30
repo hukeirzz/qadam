@@ -1,26 +1,6 @@
 // Small presentational building blocks shared across dashboard pages.
 import { ChevronDownIcon, SearchIcon } from './icons';
 
-const RANK_TINT: Record<string, string> = {
-  A: 'bg-emerald-100 text-emerald-700',
-  B: 'bg-blue-100 text-blue-700',
-  C: 'bg-amber-100 text-amber-700',
-  D: 'bg-orange-100 text-orange-700',
-  F: 'bg-red-100 text-red-700',
-};
-
-export function RankBadge({ rank }: { rank: string }) {
-  return (
-    <span
-      className={`inline-flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold ${
-        RANK_TINT[rank] ?? 'bg-slate-100 text-slate-600'
-      }`}
-    >
-      {rank}
-    </span>
-  );
-}
-
 export function Avatar({ name, className = '' }: { name: string; className?: string }) {
   return (
     <span
@@ -66,4 +46,26 @@ export function SearchBox({ placeholder }: { placeholder: string }) {
 
 export function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return <div className={`rounded-2xl bg-surface p-6 ring-1 ring-border ${className}`}>{children}</div>;
+}
+
+/** Маленький «?» — подсказка по наведению или фокусу. */
+export function InfoHint({ text }: { text: string }) {
+  return (
+    <span className="group relative inline-flex align-middle">
+      <span
+        tabIndex={0}
+        role="img"
+        aria-label={text}
+        className="flex h-4 w-4 cursor-help items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-400 outline-none transition hover:bg-slate-200 focus-visible:ring-2 focus-visible:ring-brand"
+      >
+        ?
+      </span>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute left-1/2 top-full z-10 mt-1.5 w-max max-w-[200px] -translate-x-1/2 rounded-lg bg-slate-800 px-2.5 py-1.5 text-xs font-normal leading-snug text-white opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-within:opacity-100"
+      >
+        {text}
+      </span>
+    </span>
+  );
 }

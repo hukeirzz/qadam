@@ -12,6 +12,14 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+/** Уровни сложности школьного теста. */
+export type TestLevel = 'basic' | 'medium' | 'high';
+export const TEST_LEVELS: { id: TestLevel; label: string }[] = [
+  { id: 'basic', label: 'Базовый' },
+  { id: 'medium', label: 'Средний' },
+  { id: 'high', label: 'Высокий' },
+];
+
 export interface AuthStorageAdapter {
   getItem: (key: string) => Promise<string | null> | string | null;
   setItem: (key: string, value: string) => Promise<void> | void;
@@ -224,23 +232,22 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
     async students(schoolId: string) {
       const { data } = await supabase
         .from('students')
-        .select('id, name, class_id, xp, rank, premium_source, streak, max_streak, last_activity')
+        .select('id, name, class_id, xp, last_activity')
         .eq('school_id', schoolId)
         .order('xp', { ascending: false });
       return (data ?? []) as {
         id: string; name: string; class_id: string | null; xp: number;
-        rank: string; premium_source: string; streak: number; max_streak: number; last_activity: string | null;
+        last_activity: string | null;
       }[];
     },
 
     async student(id: string) {
       const { data } = await supabase
         .from('students')
-        .select('id, name, class_id, xp, rank, premium_source, premium_unlocked, streak, max_streak, last_activity, school_id')
+        .select('id, name, class_id, xp, last_activity, school_id')
         .eq('id', id).single();
       return data as {
-        id: string; name: string; class_id: string | null; xp: number; rank: string;
-        premium_source: string; premium_unlocked: boolean; streak: number; max_streak: number;
+        id: string; name: string; class_id: string | null; xp: number;
         last_activity: string | null; school_id: string | null;
       } | null;
     },
@@ -260,6 +267,36 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
         .eq('student_id', studentId);
       return (data ?? []) as unknown as {
         exam_id: string; total: number; mock_exams: { name: string; exam_date: string | null };
+      }[];
+    },
+
+    /** Все результаты школьных тестов школы с темой теста — для успеваемости и динамики по темам. */
+    async schoolTopicResults(schoolId: string) {
+      const { data } = await supabase
+        .from('school_test_results')
+        .select('test_id, score, total, created_at, school_tests!inner(topic_id, school_id)')
+        .eq('school_tests.school_id', schoolId);
+      return (data ?? []) as unknown as {
+        test_id: string; score: number; total: number; created_at: string;
+        school_tests: { topic_id: string | null };
+      }[];
+    },
+
+    /** Какие темы входят в какой уровень сложности (тема может быть в нескольких). */
+    async topicLevels() {
+      const { data } = await supabase.from('topic_levels').select('topic_id, level');
+      return (data ?? []) as { topic_id: string; level: TestLevel }[];
+    },
+
+    /** Результаты школьных тестов ученика с уровнем и темой теста — для тепловых карт по уровням. */
+    async studentTestResults(studentId: string) {
+      const { data } = await supabase
+        .from('school_test_results')
+        .select('score, total, school_tests!inner(level, topic_id)')
+        .eq('student_id', studentId);
+      return (data ?? []) as unknown as {
+        score: number; total: number;
+        school_tests: { level: TestLevel; topic_id: string | null };
       }[];
     },
 
@@ -325,14 +362,14 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       const { data } = await supabase
         .from('school_tests')
         .select(
-          'id, title, description, target_rank, subject_id, topic_id, published, created_at, ' +
+          'id, title, description, level, subject_id, topic_id, published, created_at, ' +
             'school_test_students(student_id), school_test_questions(id), school_test_results(id)',
         )
         .eq('school_id', schoolId)
         .order('created_at', { ascending: false });
       return (data ?? []) as unknown as {
-        id: string; title: string; description: string | null;
-        target_rank: string | null; subject_id: string | null; topic_id: string | null;
+        id: string; title: string; description: string | null; level: TestLevel;
+        subject_id: string | null; topic_id: string | null;
         published: boolean; created_at: string;
         school_test_students: { student_id: string }[];
         school_test_questions: { id: string }[];
@@ -345,15 +382,15 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       const { data } = await supabase
         .from('school_tests')
         .select(
-          'id, title, description, target_rank, subject_id, topic_id, published, created_at, ' +
+          'id, title, description, level, subject_id, topic_id, published, created_at, ' +
             'school_test_students(student_id), ' +
             'school_test_questions(id, order_num, text, explanation, school_test_options(id, order_num, text, is_correct))',
         )
         .eq('id', testId)
         .single();
       return (data ?? null) as unknown as {
-        id: string; title: string; description: string | null;
-        target_rank: string | null; subject_id: string | null; topic_id: string | null;
+        id: string; title: string; description: string | null; level: TestLevel;
+        subject_id: string | null; topic_id: string | null;
         published: boolean; created_at: string;
         school_test_students: { student_id: string }[];
         school_test_questions: {
@@ -389,7 +426,7 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       test: {
         title: string;
         description?: string | null;
-        targetRank: string | null; // null = любой ранг — информационное поле, не фильтр видимости
+        level: TestLevel;
         subjectId: string | null;
         topicId?: string | null;
         studentIds: string[]; // видимость решает только это — назначенные ученики
@@ -404,7 +441,7 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
         .from('school_tests')
         .insert({
           school_id: schoolId, title: test.title, description: test.description ?? null,
-          target_rank: test.targetRank, subject_id: test.subjectId, topic_id: test.topicId ?? null,
+          level: test.level, subject_id: test.subjectId, topic_id: test.topicId ?? null,
           created_by: createdBy, published: false,
         })
         .select('id').single();

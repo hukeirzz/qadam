@@ -1,10 +1,11 @@
 import Link from 'next/link';
-import { Card, RankBadge } from '@/components/ui';
+import { Card } from '@/components/ui';
 import { ArrowRightIcon } from '@/components/icons';
+import { TEST_LEVELS, type TestLevel } from '@qadam/api-client';
 
 type TestDetail = {
-  id: string; title: string; description: string | null;
-  target_rank: string | null; subject_id: string | null;
+  id: string; title: string; description: string | null; level: TestLevel;
+  subject_id: string | null;
   school_test_students: { student_id: string }[];
   school_test_questions: { id: string }[];
 };
@@ -61,7 +62,7 @@ export function SchoolTestResults({
       <Card>
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-xl font-bold tracking-tight text-slate-800">{test.title}</h1>
-          {test.target_rank && <RankBadge rank={test.target_rank} />}
+          <span className="rounded-md bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">{TEST_LEVELS.find((l) => l.id === test.level)?.label}</span>
         </div>
         {test.description && <p className="mt-1.5 text-sm text-slate-500">{test.description}</p>}
         <p className="mt-2 text-xs text-slate-400">

@@ -2,6 +2,7 @@ import { redirect, notFound } from 'next/navigation';
 import { getStaff, getServerApi } from '@/lib/auth';
 import { StudentProfile } from '@/components/student-profile';
 import * as agg from '@/lib/aggregate';
+import { TEST_LEVELS } from '@qadam/api-client';
 
 export default async function StudentProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -13,11 +14,12 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
   const student = await api.staffData.student(id);
   if (!student) notFound();
 
-  const [classes, stats, mocks, topics] = await Promise.all([
+  const [classes, testResults, mocks, topics, topicLevels] = await Promise.all([
     api.staffData.classes(role.school_id),
-    api.staffData.studentTopicStats(id),
+    api.staffData.studentTestResults(id),
     api.staffData.studentMockResults(id),
     api.staffData.topics(),
+    api.staffData.topicLevels(),
   ]);
 
   const className = classes.find((c) => c.id === student.class_id)?.name ?? '—';
@@ -27,13 +29,9 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
 
   return (
     <StudentProfile
-      student={{
-        name: student.name, rank: student.rank, xp: student.xp,
-        streak: student.streak, max_streak: student.max_streak, premium_source: student.premium_source,
-      }}
+      student={{ name: student.name }}
       className={className}
-      sectionAcc={agg.sectionAccuracy(stats)}
-      topicGroups={agg.topicAccuracyBySubject(stats, topics)}
+      levelMaps={TEST_LEVELS.map((l) => ({ id: l.id, label: l.label, groups: agg.levelHeatmap(l.id, testResults, topicLevels, topics) }))}
       mockHistory={mockHistory}
     />
   );

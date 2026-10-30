@@ -2,6 +2,9 @@ import { getStaff, getServerApi } from '@/lib/auth';
 import { DashboardHome, type Attention } from '@/components/dashboard-home';
 import * as agg from '@/lib/aggregate';
 
+const HELP_BELOW = 40; // точность с первой попытки, % — ниже нужна помощь
+const TOP_ABOVE = 80; // точность, % — выше по всем темам
+
 export default async function DashboardHomePage() {
   const { role } = await getStaff();
   const schoolId = role?.school_id ?? null;
@@ -12,36 +15,41 @@ export default async function DashboardHomePage() {
   let classes: agg.ClassRow[] = [];
   let exams: agg.Exam[] = [];
   let results: agg.Result[] = [];
+  let stats: Awaited<ReturnType<typeof api.staffData.topicStats>> = [];
   if (schoolId) {
-    [classes, students, exams, results] = await Promise.all([
+    [classes, students, exams, results, stats] = await Promise.all([
       api.staffData.classes(schoolId),
       api.staffData.students(schoolId),
       api.staffData.mockExams(schoolId),
       api.staffData.mockResults(schoolId),
+      api.staffData.topicStats(schoolId),
     ]);
   }
 
   const latest = agg.latestMockByStudent(exams, results);
-  const rankDist = agg.rankDistribution(students);
+  const accuracy = agg.studentAccuracy(stats);
   const clsName = (id: string | null) => classes.find((c) => c.id === id)?.name ?? '—';
 
-  const atRisk = students
-    .map((s): Attention | null => {
-      const m = latest.get(s.id);
-      if (m != null && m < 110) return { id: s.id, name: s.name, cls: clsName(s.class_id), reason: `Ниже проходного порога · балл ${m}`, tone: 'text-red-500' };
-      if (s.rank === 'C' || s.rank === 'D') return { id: s.id, name: s.name, cls: clsName(s.class_id), reason: `Низкий ранг ${s.rank}${m != null ? ` · балл ${m}` : ''}`, tone: 'text-amber-600' };
-      return null;
+  const needHelp = students
+    .flatMap((s): Attention[] => {
+      const acc = accuracy.get(s.id);
+      return acc != null && acc < HELP_BELOW
+        ? [{ id: s.id, name: s.name, cls: clsName(s.class_id), accuracy: acc, mock: latest.get(s.id) ?? null }]
+        : [];
     })
-    .filter((x): x is Attention => x !== null);
+    .sort((a, b) => a.accuracy - b.accuracy);
+
+  const topStudents = agg.allTopicsAbove(stats, TOP_ABOVE);
 
   return (
     <DashboardHome
       totalStudents={students.length}
-      attentionCount={atRisk.length}
-      avgRank={agg.avgRankLetter(students)}
-      sCount={rankDist.S}
-      rankDist={rankDist}
-      attention={atRisk.slice(0, 5)}
+      avgMock={agg.schoolAvgMock(exams, results)}
+      helpCount={needHelp.length}
+      topCount={students.filter((s) => topStudents.has(s.id)).length}
+      helpBelow={HELP_BELOW}
+      topAbove={TOP_ABOVE}
+      needHelp={needHelp}
       dynamics={agg.mockDynamics(exams, results)}
     />
   );
