@@ -11,8 +11,6 @@
   },
   "dependencies": {
     "@qadam/api-client": "*",
-    "@qadam/business-logic": "*",
-    "@qadam/types": "*",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.106.2",
     "next": "16.2.10",

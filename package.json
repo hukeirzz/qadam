@@ -7,7 +7,6 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:mobile": "npm run start --workspace=apps/mobile",
     "dev:school-web": "npm run dev --workspace=apps/school-web",
     "build": "turbo run build",
     "lint": "turbo run lint",
