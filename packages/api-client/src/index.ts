@@ -252,14 +252,6 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       } | null;
     },
 
-    async studentTopicStats(studentId: string) {
-      const { data } = await supabase
-        .from('student_topic_stats')
-        .select('topic_id, subject_id, correct_first, answered')
-        .eq('student_id', studentId);
-      return (data ?? []) as { topic_id: string; subject_id: string; correct_first: number; answered: number }[];
-    },
-
     async studentMockResults(studentId: string) {
       const { data } = await supabase
         .from('mock_results')
@@ -274,10 +266,10 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
     async schoolTopicResults(schoolId: string) {
       const { data } = await supabase
         .from('school_test_results')
-        .select('test_id, score, total, created_at, school_tests!inner(topic_id, school_id)')
+        .select('test_id, student_id, score, total, created_at, school_tests!inner(topic_id, school_id)')
         .eq('school_tests.school_id', schoolId);
       return (data ?? []) as unknown as {
-        test_id: string; score: number; total: number; created_at: string;
+        test_id: string; student_id: string; score: number; total: number; created_at: string;
         school_tests: { topic_id: string | null };
       }[];
     },
@@ -321,16 +313,6 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
         exam_id: string; student_id: string; total: number;
         math: number | null; geometry: number | null; grammar: number | null;
         analogies: number | null; reading: number | null;
-      }[];
-    },
-
-    async topicStats(schoolId: string) {
-      const { data } = await supabase
-        .from('student_topic_stats')
-        .select('student_id, topic_id, subject_id, correct_first, answered, students!inner(school_id)')
-        .eq('students.school_id', schoolId);
-      return (data ?? []) as unknown as {
-        student_id: string; topic_id: string; subject_id: string; correct_first: number; answered: number;
       }[];
     },
 

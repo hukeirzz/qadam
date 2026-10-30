@@ -7,12 +7,12 @@ import { Card } from '@/components/ui';
 import { TestsIcon, PlusIcon } from '@/components/icons';
 import { createBrowserApi } from '@/lib/supabase/client';
 import { TestBuilder } from '@/components/test-builder';
+import type { TestResultRow } from '@/lib/aggregate';
 import { TEST_LEVELS, type TestLevel } from '@qadam/api-client';
 
 type ClassRow = { id: string; name: string; promo_code: string | null };
 type StudentRow = { id: string; name: string; class_id: string | null };
 type TopicRow = { id: string; subject_id: string; title: string; order_num: number };
-type TopicStatRow = { student_id: string; topic_id: string; subject_id: string; correct_first: number; answered: number };
 type TestRow = {
   id: string; title: string; description: string | null; level: TestLevel;
   subject_id: string | null; topic_id: string | null;
@@ -23,7 +23,7 @@ type TestRow = {
 };
 
 export function TestsManager({
-  schoolId, classes, tests, students, topics, topicLevels, topicStats,
+  schoolId, classes, tests, students, topics, topicLevels, topicResults,
 }: {
   schoolId: string;
   classes: ClassRow[];
@@ -31,7 +31,7 @@ export function TestsManager({
   students: StudentRow[];
   topics: TopicRow[];
   topicLevels: { topic_id: string; level: TestLevel }[];
-  topicStats: TopicStatRow[];
+  topicResults: TestResultRow[];
 }) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
@@ -75,7 +75,7 @@ export function TestsManager({
           students={students}
           topics={topics}
           topicLevels={topicLevels}
-          topicStats={topicStats}
+          topicResults={topicResults}
           onDone={() => { setCreating(false); router.refresh(); }}
           onCancel={() => setCreating(false)}
         />

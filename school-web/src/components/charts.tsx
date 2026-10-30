@@ -97,139 +97,6 @@ export function LineChart({
   );
 }
 
-export function BarChart({
-  labels,
-  values,
-  max,
-}: {
-  labels: string[];
-  values: number[];
-  max: number;
-}) {
-  const W = 520;
-  const H = 220;
-  const padL = 10;
-  const padR = 10;
-  const padT = 10;
-  const padB = 26;
-  const plotW = W - padL - padR;
-  const plotH = H - padT - padB;
-  const n = values.length;
-  const slot = plotW / n;
-  const barW = slot * 0.5;
-
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="mt-2 w-full" role="img" aria-label="Столбчатый график">
-      {values.map((v, i) => {
-        const h = (v / max) * plotH;
-        const bx = padL + i * slot + (slot - barW) / 2;
-        const by = padT + plotH - h;
-        return (
-          <g key={i}>
-            <rect x={bx} y={by} width={barW} height={h} rx="5" fill="#6d28d9" opacity={0.85} />
-            <text x={bx + barW / 2} y={H - 8} textAnchor="middle" fontSize="11" fill="#9ca3af">
-              {labels[i]}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
-export function Sparkline({ values, color = '#6d28d9' }: { values: number[]; color?: string }) {
-  const W = 200;
-  const H = 44;
-  const pad = 3;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-  const x = (i: number) => pad + (i * (W - 2 * pad)) / (values.length - 1);
-  const y = (v: number) => pad + (1 - (v - min) / range) * (H - 2 * pad);
-  const pts = values.map((v, i) => `${x(i)},${y(v)}`).join(' ');
-  const area = `M ${x(0)},${y(values[0])} ${values
-    .map((v, i) => `L ${x(i)},${y(v)}`)
-    .join(' ')} L ${x(values.length - 1)},${H} L ${x(0)},${H} Z`;
-  const gid = `spark_${color.replace('#', '')}`;
-
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-10 w-full" aria-hidden="true">
-      <defs>
-        <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.22" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={area} fill={`url(#${gid})`} />
-      <polyline
-        points={pts}
-        fill="none"
-        stroke={color}
-        strokeWidth="2"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
-  );
-}
-
-export function RadarChart({
-  axes,
-  series,
-  max = 100,
-  size = 260,
-}: {
-  axes: string[];
-  series: { label: string; color: string; values: number[] }[];
-  max?: number;
-  size?: number;
-}) {
-  const cx = size / 2;
-  const cy = size / 2;
-  const r = size / 2 - 34;
-  const n = axes.length;
-  const ang = (i: number) => (Math.PI * 2 * i) / n - Math.PI / 2;
-  const pt = (i: number, frac: number): [number, number] => [
-    cx + frac * r * Math.cos(ang(i)),
-    cy + frac * r * Math.sin(ang(i)),
-  ];
-  const rings = [0.25, 0.5, 0.75, 1];
-  const P = 60; // room for full axis labels
-
-  return (
-    <svg viewBox={`${-P} ${-20} ${size + 2 * P} ${size + 40}`} className="w-full max-w-[340px]" role="img" aria-label="Радар точности по разделам">
-      {rings.map((f) => (
-        <polygon key={f} points={axes.map((_, i) => pt(i, f).join(',')).join(' ')} fill="none" stroke="#e5e7eb" strokeWidth="1" />
-      ))}
-      {axes.map((_, i) => {
-        const [x, y] = pt(i, 1);
-        return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="#e5e7eb" strokeWidth="1" />;
-      })}
-      {series.map((s) => (
-        <polygon
-          key={s.label}
-          points={s.values.map((v, i) => pt(i, v / max).join(',')).join(' ')}
-          fill={s.color}
-          fillOpacity="0.08"
-          stroke={s.color}
-          strokeWidth="2"
-          strokeLinejoin="round"
-        />
-      ))}
-      {axes.map((a, i) => {
-        const [x, y] = pt(i, 1.14);
-        const anchor = Math.abs(x - cx) < 8 ? 'middle' : x > cx ? 'start' : 'end';
-        return (
-          <text key={a} x={x} y={y + 3} textAnchor={anchor} fontSize="11" fill="#64748b">
-            {a}
-          </text>
-        );
-      })}
-    </svg>
-  );
-}
-
 export function DonutChart({
   segments,
   size = 180,
@@ -242,14 +109,15 @@ export function DonutChart({
   const r = (size - thickness) / 2;
   const c = 2 * Math.PI * r;
   const total = segments.reduce((s, x) => s + x.value, 0) || 1;
-  let offset = 0;
+  const lens = segments.map((s) => (s.value / total) * c);
+  const offsets = lens.map((_, i) => lens.slice(0, i).reduce((a, b) => a + b, 0));
 
   return (
     <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} role="img" aria-label="Кольцевая диаграмма">
       <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
-        {segments.map((s) => {
-          const len = (s.value / total) * c;
-          const seg = (
+        {segments.map((s, i) => {
+          const len = lens[i];
+          return (
             <circle
               key={s.label}
               cx={size / 2}
@@ -259,12 +127,10 @@ export function DonutChart({
               stroke={s.color}
               strokeWidth={thickness}
               strokeDasharray={`${len} ${c - len}`}
-              strokeDashoffset={-offset}
+              strokeDashoffset={-offsets[i]}
               strokeLinecap="butt"
             />
           );
-          offset += len;
-          return seg;
         })}
       </g>
     </svg>

@@ -9,12 +9,10 @@ import * as agg from '@/lib/aggregate';
 
 const THRESHOLD = 110;
 const MAX_SCORE = 245;
-const HELP_BELOW = 40; // точность с первой попытки, % — ниже нужна помощь
+const HELP_BELOW = 40; // точность по школьным тестам, % — ниже нужна помощь
 const TOP_ABOVE = 80; // точность, % — выше по всем темам
 const TOPICS_PREVIEW = 6;
 const WEAK_BELOW = 50; // тема считается слабой при точности ниже, %
-
-type TopicStat = { student_id: string; topic_id: string; subject_id: string; correct_first: number; answered: number };
 
 function topicColor(acc: number) {
   if (acc >= 75) return '#22c55e';
@@ -28,11 +26,11 @@ function initials(name: string) {
 }
 
 export function AnalyticsView({
-  students, classes, exams, results, stats, topics, topicResults,
+  students, classes, exams, results, topics, topicResults,
 }: {
   students: agg.Student[]; classes: agg.ClassRow[]; exams: agg.Exam[]; results: agg.Result[];
-  stats: TopicStat[]; topics: { id: string; title: string }[];
-  topicResults: Parameters<typeof agg.topicTestProgress>[0];
+  topics: { id: string; title: string }[];
+  topicResults: agg.TestResultRow[];
 }) {
   const examsWithResults = exams.filter((e) => results.some((r) => r.exam_id === e.id));
   const [showAllTopics, setShowAllTopics] = useState(false);
@@ -41,11 +39,11 @@ export function AnalyticsView({
   const avgMock = agg.schoolAvgMock(exams, results);
   const dyn = agg.mockDynamics(exams, results);
   const classScores = agg.classMockAvg(students, classes, exams, results);
-  const accuracy = agg.studentAccuracy(stats);
+  const accuracy = agg.studentAccuracy(topicResults);
   const deltas = agg.mockDeltaByStudent(exams, results);
   const latest = agg.latestMockByStudent(exams, results);
-  const weak = agg.weakTopicTitles(stats, topics, WEAK_BELOW, 2);
-  const topSet = agg.allTopicsAbove(stats, TOP_ABOVE);
+  const weak = agg.weakTopicTitles(topicResults, topics, WEAK_BELOW, 2);
+  const topSet = agg.allTopicsAbove(topicResults, TOP_ABOVE);
   const clsName = (id: string | null) => classes.find((c) => c.id === id)?.name ?? '—';
 
   const needHelp = students
@@ -221,7 +219,7 @@ export function AnalyticsView({
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-semibold text-slate-800">Ученики, которым нужна помощь</h2>
-            <p className="text-xs text-slate-400">Точность ответов с первой попытки ниже {HELP_BELOW}%</p>
+            <p className="text-xs text-slate-400">Точность по школьным тестам ниже {HELP_BELOW}%</p>
           </div>
           <Link href="/students" className="text-sm font-medium text-brand hover:text-brand-hover">Все ученики</Link>
         </div>

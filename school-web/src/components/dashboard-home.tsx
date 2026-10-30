@@ -55,7 +55,7 @@ export function DashboardHome({
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-semibold text-slate-800">Ученики, которым нужна помощь</h2>
-            <p className="text-xs text-slate-400">Точность ответов с первой попытки ниже {helpBelow}%</p>
+            <p className="text-xs text-slate-400">Точность по школьным тестам ниже {helpBelow}%</p>
           </div>
           <Link href="/students" className="text-sm font-medium text-brand hover:text-brand-hover">Все ученики</Link>
         </div>

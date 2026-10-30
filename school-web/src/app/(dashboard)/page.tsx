@@ -2,7 +2,7 @@ import { getStaff, getServerApi } from '@/lib/auth';
 import { DashboardHome, type Attention } from '@/components/dashboard-home';
 import * as agg from '@/lib/aggregate';
 
-const HELP_BELOW = 40; // точность с первой попытки, % — ниже нужна помощь
+const HELP_BELOW = 40; // точность по школьным тестам, % — ниже нужна помощь
 const TOP_ABOVE = 80; // точность, % — выше по всем темам
 
 export default async function DashboardHomePage() {
@@ -15,19 +15,19 @@ export default async function DashboardHomePage() {
   let classes: agg.ClassRow[] = [];
   let exams: agg.Exam[] = [];
   let results: agg.Result[] = [];
-  let stats: Awaited<ReturnType<typeof api.staffData.topicStats>> = [];
+  let testResults: agg.TestResultRow[] = [];
   if (schoolId) {
-    [classes, students, exams, results, stats] = await Promise.all([
+    [classes, students, exams, results, testResults] = await Promise.all([
       api.staffData.classes(schoolId),
       api.staffData.students(schoolId),
       api.staffData.mockExams(schoolId),
       api.staffData.mockResults(schoolId),
-      api.staffData.topicStats(schoolId),
+      api.staffData.schoolTopicResults(schoolId),
     ]);
   }
 
   const latest = agg.latestMockByStudent(exams, results);
-  const accuracy = agg.studentAccuracy(stats);
+  const accuracy = agg.studentAccuracy(testResults);
   const clsName = (id: string | null) => classes.find((c) => c.id === id)?.name ?? '—';
 
   const needHelp = students
@@ -39,7 +39,7 @@ export default async function DashboardHomePage() {
     })
     .sort((a, b) => a.accuracy - b.accuracy);
 
-  const topStudents = agg.allTopicsAbove(stats, TOP_ABOVE);
+  const topStudents = agg.allTopicsAbove(testResults, TOP_ABOVE);
 
   return (
     <DashboardHome

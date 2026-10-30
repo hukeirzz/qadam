@@ -1,5 +1,5 @@
 // Pure aggregation helpers over the school's raw rows (students, mock exams/
-// results, per-topic accuracy). Shared by the dashboard and analytics pages.
+// results, school-test results). Shared by the dashboard and analytics pages.
 
 export type Student = {
   id: string; name: string; class_id: string | null; xp: number;
@@ -21,15 +21,6 @@ export function relDay(iso: string | null): string {
 export type ClassRow = { id: string; name: string };
 export type Exam = { id: string; name: string; exam_date: string | null };
 export type Result = { exam_id: string; student_id: string; total: number };
-export type Stat = { student_id: string; subject_id: string; correct_first: number; answered: number };
-
-export const SUBJECTS = [
-  { id: 'math', label: 'Мат' },
-  { id: 'geometry', label: 'Гео' },
-  { id: 'grammar', label: 'Грам' },
-  { id: 'analogies', label: 'Анал' },
-  { id: 'reading', label: 'Чт' },
-];
 
 const round = (n: number) => Math.round(n);
 const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
@@ -46,29 +37,48 @@ export function latestMockByStudent(exams: Exam[], results: Result[]): Map<strin
   return new Map([...best].map(([k, v]) => [k, v.total]));
 }
 
-type TopicRow = { student_id: string; correct_first: number; answered: number };
 
-/** Per-student first-try accuracy (0–100, pooled over all topics). */
-export function studentAccuracy(stats: TopicRow[]) {
-  const acc = new Map<string, { c: number; a: number }>();
-  for (const st of stats) {
-    const cur = acc.get(st.student_id) ?? { c: 0, a: 0 };
-    cur.c += st.correct_first; cur.a += st.answered; acc.set(st.student_id, cur);
+/** One student's result on one school test (api: staffData.schoolTopicResults). */
+export type TestResultRow = {
+  test_id: string; student_id: string; score: number; total: number; created_at: string;
+  school_tests: { topic_id: string | null };
+};
+
+/** Per-student overall accuracy on school tests (0–100, pooled). */
+export function studentAccuracy(rows: TestResultRow[]) {
+  const acc = new Map<string, { s: number; t: number }>();
+  for (const r of rows) {
+    const cur = acc.get(r.student_id) ?? { s: 0, t: 0 };
+    cur.s += r.score; cur.t += r.total; acc.set(r.student_id, cur);
   }
-  return new Map([...acc].filter(([, v]) => v.a > 0).map(([k, v]) => [k, round((100 * v.c) / v.a)]));
+  return new Map([...acc].filter(([, v]) => v.t > 0).map(([k, v]) => [k, round((100 * v.s) / v.t)]));
 }
 
-/** Students whose first-try accuracy is above `bar`% on every topic they have answered. */
-export function allTopicsAbove(stats: TopicRow[], bar: number): Set<string> {
-  const seen = new Set<string>();
-  const failed = new Set<string>();
-  for (const st of stats) {
-    if (!st.answered) continue;
-    seen.add(st.student_id);
-    if ((100 * st.correct_first) / st.answered <= bar) failed.add(st.student_id);
+/** student -> topic -> pooled accuracy (0–100) over that student's tests on the topic. */
+function studentTopicAccuracy(rows: TestResultRow[]) {
+  const acc = new Map<string, Map<string, { s: number; t: number }>>();
+  for (const r of rows) {
+    const topic = r.school_tests.topic_id;
+    if (!topic || !r.total) continue;
+    if (!acc.has(r.student_id)) acc.set(r.student_id, new Map());
+    const m = acc.get(r.student_id)!;
+    const cur = m.get(topic) ?? { s: 0, t: 0 };
+    cur.s += r.score; cur.t += r.total; m.set(topic, cur);
   }
-  return new Set([...seen].filter((id) => !failed.has(id)));
+  return new Map(
+    [...acc].map(([sid, m]) => [sid, new Map([...m].map(([tid, v]) => [tid, (100 * v.s) / v.t]))] as const),
+  );
 }
+
+/** Students whose accuracy is above `bar`% on every topic they have tested. */
+export function allTopicsAbove(rows: TestResultRow[], bar: number): Set<string> {
+  return new Set(
+    [...studentTopicAccuracy(rows)]
+      .filter(([, m]) => m.size > 0 && [...m.values()].every((v) => v > bar))
+      .map(([sid]) => sid),
+  );
+}
+
 
 export function schoolAvgMock(exams: Exam[], results: Result[]): number {
   const latest = [...latestMockByStudent(exams, results).values()];
@@ -101,85 +111,11 @@ export function classMockAvg(students: Student[], classes: ClassRow[], exams: Ex
     .sort((a, b) => b.v - a.v);
 }
 
-/** Average XP per class, sorted desc. */
-export function classXpAvg(students: Student[], classes: ClassRow[]) {
-  return classes
-    .map((c) => {
-      const xps = students.filter((s) => s.class_id === c.id).map((s) => s.xp);
-      return { cls: c.name, v: xps.length ? round(avg(xps)) : 0 };
-    })
-    .filter((x) => x.v > 0)
-    .sort((a, b) => b.v - a.v);
-}
-
-/** Per class × subject first-try accuracy (pooled), 0–100. */
-export function accuracyByClassSubject(students: Student[], classes: ClassRow[], stats: Stat[]) {
-  const classOf = new Map(students.map((s) => [s.id, s.class_id]));
-  // key: classId|subjectId -> {correct, answered}
-  const acc = new Map<string, { c: number; a: number }>();
-  for (const st of stats) {
-    const cid = classOf.get(st.student_id);
-    if (!cid) continue;
-    const k = `${cid}|${st.subject_id}`;
-    const cur = acc.get(k) ?? { c: 0, a: 0 };
-    cur.c += st.correct_first;
-    cur.a += st.answered;
-    acc.set(k, cur);
-  }
-  const withData = classes.filter((c) => SUBJECTS.some((s) => acc.has(`${c.id}|${s.id}`)));
-  const rows = withData.map((c) => ({
-    cls: c.name,
-    vals: SUBJECTS.map((s) => {
-      const v = acc.get(`${c.id}|${s.id}`);
-      return v && v.a ? round((100 * v.c) / v.a) : 0;
-    }),
-  }));
-  return { cols: SUBJECTS.map((s) => s.label), rows };
-}
 
 export const SUBJECT_LABELS: Record<string, string> = {
-  math: 'Математика', geometry: 'Геометрия', grammar: 'Грамматика',
-  analogies: 'Аналогии', reading: 'Чтение и понимание',
+  math: 'Математика', geometry: 'Геометрия',
 };
 
-// Compact-but-full labels for radar axes (no awkward "Анал" 😅).
-export const SUBJECT_AXIS: Record<string, string> = {
-  math: 'Математика', geometry: 'Геометрия', grammar: 'Грамматика',
-  analogies: 'Аналогии', reading: 'Чтение',
-};
-
-export type TopicStat = { topic_id: string; subject_id: string; correct_first: number; answered: number };
-export type Topic = { id: string; subject_id: string; title: string; order_num: number };
-
-/** Per-section first-try accuracy for one student (pooled over topics). */
-export function sectionAccuracy(stats: TopicStat[]) {
-  const acc = new Map<string, { c: number; a: number }>();
-  for (const st of stats) {
-    const cur = acc.get(st.subject_id) ?? { c: 0, a: 0 };
-    cur.c += st.correct_first; cur.a += st.answered; acc.set(st.subject_id, cur);
-  }
-  return SUBJECTS.map((s) => {
-    const v = acc.get(s.id);
-    return { id: s.id, label: s.label, acc: v && v.a ? Math.round((100 * v.c) / v.a) : 0, answered: v?.a ?? 0 };
-  });
-}
-
-/** Topic-level accuracy grouped by section, for the profile heatmap. */
-export function topicAccuracyBySubject(stats: TopicStat[], topics: Topic[]) {
-  const meta = new Map(topics.map((t) => [t.id, t]));
-  const by = new Map<string, { title: string; order: number; acc: number; answered: number }[]>();
-  for (const st of stats) {
-    const t = meta.get(st.topic_id);
-    if (!t) continue;
-    const acc = st.answered ? Math.round((100 * st.correct_first) / st.answered) : 0;
-    if (!by.has(st.subject_id)) by.set(st.subject_id, []);
-    by.get(st.subject_id)!.push({ title: t.title, order: t.order_num, acc, answered: st.answered });
-  }
-  return SUBJECTS.map((s) => ({
-    id: s.id, label: SUBJECT_LABELS[s.id],
-    topics: (by.get(s.id) ?? []).sort((a, b) => a.order - b.order),
-  })).filter((g) => g.topics.length > 0);
-}
 
 /** Diverging color 0=red · 50=white · 100=green. */
 export function accColor(v: number) {
@@ -190,26 +126,6 @@ export function accColor(v: number) {
   return { backgroundColor: `rgb(${r}, ${g}, ${b})`, color: v <= 22 || v >= 82 ? '#fff' : '#334155' };
 }
 
-export function topByXp(students: Student[], n: number, classId?: string) {
-  return [...students]
-    .filter((s) => !classId || classId === 'all' || s.class_id === classId)
-    .sort((a, b) => b.xp - a.xp)
-    .slice(0, n);
-}
-export function bottomByXp(students: Student[], n: number, classId?: string) {
-  return [...students]
-    .filter((s) => !classId || classId === 'all' || s.class_id === classId)
-    .sort((a, b) => a.xp - b.xp)
-    .slice(0, n);
-}
-
-/** Students genuinely lagging: XP below the group average, lowest first. */
-export function needsSupport(students: Student[], n: number, classId?: string) {
-  const pool = students.filter((s) => !classId || classId === 'all' || s.class_id === classId);
-  if (!pool.length) return [];
-  const mean = avg(pool.map((s) => s.xp));
-  return pool.filter((s) => s.xp < mean).sort((a, b) => a.xp - b.xp).slice(0, n);
-}
 
 /** Change between a student's last two mock totals (by exam order); undefined if fewer than two. */
 export function mockDeltaByStudent(exams: Exam[], results: Result[]): Map<string, number> {
@@ -228,25 +144,26 @@ export function mockDeltaByStudent(exams: Exam[], results: Result[]): Map<string
   return out;
 }
 
-/** Titles of the student's weakest topics (first-try accuracy below `bar`%), weakest first. */
+/** Titles of the student's weakest topics (test accuracy below `bar`%), weakest first. */
 export function weakTopicTitles(
-  stats: { student_id: string; topic_id: string; correct_first: number; answered: number }[],
+  rows: TestResultRow[],
   topics: { id: string; title: string }[],
   bar: number,
   limit: number,
 ): Map<string, string[]> {
   const title = new Map(topics.map((t) => [t.id, t.title]));
-  const by = new Map<string, { acc: number; title: string }[]>();
-  for (const st of stats) {
-    const t = title.get(st.topic_id);
-    if (!t || !st.answered) continue;
-    const acc = (100 * st.correct_first) / st.answered;
-    if (acc >= bar) continue;
-    if (!by.has(st.student_id)) by.set(st.student_id, []);
-    by.get(st.student_id)!.push({ acc, title: t });
-  }
-  return new Map([...by].map(([id, xs]) => [id, xs.sort((a, b) => a.acc - b.acc).slice(0, limit).map((x) => x.title)]));
+  return new Map(
+    [...studentTopicAccuracy(rows)].map(([sid, m]) => [
+      sid,
+      [...m]
+        .filter(([tid, v]) => v < bar && title.has(tid))
+        .sort((a, b) => a[1] - b[1])
+        .slice(0, limit)
+        .map(([tid]) => title.get(tid)!),
+    ]),
+  );
 }
+
 
 /** Score buckets for one exam's results (max 245, pass mark 110). */
 export function scoreBuckets(totals: number[]) {
@@ -295,9 +212,7 @@ export function levelHeatmap(
  * и динамика — точность последнего теста по теме минус предыдущего (пункты %).
  * Динамика null, пока по теме меньше двух тестов.
  */
-export function topicTestProgress(
-  results: { test_id: string; score: number; total: number; created_at: string; school_tests: { topic_id: string | null } }[],
-) {
+export function topicTestProgress(results: TestResultRow[]) {
   type T = { s: number; t: number; last: string };
   const by = new Map<string, Map<string, T>>(); // topic -> test -> sums
   for (const r of results) {

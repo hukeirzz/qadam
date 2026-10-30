@@ -10,7 +10,6 @@ import { TEST_LEVELS, type TestLevel } from '@qadam/api-client';
 type Topic = { id: string; subject_id: string; title: string; order_num: number };
 type ClassRow = { id: string; name: string };
 type Student = { id: string; name: string; class_id: string | null };
-type TStat = { student_id: string; topic_id: string; correct_first: number; answered: number };
 type Question = { id: string; text: string; options: string[]; correct: number };
 
 const COUNTS = [5, 10, 15, 20];
@@ -24,10 +23,10 @@ function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
 }
 export function TestBuilder({
-  schoolId, topics, topicLevels, classes, students, topicStats, onDone, onCancel,
+  schoolId, topics, topicLevels, classes, students, topicResults, onDone, onCancel,
 }: {
   schoolId: string;
-  topics: Topic[]; topicLevels: { topic_id: string; level: TestLevel }[]; classes: ClassRow[]; students: Student[]; topicStats: TStat[];
+  topics: Topic[]; topicLevels: { topic_id: string; level: TestLevel }[]; classes: ClassRow[]; students: Student[]; topicResults: agg.TestResultRow[];
   onDone: () => void;
   onCancel: () => void;
 }) {
@@ -57,10 +56,11 @@ export function TestBuilder({
   const sections = sectionsFor(level);
   const subjectName = sections.find((s) => s.id === subjectId)?.name ?? '';
 
-  const statMap = new Map(topicStats.map((s) => [`${s.student_id}:${s.topic_id}`, s]));
+  // Точность ученика по выбранной теме — по его прошлым школьным тестам на эту тему.
   const topicAcc = (studentId: string): number | null => {
-    const s = statMap.get(`${studentId}:${topicId}`);
-    return s && s.answered ? Math.round((100 * s.correct_first) / s.answered) : null;
+    const rs = topicResults.filter((r) => r.student_id === studentId && r.school_tests.topic_id === topicId);
+    const total = rs.reduce((a, r) => a + r.total, 0);
+    return total ? Math.round((100 * rs.reduce((a, r) => a + r.score, 0)) / total) : null;
   };
   const classStudents = selClass === ALL_CLASSES ? students : students.filter((s) => s.class_id === selClass);
   const recommended = new Set(classStudents.filter((s) => { const a = topicAcc(s.id); return a != null && a < REC_THRESHOLD; }).map((s) => s.id));
@@ -94,7 +94,7 @@ export function TestBuilder({
   const delQ = (i: number) => setQuestions((qs) => qs.filter((_, qi) => qi !== i));
   const addQ = () => setQuestions((qs) => [...qs, { id: `q-${Date.now()}`, text: '', options: ['', '', '', ''], correct: 0 }]);
 
-  const toggleStudent = (id: string) => setSelStudents((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleStudent = (id: string) => setSelStudents((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const addRecommended = () => setSelStudents((s) => new Set([...s, ...recommended]));
 
   const questionsValid = questions.length > 0 && questions.every((q) => {
