@@ -48,3 +48,23 @@ export const getStaff = cache(async () => {
   const role = await api.profile.role(session.user.id);
   return { session, role, schoolName: null };
 });
+
+/** Signed-in student (students row + class/school names), memoized per request. */
+export const getStudent = cache(async () => {
+  const session = await getSession();
+  if (!session) return { session: null, student: null };
+  const api = await getServerApi();
+  const me = await api.studentData.me(session.user.id);
+  if (!me) return { session, student: null };
+  const school = Array.isArray(me.schools) ? me.schools[0] : me.schools;
+  return {
+    session,
+    student: {
+      id: me.id,
+      name: me.name,
+      email: session.user.email ?? '',
+      classLabel: me.class_label,
+      schoolName: school?.name ?? null,
+    },
+  };
+});

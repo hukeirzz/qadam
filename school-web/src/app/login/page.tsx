@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import { createBrowserApi } from '@/lib/supabase/client';
 import {
   AnalyticsIcon,
@@ -132,18 +133,18 @@ export default function LoginPage() {
               <form onSubmit={handleSubmit} className="mt-8 space-y-5">
                 <div className="space-y-1.5">
                   <label htmlFor="login" className="text-sm font-medium text-slate-600">
-                    Логин
+                    Email
                   </label>
                   <div className="relative">
                     <UserIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                     <input
                       id="login"
-                      type="text"
+                      type="email"
                       required
                       autoComplete="username"
                       value={login}
                       onChange={(e) => setLogin(e.target.value)}
-                      placeholder="Введите логин"
+                      placeholder="name@gmail.com"
                       className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pl-11 text-sm outline-none transition placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-brand/20"
                     />
                   </div>
@@ -201,8 +202,13 @@ export default function LoginPage() {
                 </button>
 
                 <p className="text-center text-sm text-slate-500">
-                  Забыли логин или пароль? Обратитесь к вашему представителю Qadam —
-                  мы выдадим данные заново.
+                  Ученик и ещё нет аккаунта?{' '}
+                  <Link href="/register" className="font-semibold text-brand hover:text-brand-hover">
+                    Зарегистрироваться по коду класса
+                  </Link>
+                </p>
+                <p className="text-center text-xs text-slate-400">
+                  Учителям: если забыли логин или пароль, обратитесь к вашему представителю Qadam.
                 </p>
               </form>
             </div>

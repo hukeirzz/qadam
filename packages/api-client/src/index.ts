@@ -82,11 +82,16 @@ export type SchoolTestQuestionDTO = QuizQuestionBase;
  */
 export function wrapSupabaseClient(supabase: SupabaseClient) {
   const auth = {
-    async signUp(email: string, password: string, name: string) {
+    /**
+     * Student self-registration. `classCode` rides along in the user metadata:
+     * the handle_new_user trigger resolves it to class + school on insert, so
+     * the student lands in their class even before the email is confirmed.
+     */
+    async signUp(email: string, password: string, name: string, classCode?: string) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { name } },
+        options: { data: { name, ...(classCode ? { class_code: classCode.trim() } : {}) } },
       });
       return { data, error };
     },
@@ -478,8 +483,88 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
     },
   };
 
+  // Student-facing reads/writes. RLS limits everything to the signed-in
+  // student: only tests assigned to them (and published) are visible.
+  const studentData = {
+    /** Public pre-registration check: class + school name for a join code, or null. */
+    async checkClassCode(code: string): Promise<{ class_name: string; school_name: string } | null> {
+      const { data, error } = await supabase.rpc('check_class_code', { p_code: code });
+      if (error || !Array.isArray(data) || data.length === 0) return null;
+      return data[0] as { class_name: string; school_name: string };
+    },
+
+    async me(userId: string) {
+      const { data } = await supabase
+        .from('students')
+        .select('id, name, class_label, class_id, school_id, schools(name)')
+        .eq('id', userId)
+        .single();
+      return (data ?? null) as unknown as {
+        id: string; name: string; class_label: string | null; class_id: string | null; school_id: string | null;
+        schools: { name: string } | { name: string }[] | null;
+      } | null;
+    },
+
+    /** Tests assigned to the student (published only, by RLS), newest first. */
+    async tests() {
+      const { data } = await supabase
+        .from('school_tests')
+        .select('id, title, description, level, subject_id, topic_id, created_at, school_test_questions(id)')
+        .order('created_at', { ascending: false });
+      return ((data ?? []) as unknown as {
+        id: string; title: string; description: string | null; level: TestLevel;
+        subject_id: string | null; topic_id: string | null; created_at: string;
+        school_test_questions: { id: string }[];
+      }[]).map((t) => ({ ...t, question_count: t.school_test_questions.length }));
+    },
+
+    /** topic_id → title, for labelling tests ("Квадратные уравнения"). */
+    async topicTitles() {
+      const { data } = await supabase.from('topics').select('id, title');
+      return Object.fromEntries(((data ?? []) as { id: string; title: string }[]).map((t) => [t.id, t.title]));
+    },
+
+    async results(studentId: string) {
+      const { data } = await supabase
+        .from('school_test_results')
+        .select('test_id, score, total, duration_seconds, created_at, school_tests(title, subject_id, topic_id, level)')
+        .eq('student_id', studentId)
+        .order('created_at', { ascending: false });
+      return (data ?? []) as unknown as {
+        test_id: string; score: number; total: number; duration_seconds: number | null; created_at: string;
+        school_tests: { title: string; subject_id: string | null; topic_id: string | null; level: TestLevel } | null;
+      }[];
+    },
+
+    async test(testId: string) {
+      const { data } = await supabase
+        .from('school_tests')
+        .select(
+          'id, title, description, level, subject_id, ' +
+            'school_test_questions(id, order_num, text, explanation, school_test_options(id, order_num, text, is_correct))',
+        )
+        .eq('id', testId)
+        .single();
+      return (data ?? null) as unknown as {
+        id: string; title: string; description: string | null; level: TestLevel; subject_id: string | null;
+        school_test_questions: {
+          id: string; order_num: number; text: string; explanation: string | null;
+          school_test_options: { id: string; order_num: number; text: string; is_correct: boolean }[];
+        }[];
+      } | null;
+    },
+
+    /** One attempt per test (unique test_id+student_id); total/score are re-checked by a DB trigger. */
+    async submitResult(testId: string, studentId: string, score: number, durationSeconds: number) {
+      const { error } = await supabase.from('school_test_results').insert({
+        test_id: testId, student_id: studentId, score, total: 0, duration_seconds: durationSeconds,
+      });
+      return { error };
+    },
+  };
+
   return {
-    supabase, auth, profile, schools, staffData,
+    supabase, auth, profile, schools, staffData, studentData,
   };
 }
 
