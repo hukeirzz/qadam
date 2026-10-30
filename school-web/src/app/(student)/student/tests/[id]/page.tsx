@@ -19,7 +19,7 @@ export default async function StudentTestPage({ params }: { params: Promise<{ id
     const p = pct(done.score, done.total);
     const tone = pctTone(p);
     return (
-      <div className="rounded-3xl bg-white p-8 text-center shadow-sm shadow-slate-200/60 ring-1 ring-slate-100">
+      <div className="mx-auto max-w-2xl rounded-3xl bg-white p-8 text-center shadow-sm shadow-slate-200/60 ring-1 ring-slate-100">
         <p className="text-sm text-slate-400">{subtitle}</p>
         <h1 className="mt-1 text-2xl font-bold text-slate-800">{title}</h1>
         <span className={`mx-auto mt-6 flex h-20 w-20 items-center justify-center rounded-full text-2xl font-bold ${tone.icon}`}>{p}%</span>
@@ -35,11 +35,11 @@ export default async function StudentTestPage({ params }: { params: Promise<{ id
   }
 
   if (test.school_test_questions.length === 0) {
-    return <p className="rounded-3xl bg-white p-8 text-center text-slate-400 ring-1 ring-slate-100">В этом тесте пока нет вопросов.</p>;
+    return <p className="mx-auto max-w-2xl rounded-3xl bg-white p-8 text-center text-slate-400 ring-1 ring-slate-100">В этом тесте пока нет вопросов.</p>;
   }
 
   return (
-    <TestRunner testId={id} studentId={student!.id} title={title} subtitle={subtitle}
-      questions={test.school_test_questions} />
+    <div className="mx-auto max-w-2xl"><TestRunner testId={id} studentId={student!.id} title={title} subtitle={subtitle}
+      questions={test.school_test_questions} /></div>
   );
 }
