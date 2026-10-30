@@ -1,5 +1,5 @@
-// Storage-agnostic Supabase access shared by apps/mobile and
-// apps/school-web: each app calls Supabase only through this package,
+// Storage-agnostic Supabase access used by
+// school-web: each app calls Supabase only through this package,
 // never `@supabase/supabase-js` directly, so swapping the backend later
 // (or hardening it, e.g. server-side XP validation via a Postgres RPC
 // instead of trusting the client) doesn't require touching either app's
@@ -68,10 +68,9 @@ export type SchoolTestQuestionDTO = QuizQuestionBase;
 /**
  * Wraps an already-constructed SupabaseClient with the auth/profile/theory/
  * topics/questions namespaces. Use this when the platform needs to build
- * the client itself (e.g. apps/school-web's @supabase/ssr browser/server
+ * the client itself (e.g. school-web's @supabase/ssr browser/server
  * clients, which manage cookie-based storage internally and aren't
  * compatible with the getItem/setItem AuthStorageAdapter shape below).
- * apps/mobile uses createApiClient() instead, which builds the client too.
  */
 export function wrapSupabaseClient(supabase: SupabaseClient) {
   const auth = {

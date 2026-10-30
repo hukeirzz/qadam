@@ -3,11 +3,11 @@
   "private": true,
   "packageManager": "npm@11.6.2",
   "workspaces": [
-    "apps/*",
+    "school-web",
     "packages/*"
   ],
   "scripts": {
-    "dev:school-web": "npm run dev --workspace=apps/school-web",
+    "dev:school-web": "npm run dev --workspace=school-web",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck"
