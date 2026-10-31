@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ArrowRightIcon } from './icons';
-import { SubjectIcon, type SubjectTone } from './subject-icon';
+import { SubjectIcon } from './subject-icon';
 import { formatDate, pct, subjectLabel } from '@/lib/student-ui';
 import { plural } from './student-widgets';
 
@@ -23,8 +23,8 @@ export function outcome(done: { score: number; total: number }): 'perfect' | 'mi
 }
 
 const OUTCOME_UI = {
-  perfect: { tone: 'green' as SubjectTone, row: 'border-emerald-400 bg-emerald-50/50', chip: 'bg-emerald-100 text-emerald-800', badge: 'bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500', label: 'Без ошибок' },
-  mistakes: { tone: 'orange' as SubjectTone, row: 'border-orange-400 bg-orange-50/50', chip: 'bg-orange-100 text-orange-800', badge: 'bg-orange-50 text-orange-700', dot: 'bg-orange-500', label: 'Есть ошибки' },
+  perfect: { row: 'bg-emerald-50/50', chip: 'bg-emerald-100 text-emerald-800', badge: 'bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500', label: 'Без ошибок' },
+  mistakes: { row: 'bg-orange-50/50', chip: 'bg-orange-100 text-orange-800', badge: 'bg-orange-50 text-orange-700', dot: 'bg-orange-500', label: 'Есть ошибки' },
 };
 export const outcomeUI = (done: { score: number; total: number }) => OUTCOME_UI[outcome(done)];
 
@@ -43,9 +43,9 @@ export function TaskRow({ task }: { task: Task }) {
   const p = task.done ? pct(task.done.score, task.done.total) : null;
   const btn = 'flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-brand/40';
   return (
-    <li className={`rounded-lg border-l-4 ${ui ? ui.row : 'border-transparent'}`}>
+    <li className={`rounded-lg ${ui ? ui.row : ''}`}>
       <div className="flex items-center gap-4 px-3 py-3.5 sm:px-4">
-        <SubjectIcon id={task.subjectId} tone={ui?.tone} />
+        <SubjectIcon id={task.subjectId} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-slate-900">{task.topicTitle ?? task.title}</p>
           <p className="mt-0.5 truncate text-xs text-slate-500">
