@@ -2,49 +2,8 @@ import Link from 'next/link';
 import { getStudent, getServerApi } from '@/lib/auth';
 import { ArrowRightIcon, BoltIcon, CalendarIcon, CheckIcon, FileIcon } from '@/components/icons';
 import { StudentResultsList, type ResultItem } from '@/components/student-results-list';
-import { SubjectIcon } from '@/components/subject-icon';
+import { AccuracyCard, CARD, StatCard, TopicsCard, plural } from '@/components/student-widgets';
 import { formatDate, pct, subjectLabel } from '@/lib/student-ui';
-
-const CARD = 'rounded-2xl bg-white ring-1 ring-slate-200/70';
-
-function plural(n: number, one: string, few: string, many: string) {
-  const m10 = n % 10, m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return one;
-  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
-  return many;
-}
-
-/** Circular progress (SVG): neutral track + violet arc, percentage and caption in the middle. */
-function Ring({ value, size = 116 }: { value: number; size?: number }) {
-  const stroke = 11;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#eef0f4" strokeWidth={stroke} />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#6d28d9" strokeWidth={stroke} strokeLinecap="round"
-          strokeDasharray={c} strokeDashoffset={c * (1 - value / 100)} />
-      </svg>
-      <span className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-bold leading-none text-slate-800">{value}%</span>
-        <span className="mt-1 text-xs text-slate-400">средняя</span>
-      </span>
-    </div>
-  );
-}
-
-function StatCard({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) {
-  return (
-    <div className={`${CARD} flex min-w-0 items-center gap-3 px-4 py-3.5`}>
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-brand">{icon}</span>
-      <div className="min-w-0">
-        <p className="text-2xl font-bold leading-none text-slate-800">{value}</p>
-        <p className="mt-1 text-xs leading-tight text-slate-400">{label}</p>
-      </div>
-    </div>
-  );
-}
 
 export default async function StudentHome() {
   const { student } = await getStudent();
@@ -75,8 +34,7 @@ export default async function StudentHome() {
     const cur = bySubject.get(id) ?? { s: 0, t: 0 };
     bySubject.set(id, { s: cur.s + r.score, t: cur.t + r.total });
   }
-  const overall = pct(allS, allT);
-  const topicsDone = doneTopics.size;
+    const topicsDone = doneTopics.size;
 
   // One grid for the whole page so the right column's edges line up from top to bottom.
   // DOM order = mobile order (hero, task, stats, accuracy, results, topics); on lg it is placed explicitly.
@@ -129,22 +87,7 @@ export default async function StudentHome() {
           label={`${plural(results.length, 'пройденный', 'пройденных', 'пройденных')} ${plural(results.length, 'тест', 'теста', 'тестов')}`} />
       </div>
 
-      {/* Accuracy */}
-      <div className={`${CARD} p-5 lg:col-start-2 lg:row-start-2`}>
-        <h2 className="text-base font-bold text-slate-800">Моя точность</h2>
-        {allT > 0 ? (
-          <div className="mt-4 flex items-center gap-5">
-            <Ring value={overall} />
-            <span className="h-16 w-px bg-slate-100" />
-            <div className="text-sm text-slate-500">
-              <p className="font-semibold text-slate-800">{allS} верных из {allT}</p>
-              <p className="mt-0.5">в {results.length} {plural(results.length, 'тесте', 'тестах', 'тестах')}</p>
-            </div>
-          </div>
-        ) : (
-          <p className="mt-3 text-sm text-slate-400">Пройди первый тест — здесь появится твоя точность.</p>
-        )}
-      </div>
+      <AccuracyCard score={allS} total={allT} tests={results.length} className="lg:col-start-2 lg:row-start-2" />
 
       {/* Recent results */}
       <section className="lg:col-start-1 lg:row-start-3">
@@ -159,31 +102,7 @@ export default async function StudentHome() {
         <StudentResultsList items={items} />
       </section>
 
-      {/* My topics */}
-      {bySubject.size > 0 && (
-        <section className={`${CARD} p-5 lg:col-start-2 lg:row-start-3 lg:self-start`}>
-          <h2 className="text-base font-bold text-slate-800">Мои темы</h2>
-          <ul className="mt-4 space-y-5">
-            {[...bySubject.entries()].map(([id, v]) => {
-              const p = pct(v.s, v.t);
-              return (
-                <li key={id} className="flex items-center gap-3">
-                  <SubjectIcon id={id} tone="violet" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <p className="truncate text-sm font-semibold text-slate-800">{subjectLabel(id)}</p>
-                      <span className="text-xs font-medium text-slate-500">{p}%</span>
-                    </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
-                      <div className="h-full rounded-full bg-brand" style={{ width: `${p}%` }} />
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
+      <TopicsCard bySubject={bySubject} className="lg:col-start-2 lg:row-start-3 lg:self-start" />
     </div>
   );
 }
