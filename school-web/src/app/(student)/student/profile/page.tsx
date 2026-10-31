@@ -24,7 +24,7 @@ export default async function StudentProfilePage() {
   return (
     <div className="grid gap-5 md:grid-cols-[320px_minmax(0,1fr)] md:items-start md:gap-x-6">
       <div className={`${CARD} flex flex-col items-center px-6 py-8 text-center`}>
-        <span className="flex h-20 w-20 items-center justify-center rounded-2xl bg-brand text-2xl font-bold text-white">{initials}</span>
+        <span className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 text-2xl font-bold text-white shadow-md shadow-violet-500/30">{initials}</span>
         <h1 className="mt-4 text-xl font-bold tracking-tight text-slate-900">{student!.name}</h1>
         {student!.classLabel && (
           <span className="mt-2 inline-block rounded-md bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700">{student!.classLabel} класс</span>
