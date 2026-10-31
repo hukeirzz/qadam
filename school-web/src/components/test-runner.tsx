@@ -51,7 +51,7 @@ export function TestRunner({
   if (done) {
     const p = pct(score, qs.length);
     return (
-      <div className="rounded-3xl bg-white p-8 text-center shadow-sm shadow-slate-200/60 ring-1 ring-slate-100">
+      <div className="rounded-2xl bg-white p-8 text-center ring-1 ring-slate-200/70">
         <span className={`mx-auto flex h-20 w-20 items-center justify-center rounded-full text-3xl font-bold ${pctTone(p).icon}`}>{p}%</span>
         <h1 className="mt-5 text-2xl font-bold text-slate-800">{p >= 70 ? 'Отличная работа!' : p >= 50 ? 'Хороший результат!' : 'Есть куда расти!'}</h1>
         <p className="mt-1.5 text-slate-500">Верных ответов: {score} из {qs.length}</p>
@@ -76,7 +76,7 @@ export function TestRunner({
         <span className="text-sm font-medium text-slate-500">{index + 1} / {qs.length}</span>
       </div>
 
-      <div className="rounded-3xl bg-white p-6 shadow-sm shadow-slate-200/60 ring-1 ring-slate-100">
+      <div className="rounded-2xl bg-white p-6 ring-1 ring-slate-200/70">
         <p className="text-lg font-semibold leading-snug text-slate-800">{q.text}</p>
 
         <div className="mt-5 space-y-2.5">
