@@ -5,11 +5,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createBrowserApi } from '@/lib/supabase/client';
-import { ChevronDownIcon, HomeIcon, LogoutIcon, ProfileIcon } from './icons';
+import { AnalyticsIcon, ChevronDownIcon, HomeIcon, LogoutIcon } from './icons';
 
 const TABS = [
   { href: '/student', label: 'Главная', Icon: HomeIcon },
-  { href: '/student/profile', label: 'Профиль', Icon: ProfileIcon },
+  { href: '/student/profile', label: 'Профиль', Icon: AnalyticsIcon },
 ];
 
 function initials(name: string) {
@@ -41,9 +41,11 @@ export function StudentShell({
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(1200px_500px_at_50%_-100px,#ece8ff_0%,transparent_70%),linear-gradient(180deg,#f8f7ff_0%,#fbfbfe_45%,#ffffff_100%)]">
-      <header className="sticky top-0 z-30 border-b border-slate-100/80 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3.5 sm:px-8 sm:py-4">
+    <div className="relative min-h-screen overflow-x-clip bg-[linear-gradient(180deg,#f8f7ff_0%,#fbfaff_50%,#ffffff_100%)]">
+      <span aria-hidden className="pointer-events-none absolute -right-40 -top-56 h-[620px] w-[620px] rounded-full bg-[radial-gradient(circle,#e6e0ff_0%,rgba(230,224,255,0)_68%)]" />
+      <span aria-hidden className="pointer-events-none absolute right-[18%] top-24 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,#efeaff_0%,rgba(239,234,255,0)_70%)]" />
+      <header className="sticky top-0 z-30 bg-white/60 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3.5 sm:px-8 sm:py-4">
           <Link href="/student" className="flex items-center gap-2.5">
             <Image src="/logo_qadam.png" alt="Qadam" width={32} height={32} className="h-8 w-8 object-contain" />
             <span className="text-xl font-bold tracking-tight text-slate-800">Qadam</span>
@@ -53,7 +55,7 @@ export function StudentShell({
             {TABS.map(({ href, label, Icon }) => (
               <Link key={href} href={href}
                 className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
-                  isActive(href) ? 'bg-violet-50 text-brand' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}>
+                  isActive(href) ? 'bg-violet-100/70 text-brand' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}>
                 <Icon className="h-[18px] w-[18px]" /> {label}
               </Link>
             ))}
@@ -83,7 +85,7 @@ export function StudentShell({
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-5 pb-28 pt-7 sm:px-8 sm:pb-14 sm:pt-10">{children}</main>
+      <main className="relative mx-auto max-w-7xl px-5 pb-28 pt-7 sm:px-8 sm:pb-14 sm:pt-10">{children}</main>
 
       {/* Bottom tab bar — mobile only */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-100 bg-white/95 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur sm:hidden">
