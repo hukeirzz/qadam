@@ -4,6 +4,7 @@ import { getStudent, getServerApi } from '@/lib/auth';
 import { loadStudentData } from '@/lib/student-data';
 import { TestRunner } from '@/components/test-runner';
 import { outcomeUI } from '@/components/student-tasks';
+import { topicWithLevel } from '@/lib/levels';
 import { formatDate, formatDuration, pct, subjectLabel } from '@/lib/student-ui';
 
 export default async function StudentTestPage({
@@ -13,10 +14,10 @@ export default async function StudentTestPage({
   const { retake } = await searchParams;
   const { student } = await getStudent();
   const api = await getServerApi();
-  const [test, { results, retakes }] = await Promise.all([api.studentData.test(id), loadStudentData(student!.id)]);
+  const [test, { results, retakes, topicTitles }] = await Promise.all([api.studentData.test(id), loadStudentData(student!.id)]);
   if (!test) notFound();
 
-  const title = test.title;
+  const title = test.topic_id && topicTitles[test.topic_id] ? topicWithLevel(topicTitles[test.topic_id], test.level) : test.title;
   const subtitle = `${subjectLabel(test.subject_id)} · Тест`;
   const first = results.find((r) => r.test_id === id);
   const attempts = retakes.filter((r) => r.test_id === id);

@@ -540,13 +540,13 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       const { data } = await supabase
         .from('school_tests')
         .select(
-          'id, title, description, level, subject_id, ' +
+          'id, title, description, level, subject_id, topic_id, ' +
             'school_test_questions(id, order_num, text, explanation, school_test_options(id, order_num, text, is_correct))',
         )
         .eq('id', testId)
         .single();
       return (data ?? null) as unknown as {
-        id: string; title: string; description: string | null; level: TestLevel; subject_id: string | null;
+        id: string; title: string; description: string | null; level: TestLevel; subject_id: string | null; topic_id: string | null;
         school_test_questions: {
           id: string; order_num: number; text: string; explanation: string | null;
           school_test_options: { id: string; order_num: number; text: string; is_correct: boolean }[];

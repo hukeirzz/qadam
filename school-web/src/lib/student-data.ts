@@ -1,6 +1,7 @@
 import { cache } from 'react';
 import { getServerApi } from './auth';
 import type { Task } from '@/components/student-tasks';
+import { topicWithLevel } from './levels';
 
 /**
  * Everything the student screens need, from real data only:
@@ -26,7 +27,7 @@ export const loadStudentData = cache(async (studentId: string) => {
       id: t.id,
       title: t.title,
       subjectId: t.subject_id,
-      topicTitle: t.topic_id ? topicTitles[t.topic_id] ?? null : null,
+      topicTitle: t.topic_id && topicTitles[t.topic_id] ? topicWithLevel(topicTitles[t.topic_id], t.level) : null,
       questionCount: t.question_count,
       createdAt: t.created_at,
       done: r ? { score: r.score, total: r.total, at: r.created_at } : null,

@@ -6,6 +6,7 @@ import { SparkleIcon } from '@/components/icons';
 import { createBrowserApi } from '@/lib/supabase/client';
 import * as agg from '@/lib/aggregate';
 import { TEST_LEVELS, type TestLevel } from '@qadam/api-client';
+import { topicWithLevel } from '@/lib/levels';
 
 type Topic = { id: string; subject_id: string; title: string; order_num: number };
 type ClassRow = { id: string; name: string };
@@ -52,7 +53,7 @@ export function TestBuilder({
   const [error, setError] = useState<string | null>(null);
 
   const sectionTopics = topicsFor(level).filter((t) => t.subject_id === subjectId);
-  const topicTitle = topics.find((t) => t.id === topicId)?.title ?? '';
+  const topicTitle = topicWithLevel(topics.find((t) => t.id === topicId)?.title ?? '', level);
   const sections = sectionsFor(level);
   const subjectName = sections.find((s) => s.id === subjectId)?.name ?? '';
 
@@ -185,7 +186,7 @@ export function TestBuilder({
               <label className="text-sm font-medium text-slate-600">Тема</label>
               <select value={topicId} onChange={(e) => setTopicId(e.target.value)}
                 className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-brand">
-                {sectionTopics.map((t) => (<option key={t.id} value={t.id}>{t.title}</option>))}
+                {sectionTopics.map((t) => (<option key={t.id} value={t.id}>{topicWithLevel(t.title, level)}</option>))}
               </select>
             </div>
           </div>

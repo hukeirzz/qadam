@@ -177,6 +177,7 @@ export function scoreBuckets(totals: number[]) {
 }
 
 export type TestLevelId = 'basic' | 'medium' | 'high';
+import { topicWithLevel } from './levels';
 export type LevelHeatmapGroup = { id: string; label: string; topics: { title: string; acc: number | null; tests: number }[] };
 
 /**
@@ -202,7 +203,7 @@ export function levelHeatmap(
   for (const t of [...topics].filter((x) => inLevel.has(x.id)).sort((a, b) => a.order_num - b.order_num)) {
     if (!by.has(t.subject_id)) by.set(t.subject_id, { id: t.subject_id, label: SUBJECT_LABELS[t.subject_id] ?? t.subject_id, topics: [] });
     const v = acc.get(t.id);
-    by.get(t.subject_id)!.topics.push({ title: t.title, acc: v && v.t ? Math.round((100 * v.s) / v.t) : null, tests: v?.n ?? 0 });
+    by.get(t.subject_id)!.topics.push({ title: topicWithLevel(t.title, level), acc: v && v.t ? Math.round((100 * v.s) / v.t) : null, tests: v?.n ?? 0 });
   }
   return [...by.values()].sort((a, b) => a.id.localeCompare(b.id));
 }
