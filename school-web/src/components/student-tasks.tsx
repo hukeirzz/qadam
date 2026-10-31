@@ -37,14 +37,14 @@ export function StatusBadge({ done }: { done: Task['done'] }) {
   );
 }
 
-/** One assigned test: title, topic, size, status and the primary action. Whole row is a single link. */
+/** One assigned test: title, topic, size, status. The row itself is static — only the button opens the test. */
 export function TaskRow({ task }: { task: Task }) {
   const ui = task.done ? outcomeUI(task.done) : null;
   const p = task.done ? pct(task.done.score, task.done.total) : null;
+  const btn = 'flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-brand/40';
   return (
     <li className={`rounded-lg border-l-4 ${ui ? ui.row : 'border-transparent'}`}>
-      <Link href={`/student/tests/${task.id}`}
-        className="group flex items-center gap-4 rounded-lg px-3 py-3.5 outline-none transition hover:bg-slate-50/70 focus-visible:ring-2 focus-visible:ring-brand/40 sm:px-4">
+      <div className="flex items-center gap-4 px-3 py-3.5 sm:px-4">
         <SubjectIcon id={task.subjectId} tone={ui?.tone} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-slate-900">{task.topicTitle ?? task.title}</p>
@@ -59,17 +59,20 @@ export function TaskRow({ task }: { task: Task }) {
             </span>
           </div>
         </div>
-        {task.done && ui ? (
+        {task.done && ui && (
           <div className="text-right">
             <span className={`inline-block rounded-md px-2.5 py-1 text-sm font-semibold ${ui.chip}`}>{task.done.score}/{task.done.total}</span>
             <p className="mt-1 text-xs text-slate-400">{p}%</p>
           </div>
-        ) : (
-          <span className="flex shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3.5 py-2 text-sm font-medium text-white transition group-hover:bg-brand-hover">
-            Начать <ArrowRightIcon className="h-4 w-4" />
-          </span>
         )}
-      </Link>
+        {task.done ? (
+          <Link href={`/student/tests/${task.id}`} className={`${btn} text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50`}>Результат</Link>
+        ) : (
+          <Link href={`/student/tests/${task.id}`} className={`${btn} bg-brand text-white hover:bg-brand-hover`}>
+            Начать <ArrowRightIcon className="h-4 w-4" />
+          </Link>
+        )}
+      </div>
     </li>
   );
 }
