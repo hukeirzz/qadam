@@ -13,13 +13,6 @@ export function formatDate(iso: string) {
 
 export const pct = (score: number, total: number) => (total ? Math.round((100 * score) / total) : 0);
 
-/** Badge colours by percentage: ≥70 green, ≥50 violet, below — amber. */
-export function pctTone(p: number) {
-  if (p >= 70) return { chip: 'bg-emerald-50 text-emerald-600', icon: 'bg-emerald-50 text-emerald-600' };
-  if (p >= 50) return { chip: 'bg-violet-50 text-violet-600', icon: 'bg-violet-50 text-violet-600' };
-  return { chip: 'bg-amber-50 text-amber-600', icon: 'bg-amber-50 text-amber-600' };
-}
-
 export function formatDuration(sec: number | null) {
   if (sec == null) return null;
   const m = Math.floor(sec / 60);

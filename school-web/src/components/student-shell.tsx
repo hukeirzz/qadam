@@ -5,12 +5,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createBrowserApi } from '@/lib/supabase/client';
-import { AnalyticsIcon, ChevronDownIcon, FileIcon, HomeIcon, LogoutIcon, ProfileIcon } from './icons';
+import { AnalyticsIcon, ChevronDownIcon, HomeIcon, LogoutIcon, ProfileIcon } from './icons';
 
 const TABS = [
   { href: '/student', label: 'Главная', Icon: HomeIcon },
-  { href: '/student/tasks', label: 'Задания', Icon: FileIcon },
-  { href: '/student/results', label: 'Результаты', Icon: AnalyticsIcon },
+  { href: '/student/progress', label: 'Успеваемость', Icon: AnalyticsIcon },
 ];
 
 function initials(name: string) {
@@ -34,8 +33,8 @@ export function StudentShell({
   }, []);
 
   const isActive = (href: string) => (href === '/student' ? pathname === href : pathname.startsWith(href));
-  // Test pages belong to the "Задания" section.
-  const sectionActive = (href: string) => (href === '/student/tasks' ? isActive(href) || pathname.startsWith('/student/tests') : isActive(href));
+  // Test pages belong to the home section (that is where tasks and history live).
+  const sectionActive = (href: string) => (href === '/student' ? pathname === href || pathname.startsWith('/student/tests') : isActive(href));
 
   async function logout() {
     await createBrowserApi().auth.signOut();
@@ -94,7 +93,7 @@ export function StudentShell({
 
       {/* Bottom tab bar — mobile only */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom,0px)] backdrop-blur sm:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-3">
+        <div className="mx-auto grid max-w-md grid-cols-2">
           {TABS.map(({ href, label, Icon }) => (
             <Link key={href} href={href} aria-current={sectionActive(href) ? 'page' : undefined}
               className={`flex flex-col items-center gap-1 py-3 text-xs font-medium ${sectionActive(href) ? 'text-brand' : 'text-slate-500'}`}>

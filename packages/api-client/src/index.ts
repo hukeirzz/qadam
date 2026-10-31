@@ -554,7 +554,25 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       } | null;
     },
 
-    /** One attempt per test (unique test_id+student_id); total/score are re-checked by a DB trigger. */
+    /** Later attempts. Kept apart from school_test_results so they never reach any analytics. */
+    async retakes(studentId: string) {
+      const { data } = await supabase
+        .from('school_test_retakes')
+        .select('test_id, score, total, duration_seconds, created_at')
+        .eq('student_id', studentId)
+        .order('created_at', { ascending: false });
+      return (data ?? []) as { test_id: string; score: number; total: number; duration_seconds: number | null; created_at: string }[];
+    },
+
+    /** Only allowed by RLS after the first attempt exists; total/score are re-checked by a DB trigger. */
+    async submitRetake(testId: string, studentId: string, score: number, durationSeconds: number) {
+      const { error } = await supabase.from('school_test_retakes').insert({
+        test_id: testId, student_id: studentId, score, total: 0, duration_seconds: durationSeconds,
+      });
+      return { error };
+    },
+
+    /** First attempt (unique test_id+student_id) — the only one analytics use. total/score are re-checked by a DB trigger. */
     async submitResult(testId: string, studentId: string, score: number, durationSeconds: number) {
       const { error } = await supabase.from('school_test_results').insert({
         test_id: testId, student_id: studentId, score, total: 0, duration_seconds: durationSeconds,

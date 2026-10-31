@@ -1,7 +1,5 @@
-import Link from 'next/link';
 import { getStudent } from '@/lib/auth';
 import { loadStudentData } from '@/lib/student-data';
-import { ArrowRightIcon } from '@/components/icons';
 import { CARD, plural } from '@/components/student-widgets';
 import { EmptyState, TaskList } from '@/components/student-tasks';
 
@@ -10,11 +8,11 @@ export default async function StudentHome() {
   const { tasks } = await loadStudentData(student!.id);
 
   const pending = tasks.filter((t) => !t.done);
-  const done = tasks.length - pending.length;
-  const progress = tasks.length ? Math.round((100 * done) / tasks.length) : 0;
-  // Pending first (oldest = the one to do next), then the latest completed ones.
+  const completed = tasks.filter((t) => t.done).sort((a, b) => b.done!.at.localeCompare(a.done!.at));
+  const perfect = completed.filter((t) => t.done!.score === t.done!.total).length;
+  const progress = tasks.length ? Math.round((100 * completed.length) / tasks.length) : 0;
+  // Oldest assignment first — that's the one to do next.
   const pendingOrdered = [...pending].reverse();
-  const featured = [...pendingOrdered, ...tasks.filter((t) => t.done)].slice(0, 5);
   const firstName = student!.name.split(/\s+/)[0];
 
   return (
@@ -29,13 +27,13 @@ export default async function StudentHome() {
       </section>
 
       {/* Summary */}
-      <aside className={`${CARD} p-5 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start`} aria-label="Сводка по заданиям">
+      <aside className={`${CARD} p-5 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:self-start`} aria-label="Сводка по заданиям">
         <h2 className="text-sm font-semibold text-slate-900">Задания</h2>
         <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
           {[
             { label: 'Назначено', value: tasks.length },
             { label: 'К выполнению', value: pending.length },
-            { label: 'Завершено', value: done },
+            { label: 'Решено', value: completed.length },
           ].map((s) => (
             <div key={s.label} className="rounded-lg bg-slate-50 px-1 py-3">
               <dd className="text-xl font-semibold text-slate-900">{s.value}</dd>
@@ -53,18 +51,24 @@ export default async function StudentHome() {
             </div>
           </div>
         )}
+        {completed.length > 0 && (
+          <p className="mt-4 flex items-center gap-2 text-xs text-slate-500">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden /> без ошибок: {perfect}
+            <span className="ml-2 h-2 w-2 rounded-full bg-orange-500" aria-hidden /> с ошибками: {completed.length - perfect}
+          </p>
+        )}
       </aside>
 
-      <section className="lg:col-start-1 lg:row-start-2">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-900">Актуальные задания</h2>
-          {tasks.length > 0 && (
-            <Link href="/student/tasks" className="flex items-center gap-1 text-sm font-medium text-brand hover:text-brand-hover">
-              Все задания <ArrowRightIcon className="h-4 w-4" />
-            </Link>
-          )}
-        </div>
-        <TaskList tasks={featured} empty={<EmptyState title="Пока нет назначенных заданий" text="Когда учитель отправит тест, он появится здесь." />} />
+      <section className="lg:col-start-1 lg:row-start-2" aria-labelledby="actual">
+        <h2 id="actual" className="mb-3 text-sm font-semibold text-slate-900">Актуальные задания</h2>
+        <TaskList tasks={pendingOrdered}
+          empty={<EmptyState title={tasks.length ? 'Невыполненных заданий нет' : 'Пока нет назначенных заданий'}
+            text={tasks.length ? undefined : 'Когда учитель отправит тест, он появится здесь.'} />} />
+      </section>
+
+      <section className="lg:col-start-1 lg:row-start-3" aria-labelledby="history">
+        <h2 id="history" className="mb-3 text-sm font-semibold text-slate-900">История тестов</h2>
+        <TaskList tasks={completed} empty={<EmptyState title="Решённых тестов пока нет" text="После первого решённого теста он появится здесь." />} />
       </section>
     </div>
   );

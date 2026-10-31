@@ -5,14 +5,15 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createBrowserApi } from '@/lib/supabase/client';
 import { CheckIcon } from './icons';
-import { pct, pctTone } from '@/lib/student-ui';
+import { pct } from '@/lib/student-ui';
+import { outcome } from './student-tasks';
 
 type Option = { id: string; order_num: number; text: string; is_correct: boolean };
 type Question = { id: string; order_num: number; text: string; explanation: string | null; school_test_options: Option[] };
 
 export function TestRunner({
-  testId, studentId, title, subtitle, questions,
-}: { testId: string; studentId: string; title: string; subtitle: string; questions: Question[] }) {
+  testId, studentId, title, subtitle, questions, retake = false,
+}: { testId: string; studentId: string; title: string; subtitle: string; questions: Question[]; retake?: boolean }) {
   const router = useRouter();
   const qs = useMemo(
     () => [...questions].sort((a, b) => a.order_num - b.order_num)
@@ -41,7 +42,8 @@ export function TestRunner({
     if (!last) { setIndex((i) => i + 1); setPicked(null); return; }
     setSaving(true); setError(null);
     const seconds = Math.round((Date.now() - startedAt.current) / 1000);
-    const { error: err } = await createBrowserApi().studentData.submitResult(testId, studentId, score, seconds);
+    const api = createBrowserApi().studentData;
+    const { error: err } = retake ? await api.submitRetake(testId, studentId, score, seconds) : await api.submitResult(testId, studentId, score, seconds);
     setSaving(false);
     if (err) { setError('Не удалось сохранить результат. Попробуйте ещё раз.'); return; }
     setDone(true);
@@ -50,13 +52,15 @@ export function TestRunner({
 
   if (done) {
     const p = pct(score, qs.length);
+    const perfect = outcome({ score, total: qs.length }) === 'perfect';
     return (
       <div className="rounded-xl bg-white p-8 text-center ring-1 ring-slate-200/70">
-        <span className={`mx-auto flex h-20 w-20 items-center justify-center rounded-full text-3xl font-bold ${pctTone(p).icon}`}>{p}%</span>
-        <h1 className="mt-5 text-2xl font-bold text-slate-800">{p >= 70 ? 'Отличная работа!' : p >= 50 ? 'Хороший результат!' : 'Есть куда расти!'}</h1>
+        <span className={`mx-auto flex h-20 w-20 items-center justify-center rounded-full text-3xl font-bold ${perfect ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>{p}%</span>
+        <h1 className="mt-5 text-2xl font-bold text-slate-800">{perfect ? 'Без ошибок!' : p >= 50 ? 'Хороший результат!' : 'Есть куда расти!'}</h1>
         <p className="mt-1.5 text-slate-500">Верных ответов: {score} из {qs.length}</p>
-        <Link href="/student/tasks" className="mt-7 inline-block rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover">
-          К заданиям
+        {retake && <p className="mx-auto mt-3 max-w-sm text-sm text-slate-400">Это пересдача — на аналитику она не влияет, учитывается только первая сдача.</p>}
+        <Link href="/student" className="mt-7 inline-block rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover">
+          На главную
         </Link>
       </div>
     );
@@ -65,7 +69,7 @@ export function TestRunner({
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-sm text-slate-400">{subtitle}</p>
+        <p className="text-sm text-slate-400">{subtitle}{retake ? ' · пересдача' : ''}</p>
         <h1 className="text-2xl font-bold tracking-tight text-slate-800">{title}</h1>
       </div>
 
