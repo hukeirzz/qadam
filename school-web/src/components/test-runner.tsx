@@ -51,12 +51,12 @@ export function TestRunner({
   if (done) {
     const p = pct(score, qs.length);
     return (
-      <div className="rounded-2xl bg-white p-8 text-center ring-1 ring-slate-200/70">
+      <div className="rounded-xl bg-white p-8 text-center ring-1 ring-slate-200/70">
         <span className={`mx-auto flex h-20 w-20 items-center justify-center rounded-full text-3xl font-bold ${pctTone(p).icon}`}>{p}%</span>
         <h1 className="mt-5 text-2xl font-bold text-slate-800">{p >= 70 ? 'Отличная работа!' : p >= 50 ? 'Хороший результат!' : 'Есть куда расти!'}</h1>
         <p className="mt-1.5 text-slate-500">Верных ответов: {score} из {qs.length}</p>
-        <Link href="/student" className="mt-7 inline-block rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover">
-          На главную
+        <Link href="/student/tasks" className="mt-7 inline-block rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover">
+          К заданиям
         </Link>
       </div>
     );
@@ -76,7 +76,7 @@ export function TestRunner({
         <span className="text-sm font-medium text-slate-500">{index + 1} / {qs.length}</span>
       </div>
 
-      <div className="rounded-2xl bg-white p-6 ring-1 ring-slate-200/70">
+      <div className="rounded-xl bg-white p-6 ring-1 ring-slate-200/70">
         <p className="text-lg font-semibold leading-snug text-slate-800">{q.text}</p>
 
         <div className="mt-5 space-y-2.5">
@@ -89,7 +89,7 @@ export function TestRunner({
               : chosen ? 'border-red-300 bg-red-50' : 'border-slate-100 opacity-60';
             return (
               <button key={o.id} onClick={() => pick(o)} disabled={answered}
-                className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3.5 text-left text-sm font-medium text-slate-700 transition ${tone}`}>
+                className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3.5 text-left text-sm font-medium text-slate-700 transition ${tone}`}>
                 <span className="flex-1">{o.text}</span>
                 {show && o.is_correct && <CheckIcon className="h-5 w-5 text-emerald-600" />}
               </button>
@@ -98,7 +98,7 @@ export function TestRunner({
         </div>
 
         {answered && q.explanation && (
-          <p className="mt-5 rounded-2xl bg-violet-50 px-4 py-3 text-sm leading-relaxed text-slate-600">
+          <p className="mt-5 rounded-xl bg-violet-50 px-4 py-3 text-sm leading-relaxed text-slate-600">
             <span className="font-semibold text-violet-700">Пояснение: </span>{q.explanation}
           </p>
         )}
@@ -107,7 +107,7 @@ export function TestRunner({
       {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
 
       <button onClick={next} disabled={!answered || saving}
-        className="w-full rounded-2xl bg-brand px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-40">
+        className="w-full rounded-xl bg-brand px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-40">
         {saving ? 'Сохраняем…' : last ? 'Завершить' : 'Дальше'}
       </button>
     </div>

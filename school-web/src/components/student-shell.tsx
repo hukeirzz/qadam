@@ -5,11 +5,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createBrowserApi } from '@/lib/supabase/client';
-import { AnalyticsIcon, ChevronDownIcon, HomeIcon, LogoutIcon } from './icons';
+import { AnalyticsIcon, ChevronDownIcon, FileIcon, HomeIcon, LogoutIcon, ProfileIcon } from './icons';
 
 const TABS = [
   { href: '/student', label: 'Главная', Icon: HomeIcon },
-  { href: '/student/profile', label: 'Профиль', Icon: AnalyticsIcon },
+  { href: '/student/tasks', label: 'Задания', Icon: FileIcon },
+  { href: '/student/results', label: 'Результаты', Icon: AnalyticsIcon },
 ];
 
 function initials(name: string) {
@@ -33,6 +34,8 @@ export function StudentShell({
   }, []);
 
   const isActive = (href: string) => (href === '/student' ? pathname === href : pathname.startsWith(href));
+  // Test pages belong to the "Задания" section.
+  const sectionActive = (href: string) => (href === '/student/tasks' ? isActive(href) || pathname.startsWith('/student/tests') : isActive(href));
 
   async function logout() {
     await createBrowserApi().auth.signOut();
@@ -51,9 +54,9 @@ export function StudentShell({
 
           <nav className="hidden items-center gap-1.5 sm:flex">
             {TABS.map(({ href, label, Icon }) => (
-              <Link key={href} href={href}
+              <Link key={href} href={href} aria-current={sectionActive(href) ? 'page' : undefined}
                 className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition ${
-                  isActive(href) ? 'bg-violet-50 text-brand' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}>
+                  sectionActive(href) ? 'bg-violet-50 text-brand' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}>
                 <Icon className="h-[18px] w-[18px]" /> {label}
               </Link>
             ))}
@@ -73,6 +76,10 @@ export function StudentShell({
                   <p className="truncate text-sm font-semibold text-slate-800">{name}</p>
                   <p className="truncate text-xs text-slate-400">{email}</p>
                 </div>
+                <Link href="/student/profile" onClick={() => setOpen(false)}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50">
+                  <ProfileIcon className="h-[18px] w-[18px]" /> Профиль
+                </Link>
                 <button onClick={logout}
                   className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50">
                   <LogoutIcon className="h-[18px] w-[18px]" /> Выйти
@@ -87,10 +94,10 @@ export function StudentShell({
 
       {/* Bottom tab bar — mobile only */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom,0px)] backdrop-blur sm:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-2">
+        <div className="mx-auto grid max-w-md grid-cols-3">
           {TABS.map(({ href, label, Icon }) => (
-            <Link key={href} href={href}
-              className={`flex flex-col items-center gap-1 py-3 text-xs font-medium ${isActive(href) ? 'text-brand' : 'text-slate-400'}`}>
+            <Link key={href} href={href} aria-current={sectionActive(href) ? 'page' : undefined}
+              className={`flex flex-col items-center gap-1 py-3 text-xs font-medium ${sectionActive(href) ? 'text-brand' : 'text-slate-500'}`}>
               <Icon className="h-6 w-6" /> {label}
             </Link>
           ))}
