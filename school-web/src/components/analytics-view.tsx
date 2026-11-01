@@ -79,17 +79,17 @@ export function AnalyticsView({
         <h1 className="text-2xl font-bold tracking-tight text-slate-800">Аналитика</h1>
       </header>
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        {KPI.map((s) => (
-          <div key={s.label} className="flex flex-col gap-2.5 rounded-2xl bg-white p-4 shadow-sm shadow-slate-200/50 ring-1 ring-slate-100 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        {KPI.map((s, i) => (
+          <div key={s.label} className="flex flex-col gap-2.5 rounded-2xl bg-white p-3.5 shadow-sm shadow-slate-200/50 ring-1 ring-slate-100 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
             <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${s.chip}`}><s.Icon className="h-5 w-5 sm:h-6 sm:w-6" /></span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold leading-tight text-slate-700">
+              <p className="text-xs font-semibold leading-tight text-slate-700 sm:text-sm">
                 {s.label}
-                {s.hint && <> <InfoHint text={s.hint} /></>}
+                {s.hint && <> <InfoHint text={s.hint} align={i % 2 === 1 ? 'end' : 'center'} /></>}
               </p>
             </div>
-            <p className={`text-2xl font-bold tracking-tight sm:text-3xl ${s.num}`}>{s.value}</p>
+            <p className={`text-xl font-bold tracking-tight sm:text-3xl ${s.num}`}>{s.value}</p>
           </div>
         ))}
       </div>
@@ -183,7 +183,26 @@ export function AnalyticsView({
         {topicRows.length === 0 ? (
           <p className="py-10 text-center text-sm text-slate-400">Пока нет результатов школьных тестов по темам.</p>
         ) : (
-          <div className="mt-4 overflow-x-auto">
+          <>
+            <ul className="mt-3 divide-y divide-slate-100 sm:hidden">
+              {shownTopics.map((t) => (
+                <li key={t.id} className="py-3">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="min-w-0 truncate text-sm font-medium text-slate-800">{t.title}</p>
+                    <span className="shrink-0 text-sm font-semibold text-slate-700">{t.acc}%</span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-3">
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-full rounded-full" style={{ width: `${t.acc}%`, background: topicColor(t.acc) }} />
+                    </div>
+                    <span className={`w-14 shrink-0 text-right text-xs font-semibold ${t.delta == null ? 'text-slate-400' : t.delta >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                      {t.delta == null ? '—' : `${t.delta >= 0 ? '↑ +' : '↓ −'}${Math.abs(t.delta)}%`}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          <div className="mt-4 hidden overflow-x-auto sm:block">
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs text-slate-400">
@@ -212,18 +231,43 @@ export function AnalyticsView({
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
 
       <Card>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold text-slate-800">Ученики, которым нужна помощь</h2>
             <p className="text-xs text-slate-400">Точность по школьным тестам ниже {HELP_BELOW}%</p>
           </div>
-          <Link href="/students" className="text-sm font-medium text-brand hover:text-brand-hover">Все ученики</Link>
+          <Link href="/students" className="shrink-0 whitespace-nowrap text-sm font-medium text-brand hover:text-brand-hover">Все ученики</Link>
         </div>
-        <div className="mt-4 overflow-x-auto">
+        <ul className="mt-3 divide-y divide-slate-100 sm:hidden">
+          {needHelp.length === 0 && <li className="py-8 text-center text-sm text-slate-400">Всё в норме — таких учеников нет 🎉</li>}
+          {needHelp.map(({ s, acc }) => {
+            const d = deltas.get(s.id);
+            const weakList = (weak.get(s.id) ?? []).join(', ');
+            return (
+              <li key={s.id} className="py-3">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[11px] font-semibold text-violet-700">{initials(s.name)}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-slate-800">{s.name}</p>
+                    <p className="text-xs text-slate-400">{clsName(s.class_id)}{latest.has(s.id) ? ` · ОРТ ${latest.get(s.id)}` : ''}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-red-500">{acc}%</p>
+                    <p className={`text-xs font-semibold ${d == null ? 'text-slate-400' : d >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{d == null ? '—' : `${d >= 0 ? '↑ +' : '↓ −'}${Math.abs(d)}`}</p>
+                  </div>
+                </div>
+                {weakList && <p className="mt-1.5 text-xs text-slate-500">Слабые темы: {weakList}</p>}
+                <Link href={`/students/${s.id}`} className="mt-2 inline-block rounded-lg bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700">Посмотреть</Link>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="mt-4 hidden overflow-x-auto sm:block">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs text-slate-400">

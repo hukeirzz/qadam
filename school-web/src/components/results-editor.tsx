@@ -300,6 +300,7 @@ export function ResultsEditor({
           <div>
             <h2 className="font-semibold text-slate-800">Сводная таблица пробных</h2>
             <p className="text-xs text-slate-400">Баллы по всем пробным · средний и прогресс (последний − первый)</p>
+            <p className="mt-1 text-[11px] text-slate-400 sm:hidden">Таблица листается вправо →</p>
           </div>
           <select value={summaryClass} onChange={(e) => setSummaryClass(e.target.value)}
             className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 outline-none transition focus:border-brand">

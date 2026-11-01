@@ -36,30 +36,46 @@ export function DashboardHome({
         <h1 className="text-2xl font-bold tracking-tight text-slate-800">Главная</h1>
       </header>
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        {STATS.map((s) => (
-          <div key={s.label} className="flex flex-col gap-2.5 rounded-2xl bg-white p-4 shadow-sm shadow-slate-200/50 ring-1 ring-slate-100 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        {STATS.map((s, i) => (
+          <div key={s.label} className="flex flex-col gap-2.5 rounded-2xl bg-white p-3.5 shadow-sm shadow-slate-200/50 ring-1 ring-slate-100 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
             <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${s.chip}`}><s.Icon className="h-5 w-5 sm:h-6 sm:w-6" /></span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold leading-tight text-slate-700">
+              <p className="text-xs font-semibold leading-tight text-slate-700 sm:text-sm">
                 {s.label}
-                {s.hint && <> <InfoHint text={s.hint} /></>}
+                {s.hint && <> <InfoHint text={s.hint} align={i % 2 === 1 ? 'end' : 'center'} /></>}
               </p>
             </div>
-            <p className={`text-2xl font-bold tracking-tight sm:text-3xl ${s.num}`}>{s.value}</p>
+            <p className={`text-xl font-bold tracking-tight sm:text-3xl ${s.num}`}>{s.value}</p>
           </div>
         ))}
       </div>
 
       <Card>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold text-slate-800">Ученики, которым нужна помощь</h2>
             <p className="text-xs text-slate-400">Точность по школьным тестам ниже {helpBelow}%</p>
           </div>
-          <Link href="/students" className="text-sm font-medium text-brand hover:text-brand-hover">Все ученики</Link>
+          <Link href="/students" className="shrink-0 whitespace-nowrap text-sm font-medium text-brand hover:text-brand-hover">Все ученики</Link>
         </div>
-        <div className="mt-4 overflow-x-auto">
+        <ul className="mt-3 divide-y divide-slate-100 sm:hidden">
+          {needHelp.length === 0 && <li className="py-8 text-center text-sm text-slate-400">Всё в норме — таких учеников нет 🎉</li>}
+          {needHelp.map((a) => (
+            <li key={a.id}>
+              <Link href={`/students/${a.id}`} className="flex items-center gap-3 py-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[11px] font-semibold text-violet-700">{initialsOf(a.name)}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-slate-800">{a.name}</p>
+                  <p className="text-xs text-slate-400">{a.cls}{a.mock != null ? ` · ОРТ ${a.mock}` : ''}</p>
+                </div>
+                <span className="text-sm font-semibold text-red-500">{a.accuracy}%</span>
+                <ChevronDownIcon className="h-4 w-4 shrink-0 -rotate-90 text-slate-300" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-4 hidden overflow-x-auto sm:block">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs text-slate-400">

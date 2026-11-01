@@ -45,11 +45,12 @@ export function SearchBox({ placeholder }: { placeholder: string }) {
 }
 
 export function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={`rounded-2xl bg-surface p-6 ring-1 ring-border ${className}`}>{children}</div>;
+  return <div className={`rounded-2xl bg-surface p-4 ring-1 ring-border sm:p-6 ${className}`}>{children}</div>;
 }
 
 /** Маленький «?» — подсказка по наведению или фокусу. */
-export function InfoHint({ text }: { text: string }) {
+/** `align="end"` right-aligns the tooltip to the "?" — use it for hints near the right edge of the screen. */
+export function InfoHint({ text, align = 'center' }: { text: string; align?: 'center' | 'end' }) {
   return (
     <span className="group relative inline-flex align-middle">
       <span
@@ -62,7 +63,7 @@ export function InfoHint({ text }: { text: string }) {
       </span>
       <span
         role="tooltip"
-        className="pointer-events-none absolute left-1/2 top-full z-10 mt-1.5 w-max max-w-[200px] -translate-x-1/2 rounded-lg bg-slate-800 px-2.5 py-1.5 text-xs font-normal leading-snug text-white opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-within:opacity-100"
+        className={`pointer-events-none absolute top-full z-10 mt-1.5 w-max max-w-[200px] ${align === 'end' ? 'right-0' : 'left-1/2 -translate-x-1/2'} rounded-lg bg-slate-800 px-2.5 py-1.5 text-xs font-normal leading-snug text-white opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-within:opacity-100`}
       >
         {text}
       </span>
