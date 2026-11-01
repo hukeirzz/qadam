@@ -32,7 +32,10 @@ export function LineChart({
     return () => ro.disconnect();
   }, []);
 
-  const W = cw || 640;
+  // Every exam keeps its own horizontal label: give each point at least 84px and let the chart
+  // scroll sideways on a narrow screen instead of dropping or overlapping labels.
+  const MIN_PER_POINT = 84;
+  const W = Math.max(cw || 640, values.length * MIN_PER_POINT + 48);
   const H = Math.round(Math.min(Math.max(W * 0.42, 160), 240));
   const padL = 34;
   const padR = 14;
@@ -52,16 +55,11 @@ export function LineChart({
 
   const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(f * max));
 
-  // On a narrow chart not every x label fits: show an evenly spaced subset (always the last one)
-  // and shorten long names, so labels never overlap.
-  const maxLabels = Math.max(2, Math.floor(plotW / 78));
-  const step = Math.ceil(n / maxLabels);
-  const show = (i: number) => i === n - 1 || (i % step === 0 && n - 1 - i >= step);
-  const short = (l: string) => (l.length > 12 ? `${l.slice(0, 11)}…` : l);
+  const short = (l: string) => (l.length > 13 ? `${l.slice(0, 12)}…` : l);
 
   return (
-    <div ref={ref} className="mt-4 w-full">
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} className="block" role="img" aria-label="График активности">
+    <div ref={ref} className="mt-4 w-full overflow-x-auto">
+    <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="block max-w-none" role="img" aria-label="График активности">
       <defs>
         <linearGradient id="lineFill" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#6d28d9" stopOpacity="0.16" />
@@ -94,7 +92,7 @@ export function LineChart({
       {values.map((v, i) => (
         <circle key={i} cx={x(i)} cy={y(v)} r="2.6" fill="#4f46e5" stroke="#fff" strokeWidth="1.4" />
       ))}
-      {labels.map((l, i) => show(i) && (
+      {labels.map((l, i) => (
         <text key={i} x={x(i)} y={H - 7} textAnchor={i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'} fontSize="11" fill="#9ca3af">
           {short(l)}
         </text>
