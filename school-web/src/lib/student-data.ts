@@ -21,6 +21,12 @@ export const loadStudentData = cache(async (studentId: string) => {
   for (const r of retakes) retakeCount.set(r.test_id, (retakeCount.get(r.test_id) ?? 0) + 1);
 
   const doneByTest = new Map(results.map((r) => [r.test_id, r]));
+  // Best attempt per test (first result + retakes) — used ONLY to colour the history, never for analytics.
+  const bestByTest = new Map<string, { score: number; total: number }>();
+  for (const r of [...results, ...retakes]) {
+    const cur = bestByTest.get(r.test_id);
+    if (!cur || r.total > 0 && r.score / r.total > cur.score / (cur.total || 1)) bestByTest.set(r.test_id, { score: r.score, total: r.total });
+  }
   const tasks: Task[] = tests.map((t) => {
     const r = doneByTest.get(t.id);
     return {
@@ -31,6 +37,7 @@ export const loadStudentData = cache(async (studentId: string) => {
       questionCount: t.question_count,
       createdAt: t.created_at,
       done: r ? { score: r.score, total: r.total, at: r.created_at } : null,
+      best: bestByTest.get(t.id) ?? null,
       retakes: retakeCount.get(t.id) ?? 0,
     };
   });

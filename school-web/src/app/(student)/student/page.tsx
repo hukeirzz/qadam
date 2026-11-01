@@ -9,7 +9,7 @@ export default async function StudentHome() {
 
   const pending = tasks.filter((t) => !t.done);
   const completed = tasks.filter((t) => t.done).sort((a, b) => b.done!.at.localeCompare(a.done!.at));
-  const perfect = completed.filter((t) => t.done!.score === t.done!.total).length;
+  const perfect = completed.filter((t) => { const b = t.best ?? t.done!; return b.score === b.total; }).length;
   const progress = tasks.length ? Math.round((100 * completed.length) / tasks.length) : 0;
   // Oldest assignment first — that's the one to do next.
   const pendingOrdered = [...pending].reverse();

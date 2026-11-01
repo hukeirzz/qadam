@@ -13,6 +13,8 @@ export type Task = {
   createdAt: string;
   /** First attempt (the one analytics use); null = not solved yet. */
   done: { score: number; total: number; at: string } | null;
+  /** Best attempt (first or a retake). Only colours the history; analytics use `done`. */
+  best: { score: number; total: number } | null;
   /** How many times the student re-took it (never counted anywhere). */
   retakes: number;
 };
@@ -28,7 +30,7 @@ const OUTCOME_UI = {
 };
 export const outcomeUI = (done: { score: number; total: number }) => OUTCOME_UI[outcome(done)];
 
-export function StatusBadge({ done }: { done: Task['done'] }) {
+export function StatusBadge({ done }: { done: { score: number; total: number } | null }) {
   const ui = done ? outcomeUI(done) : null;
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium ${ui ? ui.badge : 'bg-violet-50 text-violet-700'}`}>
@@ -39,8 +41,10 @@ export function StatusBadge({ done }: { done: Task['done'] }) {
 
 /** One assigned test: title, topic, size, status. The row itself is static — only the button opens the test. */
 export function TaskRow({ task }: { task: Task }) {
-  const ui = task.done ? outcomeUI(task.done) : null;
-  const p = task.done ? pct(task.done.score, task.done.total) : null;
+  const shown = task.best ?? task.done; // best attempt decides colour and the score chip
+  const ui = shown ? outcomeUI(shown) : null;
+  const p = shown ? pct(shown.score, shown.total) : null;
+  const improved = !!task.done && !!shown && shown.score > task.done.score;
   const btn = 'flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-brand/40';
   return (
     <li className={`rounded-lg ${ui ? ui.row : ''}`}>
@@ -52,16 +56,17 @@ export function TaskRow({ task }: { task: Task }) {
             {subjectLabel(task.subjectId)} · {task.questionCount} {plural(task.questionCount, 'вопрос', 'вопроса', 'вопросов')}
           </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <StatusBadge done={task.done} />
+            <StatusBadge done={shown} />
             <span className="text-xs text-slate-400">
               {task.done ? `Решён ${formatDate(task.done.at)}` : `Создан ${formatDate(task.createdAt)}`}
               {task.retakes > 0 ? ` · пересдач: ${task.retakes}` : ''}
+              {improved ? ` · первая сдача: ${task.done!.score}/${task.done!.total}` : ''}
             </span>
           </div>
         </div>
-        {task.done && ui && (
+        {shown && ui && (
           <div className="text-right">
-            <span className={`inline-block rounded-md px-2.5 py-1 text-sm font-semibold ${ui.chip}`}>{task.done.score}/{task.done.total}</span>
+            <span className={`inline-block rounded-md px-2.5 py-1 text-sm font-semibold ${ui.chip}`}>{shown.score}/{shown.total}</span>
             <p className="mt-1 text-xs text-slate-400">{p}%</p>
           </div>
         )}
