@@ -17,7 +17,7 @@ export function MockExamsCard({ mockHistory }: { mockHistory: { name: string; to
   const latest = mockHistory.at(-1)?.total ?? null;
   const progress = mockHistory.length >= 2 ? mockHistory.at(-1)!.total - mockHistory[0].total : null;
   return (
-    <Card>
+    <Card className="!p-4 sm:!p-6">
       <h2 className="font-semibold text-slate-800">Пробные ОРТ</h2>
       <p className="mt-1 text-xs text-slate-400">Баллы по пробным · пунктир — порог 110</p>
       {mockHistory.length === 0 ? (
@@ -48,7 +48,7 @@ export function MockExamsCard({ mockHistory }: { mockHistory: { name: string; to
 /** Тепловая карта точности по темам одного уровня (по результатам школьных тестов). */
 export function LevelHeatmapCard({ label, groups }: { label: string; groups: LevelHeatmapGroup[] }) {
   return (
-    <Card>
+    <Card className="!p-4 sm:!p-6">
       <h2 className="font-semibold text-slate-800">Тепловая карта · {label} уровень</h2>
       <p className="mt-1 text-xs text-slate-400">Точность по темам этого уровня — по результатам школьных тестов. Серые темы ещё не проходились.</p>
       {groups.length === 0 ? (

@@ -493,6 +493,22 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       return data[0] as { class_name: string; school_name: string };
     },
 
+    /** The student renames themselves (RLS: own row only). */
+    async updateName(userId: string, name: string) {
+      const { error } = await supabase.from('students').update({ name: name.trim() }).eq('id', userId);
+      return { error };
+    },
+
+    /**
+     * Moves the student to another class by its code. Goes through an RPC because a DB trigger
+     * forbids changing class/school directly — a code is the only way in.
+     */
+    async changeClass(code: string) {
+      const { data, error } = await supabase.rpc('change_class_by_code', { p_code: code });
+      const row = Array.isArray(data) ? (data[0] as { class_name: string; school_name: string } | undefined) : undefined;
+      return { data: row ?? null, error };
+    },
+
     async me(userId: string) {
       const { data } = await supabase
         .from('students')

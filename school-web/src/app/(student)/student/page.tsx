@@ -15,7 +15,7 @@ export default async function StudentHome() {
   const firstName = student!.name.split(/\s+/)[0];
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-x-8">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-x-8">
       <section className="lg:col-start-1 lg:row-start-1">
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Привет, {firstName}</h1>
         <p className="mt-1 text-sm text-slate-500">

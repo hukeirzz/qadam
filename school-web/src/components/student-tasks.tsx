@@ -39,44 +39,51 @@ export function StatusBadge({ done }: { done: { score: number; total: number } |
   );
 }
 
-/** One assigned test: title, topic, size, status. The row itself is static — only the button opens the test. */
+/**
+ * One assigned test: title, topic, size, status. The row itself is static — only the button opens the test.
+ * On a phone it stacks (info on top, score + button below) so nothing is squeezed or pushed off-screen.
+ */
 export function TaskRow({ task }: { task: Task }) {
   const shown = task.best ?? task.done; // best attempt decides colour and the score chip
   const ui = shown ? outcomeUI(shown) : null;
   const p = shown ? pct(shown.score, shown.total) : null;
   const improved = !!task.done && !!shown && shown.score > task.done.score;
-  const btn = 'flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-brand/40';
+  const btn = 'flex shrink-0 items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-brand/40';
   return (
-    <li className={`rounded-lg ${ui ? ui.row : ''}`}>
-      <div className="flex items-center gap-4 px-3 py-3.5 sm:px-4">
-        <SubjectIcon id={task.subjectId} />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-slate-900">{task.topicTitle ?? task.title}</p>
-          <p className="mt-0.5 truncate text-xs text-slate-500">
-            {subjectLabel(task.subjectId)} · {task.questionCount} {plural(task.questionCount, 'вопрос', 'вопроса', 'вопросов')}
-          </p>
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <StatusBadge done={shown} />
-            <span className="text-xs text-slate-400">
-              {task.done ? `Решён ${formatDate(task.done.at)}` : `Создан ${formatDate(task.createdAt)}`}
-              {task.retakes > 0 ? ` · пересдач: ${task.retakes}` : ''}
-              {improved ? ` · первая сдача: ${task.done!.score}/${task.done!.total}` : ''}
-            </span>
+    <li className={`min-w-0 rounded-lg ${ui ? ui.row : ''}`}>
+      <div className="flex flex-col gap-3 px-3 py-3.5 sm:flex-row sm:items-center sm:gap-4 sm:px-4">
+        <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center sm:gap-4">
+          <SubjectIcon id={task.subjectId} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-slate-900">{task.topicTitle ?? task.title}</p>
+            <p className="mt-0.5 truncate text-xs text-slate-500">
+              {subjectLabel(task.subjectId)} · {task.questionCount} {plural(task.questionCount, 'вопрос', 'вопроса', 'вопросов')}
+            </p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <StatusBadge done={shown} />
+              <span className="text-xs text-slate-400">
+                {task.done ? `Решён ${formatDate(task.done.at)}` : `Создан ${formatDate(task.createdAt)}`}
+                {task.retakes > 0 ? ` · пересдач: ${task.retakes}` : ''}
+                {improved ? ` · первая сдача: ${task.done!.score}/${task.done!.total}` : ''}
+              </span>
+            </div>
           </div>
         </div>
-        {shown && ui && (
-          <div className="text-right">
-            <span className={`inline-block rounded-md px-2.5 py-1 text-sm font-semibold ${ui.chip}`}>{shown.score}/{shown.total}</span>
-            <p className="mt-1 text-xs text-slate-400">{p}%</p>
-          </div>
-        )}
-        {task.done ? (
-          <Link href={`/student/tests/${task.id}`} className={`${btn} text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50`}>Результат</Link>
-        ) : (
-          <Link href={`/student/tests/${task.id}`} className={`${btn} bg-brand text-white hover:bg-brand-hover`}>
-            Начать <ArrowRightIcon className="h-4 w-4" />
-          </Link>
-        )}
+        <div className="flex items-center justify-between gap-3 sm:justify-end">
+          {shown && ui && (
+            <div className="flex items-baseline gap-2 sm:block sm:text-right">
+              <span className={`inline-block rounded-md px-2.5 py-1 text-sm font-semibold ${ui.chip}`}>{shown.score}/{shown.total}</span>
+              <p className="text-xs text-slate-400 sm:mt-1">{p}%</p>
+            </div>
+          )}
+          {task.done ? (
+            <Link href={`/student/tests/${task.id}`} className={`${btn} text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50`}>Результат</Link>
+          ) : (
+            <Link href={`/student/tests/${task.id}`} className={`${btn} w-full bg-brand text-white hover:bg-brand-hover sm:w-auto`}>
+              Начать <ArrowRightIcon className="h-4 w-4" />
+            </Link>
+          )}
+        </div>
       </div>
     </li>
   );
@@ -84,7 +91,7 @@ export function TaskRow({ task }: { task: Task }) {
 
 export function TaskList({ tasks, empty }: { tasks: Task[]; empty: React.ReactNode }) {
   if (tasks.length === 0) return <>{empty}</>;
-  return <ul className="space-y-1 rounded-xl bg-white p-1.5 ring-1 ring-slate-200/70">{tasks.map((t) => <TaskRow key={t.id} task={t} />)}</ul>;
+  return <ul className="min-w-0 space-y-1 rounded-xl bg-white p-1.5 ring-1 ring-slate-200/70">{tasks.map((t) => <TaskRow key={t.id} task={t} />)}</ul>;
 }
 
 export function EmptyState({ title, text }: { title: string; text?: string }) {
