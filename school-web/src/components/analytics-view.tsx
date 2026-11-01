@@ -241,7 +241,7 @@ export function AnalyticsView({
             <h2 className="font-semibold text-slate-800">Ученики, которым нужна помощь</h2>
             <p className="text-xs text-slate-400">Точность по школьным тестам ниже {HELP_BELOW}%</p>
           </div>
-          <Link href="/students" className="shrink-0 self-start whitespace-nowrap text-sm font-medium text-brand hover:text-brand-hover sm:self-auto">Все ученики →</Link>
+          <Link href="/students" className="shrink-0 self-start whitespace-nowrap text-sm font-medium text-brand hover:text-brand-hover sm:self-auto">Все ученики</Link>
         </div>
         <ul className="mt-3 divide-y divide-slate-100 sm:hidden">
           {needHelp.length === 0 && <li className="py-7 text-center"><p className="text-sm font-semibold text-slate-700">Всё в норме 🎉</p><p className="mt-1 text-xs text-slate-400">Учеников, которым нужна помощь, нет</p></li>}
