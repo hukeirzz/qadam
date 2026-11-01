@@ -4,7 +4,6 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui';
 import { KpiCard } from '@/components/kpi-card';
-import { topicWithLevel } from '@/lib/levels';
 import { plural } from '@/components/student-widgets';
 import { LineChart, DonutChart } from '@/components/charts';
 import { UsersIcon, GraduationIcon, WarningIcon, StarIcon } from '@/components/icons';
@@ -14,15 +13,7 @@ const THRESHOLD = 110;
 const MAX_SCORE = 245;
 const HELP_BELOW = 40; // точность по школьным тестам, % — ниже нужна помощь
 const TOP_ABOVE = 80; // точность, % — выше по всем темам
-const TOPICS_PREVIEW = 6;
 const WEAK_BELOW = 50; // тема считается слабой при точности ниже, %
-
-function topicColor(acc: number) {
-  if (acc >= 75) return '#22c55e';
-  if (acc >= 50) return '#6366f1';
-  if (acc >= 40) return '#f59e0b';
-  return '#ef4444';
-}
 
 function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
@@ -36,7 +27,6 @@ export function AnalyticsView({
   topicResults: agg.TestResultRow[];
 }) {
   const examsWithResults = exams.filter((e) => results.some((r) => r.exam_id === e.id));
-  const [showAllTopics, setShowAllTopics] = useState(false);
   const [examId, setExamId] = useState(examsWithResults[examsWithResults.length - 1]?.id ?? '');
 
   const avgMock = agg.schoolAvgMock(exams, results);
@@ -56,15 +46,6 @@ export function AnalyticsView({
     })
     .sort((a, b) => a.acc - b.acc);
 
-  const topicProgress = agg.topicTestProgress(topicResults);
-  const topicTitle = new Map(topics.map((t) => [t.id, t.title]));
-  const topicRows = [...topicProgress]
-    .flatMap(([key, v]) => {
-      const title = topicTitle.get(v.topicId);
-      return title ? [{ id: key, title: topicWithLevel(title, v.level), acc: v.acc, delta: v.delta }] : [];
-    })
-    .sort((a, b) => a.acc - b.acc);
-  const shownTopics = showAllTopics ? topicRows : topicRows.slice(0, TOPICS_PREVIEW);
 
   const examTotals = results.filter((r) => r.exam_id === examId).map((r) => r.total);
   const buckets = agg.scoreBuckets(examTotals);
@@ -162,73 +143,6 @@ export function AnalyticsView({
           )}
         </Card>
       </div>
-
-      <Card>
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-semibold text-slate-800">Успеваемость по темам</h2>
-            <p className="text-xs text-slate-400">Результаты школьных тестов по темам, от слабых к сильным · динамика — последний тест против предыдущего</p>
-          </div>
-          {topicRows.length > TOPICS_PREVIEW && (
-            <button onClick={() => setShowAllTopics((v) => !v)} className="text-sm font-medium text-brand hover:text-brand-hover">
-              {showAllTopics ? 'Свернуть' : 'Все темы →'}
-            </button>
-          )}
-        </div>
-        {topicRows.length === 0 ? (
-          <p className="py-10 text-center text-sm text-slate-400">Пока нет результатов школьных тестов по темам.</p>
-        ) : (
-          <>
-            <ul className="mt-3 divide-y divide-slate-100 sm:hidden">
-              {shownTopics.map((t) => (
-                <li key={t.id} className="py-3">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <p className="min-w-0 truncate text-sm font-medium text-slate-800">{t.title}</p>
-                    <span className="shrink-0 text-sm font-semibold text-slate-700">{t.acc}%</span>
-                  </div>
-                  <div className="mt-2 flex items-center gap-3">
-                    <div className="h-2 flex-1 overflow-hidden rounded-none bg-slate-100">
-                      <div className="h-full rounded-none" style={{ width: `${t.acc}%`, background: topicColor(t.acc) }} />
-                    </div>
-                    <span className={`w-14 shrink-0 text-right text-xs font-semibold ${t.delta == null ? 'text-slate-400' : t.delta >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                      {t.delta == null ? '—' : `${t.delta >= 0 ? '↑ +' : '↓ −'}${Math.abs(t.delta)}%`}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          <div className="mt-4 hidden overflow-x-auto sm:block">
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-xs text-slate-400">
-                  <th className="px-2 py-3 font-medium">Тема</th>
-                  <th className="px-2 py-3 font-medium">Процент правильных ответов</th>
-                  <th className="px-2 py-3 text-right font-medium">Динамика</th>
-                </tr>
-              </thead>
-              <tbody>
-                {shownTopics.map((t) => (
-                  <tr key={t.id} className="border-b border-slate-100 last:border-0">
-                    <td className="px-2 py-3.5 font-medium text-slate-800">{t.title}</td>
-                    <td className="px-2 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <div className="h-2 min-w-24 flex-1 overflow-hidden rounded-none bg-slate-100">
-                          <div className="h-full rounded-none" style={{ width: `${t.acc}%`, background: topicColor(t.acc) }} />
-                        </div>
-                        <span className="w-10 shrink-0 text-right font-medium text-slate-700">{t.acc}%</span>
-                      </div>
-                    </td>
-                    <td className={`whitespace-nowrap px-2 py-3.5 text-right text-xs font-semibold ${t.delta == null ? 'text-slate-400' : t.delta >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                      {t.delta == null ? '—' : `${t.delta >= 0 ? '↑ +' : '↓ −'}${Math.abs(t.delta)}%`}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          </>
-        )}
-      </Card>
 
       <Card>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">

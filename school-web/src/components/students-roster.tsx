@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui';
 import { SearchIcon, MoreIcon } from '@/components/icons';
-import { relDay, type Student, type ClassRow } from '@/lib/aggregate';
+import type { Student, ClassRow } from '@/lib/aggregate';
 
 function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
@@ -51,17 +51,14 @@ export function StudentsRoster({ students, classes }: { students: Student[]; cla
               <tr className="border-b border-slate-200 text-left text-xs text-slate-400">
                 <th className="px-2 py-3 font-medium sm:px-3">Ученик</th>
                 <th className="hidden px-2 py-3 font-medium sm:table-cell sm:px-3">Класс</th>
-                <th className="hidden px-3 py-3 font-medium md:table-cell">Последняя активность</th>
                 <th className="hidden px-3 py-3 md:table-cell" />
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
-                <tr><td colSpan={4} className="px-3 py-8 text-center text-sm text-slate-400">Ничего не найдено</td></tr>
+                <tr><td colSpan={3} className="px-3 py-8 text-center text-sm text-slate-400">Ничего не найдено</td></tr>
               )}
               {rows.map((s) => {
-                const last = relDay(s.last_activity);
-                const stale = /дней назад/.test(last) && parseInt(last) >= 5;
                 return (
                   <tr key={s.id} className="border-b border-slate-100 last:border-0">
                     <td className="px-2 py-3.5 sm:px-3">
@@ -74,7 +71,6 @@ export function StudentsRoster({ students, classes }: { students: Student[]; cla
                       </Link>
                     </td>
                     <td className="hidden px-2 py-3.5 text-slate-500 sm:table-cell sm:px-3">{clsName(s.class_id)}</td>
-                    <td className={`hidden px-3 py-3.5 md:table-cell ${stale ? 'text-red-500' : 'text-slate-500'}`}>{last}</td>
                     <td className="hidden px-3 py-3.5 md:table-cell">
                       <Link href={`/students/${s.id}`} className="text-slate-400 hover:text-slate-700" aria-label="Открыть профиль">
                         <MoreIcon className="h-5 w-5" />
