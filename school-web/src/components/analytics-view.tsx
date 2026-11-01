@@ -236,15 +236,15 @@ export function AnalyticsView({
       </Card>
 
       <Card>
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
           <div>
             <h2 className="font-semibold text-slate-800">Ученики, которым нужна помощь</h2>
             <p className="text-xs text-slate-400">Точность по школьным тестам ниже {HELP_BELOW}%</p>
           </div>
-          <Link href="/students" className="shrink-0 whitespace-nowrap text-sm font-medium text-brand hover:text-brand-hover">Все ученики</Link>
+          <Link href="/students" className="shrink-0 self-start whitespace-nowrap text-sm font-medium text-brand hover:text-brand-hover sm:self-auto">Все ученики →</Link>
         </div>
         <ul className="mt-3 divide-y divide-slate-100 sm:hidden">
-          {needHelp.length === 0 && <li className="py-8 text-center text-sm text-slate-400">Всё в норме — таких учеников нет 🎉</li>}
+          {needHelp.length === 0 && <li className="py-7 text-center"><p className="text-sm font-semibold text-slate-700">Всё в норме 🎉</p><p className="mt-1 text-xs text-slate-400">Учеников, которым нужна помощь, нет</p></li>}
           {needHelp.map(({ s, acc }) => {
             const d = deltas.get(s.id);
             const weakList = (weak.get(s.id) ?? []).join(', ');
