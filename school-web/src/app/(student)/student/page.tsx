@@ -25,23 +25,30 @@ export default async function StudentHome() {
         </p>
       </section>
 
-      {/* Summary: how many tests in total and how many are solved */}
-      <aside className={`${CARD} p-5 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:self-start`} aria-label="Сводка по тестам">
-        <h2 className="text-sm font-semibold text-slate-900">Мои тесты</h2>
-        <dl className="mt-4 grid grid-cols-2 gap-4">
-          <div>
-            <dd className="text-4xl font-semibold leading-none tracking-tight text-slate-900">{tasks.length}</dd>
-            <dt className="mt-2 text-sm text-slate-500">Всего тестов</dt>
-          </div>
-          <div className="border-l border-slate-100 pl-4">
-            <dd className="text-4xl font-semibold leading-none tracking-tight text-brand">{completed.length}</dd>
-            <dt className="mt-2 text-sm text-slate-500">Решено</dt>
-          </div>
+      {/* Summary */}
+      <aside className={`${CARD} p-5 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:self-start`} aria-label="Сводка по заданиям">
+        <h2 className="text-sm font-semibold text-slate-900">Задания</h2>
+        <dl className="mt-4 grid grid-cols-2 gap-2 text-center">
+          {[
+            { label: 'Назначено', value: tasks.length },
+            { label: 'Решено', value: completed.length },
+          ].map((s) => (
+            <div key={s.label} className="rounded-lg bg-slate-50 px-1 py-3">
+              <dd className="text-xl font-semibold text-slate-900">{s.value}</dd>
+              <dt className="mt-0.5 text-[11px] leading-tight text-slate-500">{s.label}</dt>
+            </div>
+          ))}
         </dl>
-        <div className="mt-5 h-2 overflow-hidden rounded-full bg-violet-100" role="progressbar" aria-label="Решено тестов"
-          aria-valuenow={completed.length} aria-valuemin={0} aria-valuemax={tasks.length}>
-          <div className="h-full rounded-full bg-brand transition-all" style={{ width: `${progress}%` }} />
-        </div>
+        {tasks.length > 0 && (
+          <div className="mt-4">
+            <div className="flex items-center justify-between text-xs text-slate-500">
+              <span>Выполнено</span><span className="font-medium text-slate-700">{progress}%</span>
+            </div>
+            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+              <div className="h-full rounded-full bg-brand" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+        )}
       </aside>
 
       <section className="lg:col-start-1 lg:row-start-2" aria-labelledby="actual">
