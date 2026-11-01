@@ -17,7 +17,7 @@ export default async function StudentHome() {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-x-8">
       <section className="lg:col-start-1 lg:row-start-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Привет, {firstName}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Привет, {firstName}! 👋</h1>
         <p className="mt-1 text-sm text-slate-500">
           {pending.length > 0
             ? `У вас ${pending.length} ${plural(pending.length, 'невыполненное задание', 'невыполненных задания', 'невыполненных заданий')} от учителя.`
