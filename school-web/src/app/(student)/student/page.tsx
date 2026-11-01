@@ -44,8 +44,8 @@ export default async function StudentHome() {
             <div className="flex items-center justify-between text-xs text-slate-500">
               <span>Выполнено</span><span className="font-medium text-slate-700">{progress}%</span>
             </div>
-            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
-              <div className="h-full rounded-full bg-brand" style={{ width: `${progress}%` }} />
+            <div className="mt-1.5 h-1.5 overflow-hidden rounded-none bg-slate-100" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+              <div className="h-full rounded-none bg-brand" style={{ width: `${progress}%` }} />
             </div>
           </div>
         )}

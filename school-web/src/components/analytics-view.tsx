@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui';
 import { KpiCard } from '@/components/kpi-card';
+import { topicWithLevel } from '@/lib/levels';
 import { plural } from '@/components/student-widgets';
 import { LineChart, DonutChart } from '@/components/charts';
 import { UsersIcon, GraduationIcon, WarningIcon, StarIcon } from '@/components/icons';
@@ -56,10 +57,11 @@ export function AnalyticsView({
     .sort((a, b) => a.acc - b.acc);
 
   const topicProgress = agg.topicTestProgress(topicResults);
-  const topicRows = topics
-    .flatMap((t) => {
-      const v = topicProgress.get(t.id);
-      return v ? [{ id: t.id, title: t.title, acc: v.acc, delta: v.delta }] : [];
+  const topicTitle = new Map(topics.map((t) => [t.id, t.title]));
+  const topicRows = [...topicProgress]
+    .flatMap(([key, v]) => {
+      const title = topicTitle.get(v.topicId);
+      return title ? [{ id: key, title: topicWithLevel(title, v.level), acc: v.acc, delta: v.delta }] : [];
     })
     .sort((a, b) => a.acc - b.acc);
   const shownTopics = showAllTopics ? topicRows : topicRows.slice(0, TOPICS_PREVIEW);
@@ -113,9 +115,9 @@ export function AnalyticsView({
                 <li key={c.cls} className="flex items-center gap-3">
                   <span className="w-5 shrink-0 text-sm font-semibold text-slate-400">{i + 1}</span>
                   <span className="w-20 shrink-0 truncate text-sm font-medium text-slate-700">{c.cls}</span>
-                  <div className="h-2.5 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-2.5 min-w-0 flex-1 overflow-hidden rounded-none bg-slate-100">
                     <div
-                      className="h-full rounded-full"
+                      className="h-full rounded-none"
                       style={{ width: `${Math.min(100, (100 * c.v) / MAX_SCORE)}%`, background: c.v >= THRESHOLD ? '#6d28d9' : '#ef4444' }}
                     />
                   </div>
@@ -185,8 +187,8 @@ export function AnalyticsView({
                     <span className="shrink-0 text-sm font-semibold text-slate-700">{t.acc}%</span>
                   </div>
                   <div className="mt-2 flex items-center gap-3">
-                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
-                      <div className="h-full rounded-full" style={{ width: `${t.acc}%`, background: topicColor(t.acc) }} />
+                    <div className="h-2 flex-1 overflow-hidden rounded-none bg-slate-100">
+                      <div className="h-full rounded-none" style={{ width: `${t.acc}%`, background: topicColor(t.acc) }} />
                     </div>
                     <span className={`w-14 shrink-0 text-right text-xs font-semibold ${t.delta == null ? 'text-slate-400' : t.delta >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
                       {t.delta == null ? '—' : `${t.delta >= 0 ? '↑ +' : '↓ −'}${Math.abs(t.delta)}%`}
@@ -210,8 +212,8 @@ export function AnalyticsView({
                     <td className="px-2 py-3.5 font-medium text-slate-800">{t.title}</td>
                     <td className="px-2 py-3.5">
                       <div className="flex items-center gap-3">
-                        <div className="h-2 min-w-24 flex-1 overflow-hidden rounded-full bg-slate-100">
-                          <div className="h-full rounded-full" style={{ width: `${t.acc}%`, background: topicColor(t.acc) }} />
+                        <div className="h-2 min-w-24 flex-1 overflow-hidden rounded-none bg-slate-100">
+                          <div className="h-full rounded-none" style={{ width: `${t.acc}%`, background: topicColor(t.acc) }} />
                         </div>
                         <span className="w-10 shrink-0 text-right font-medium text-slate-700">{t.acc}%</span>
                       </div>

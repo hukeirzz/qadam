@@ -271,11 +271,11 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
     async schoolTopicResults(schoolId: string) {
       const { data } = await supabase
         .from('school_test_results')
-        .select('test_id, student_id, score, total, created_at, school_tests!inner(topic_id, school_id)')
+        .select('test_id, student_id, score, total, created_at, school_tests!inner(topic_id, level, school_id)')
         .eq('school_tests.school_id', schoolId);
       return (data ?? []) as unknown as {
         test_id: string; student_id: string; score: number; total: number; created_at: string;
-        school_tests: { topic_id: string | null };
+        school_tests: { topic_id: string | null; level: TestLevel };
       }[];
     },
 

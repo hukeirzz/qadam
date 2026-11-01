@@ -41,7 +41,7 @@ export function latestMockByStudent(exams: Exam[], results: Result[]): Map<strin
 /** One student's result on one school test (api: staffData.schoolTopicResults). */
 export type TestResultRow = {
   test_id: string; student_id: string; score: number; total: number; created_at: string;
-  school_tests: { topic_id: string | null };
+  school_tests: { topic_id: string | null; level?: TestLevelId };
 };
 
 /** Per-student overall accuracy on school tests (0–100, pooled). */
@@ -54,16 +54,20 @@ export function studentAccuracy(rows: TestResultRow[]) {
   return new Map([...acc].filter(([, v]) => v.t > 0).map(([k, v]) => [k, round((100 * v.s) / v.t)]));
 }
 
-/** student -> topic -> pooled accuracy (0–100) over that student's tests on the topic. */
-function studentTopicAccuracy(rows: TestResultRow[]) {
+/**
+ * student -> topic -> pooled accuracy (0–100) over that student's tests on the topic.
+ * With `byLevel` the key is `topicId|level`, i.e. each topic at each difficulty level separately.
+ */
+function studentTopicAccuracy(rows: TestResultRow[], byLevel = false) {
   const acc = new Map<string, Map<string, { s: number; t: number }>>();
   for (const r of rows) {
     const topic = r.school_tests.topic_id;
     if (!topic || !r.total) continue;
+    const key = byLevel ? `${topic}|${r.school_tests.level ?? ''}` : topic;
     if (!acc.has(r.student_id)) acc.set(r.student_id, new Map());
     const m = acc.get(r.student_id)!;
-    const cur = m.get(topic) ?? { s: 0, t: 0 };
-    cur.s += r.score; cur.t += r.total; m.set(topic, cur);
+    const cur = m.get(key) ?? { s: 0, t: 0 };
+    cur.s += r.score; cur.t += r.total; m.set(key, cur);
   }
   return new Map(
     [...acc].map(([sid, m]) => [sid, new Map([...m].map(([tid, v]) => [tid, (100 * v.s) / v.t]))] as const),
@@ -152,14 +156,19 @@ export function weakTopicTitles(
   limit: number,
 ): Map<string, string[]> {
   const title = new Map(topics.map((t) => [t.id, t.title]));
+  // Keys are `topicId|level`: the same topic at another level is a different line, shown with its numeral.
+  const label = (key: string) => {
+    const [tid, lvl] = key.split('|');
+    return topicWithLevel(title.get(tid)!, (lvl || null) as TestLevelId | null);
+  };
   return new Map(
-    [...studentTopicAccuracy(rows)].map(([sid, m]) => [
+    [...studentTopicAccuracy(rows, true)].map(([sid, m]) => [
       sid,
       [...m]
-        .filter(([tid, v]) => v < bar && title.has(tid))
+        .filter(([key, v]) => v < bar && title.has(key.split('|')[0]))
         .sort((a, b) => a[1] - b[1])
         .slice(0, limit)
-        .map(([tid]) => title.get(tid)!),
+        .map(([key]) => label(key)),
     ]),
   );
 }
@@ -215,25 +224,28 @@ export function levelHeatmap(
  */
 export function topicTestProgress(results: TestResultRow[]) {
   type T = { s: number; t: number; last: string };
-  const by = new Map<string, Map<string, T>>(); // topic -> test -> sums
+  // `topicId|level` -> test -> sums: each topic at each difficulty level is its own line.
+  const by = new Map<string, Map<string, T>>();
   for (const r of results) {
     const topic = r.school_tests.topic_id;
     if (!topic) continue;
-    if (!by.has(topic)) by.set(topic, new Map());
-    const tests = by.get(topic)!;
+    const key = `${topic}|${r.school_tests.level ?? ''}`;
+    if (!by.has(key)) by.set(key, new Map());
+    const tests = by.get(key)!;
     const cur = tests.get(r.test_id) ?? { s: 0, t: 0, last: r.created_at };
     cur.s += r.score; cur.t += r.total;
     if (r.created_at > cur.last) cur.last = r.created_at;
     tests.set(r.test_id, cur);
   }
   return new Map(
-    [...by].flatMap(([topic, tests]) => {
+    [...by].flatMap(([key, tests]) => {
       const list = [...tests.values()].filter((x) => x.t > 0).sort((a, b) => a.last.localeCompare(b.last));
       if (!list.length) return [];
       const pct = (x: T) => (100 * x.s) / x.t;
       const all = list.reduce((a, x) => ({ s: a.s + x.s, t: a.t + x.t }), { s: 0, t: 0 });
       const delta = list.length >= 2 ? round(pct(list[list.length - 1]) - pct(list[list.length - 2])) : null;
-      return [[topic, { acc: round((100 * all.s) / all.t), delta, tests: list.length }] as const];
+      const [topicId, level] = key.split('|');
+      return [[key, { topicId, level: (level || null) as TestLevelId | null, acc: round((100 * all.s) / all.t), delta, tests: list.length }] as const];
     }),
   );
 }

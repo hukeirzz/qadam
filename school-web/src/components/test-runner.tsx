@@ -74,8 +74,8 @@ export function TestRunner({
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="h-2 flex-1 overflow-hidden rounded-full bg-violet-100">
-          <div className="h-full rounded-full bg-brand transition-all" style={{ width: `${((index + (answered ? 1 : 0)) / qs.length) * 100}%` }} />
+        <div className="h-2 flex-1 overflow-hidden rounded-none bg-violet-100">
+          <div className="h-full rounded-none bg-brand transition-all" style={{ width: `${((index + (answered ? 1 : 0)) / qs.length) * 100}%` }} />
         </div>
         <span className="text-sm font-medium text-slate-500">{index + 1} / {qs.length}</span>
       </div>

@@ -15,8 +15,8 @@ export function Avatar({ name, className = '' }: { name: string; className?: str
 
 export function ProgressBar({ value, className = 'w-28' }: { value: number; className?: string }) {
   return (
-    <div className={`h-2 overflow-hidden rounded-full bg-slate-200 ${className}`}>
-      <div className="h-full rounded-full bg-brand" style={{ width: `${value}%` }} />
+    <div className={`h-2 overflow-hidden rounded-none bg-slate-200 ${className}`}>
+      <div className="h-full rounded-none bg-brand" style={{ width: `${value}%` }} />
     </div>
   );
 }
