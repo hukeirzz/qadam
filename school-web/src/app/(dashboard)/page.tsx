@@ -44,6 +44,7 @@ export default async function DashboardHomePage() {
   return (
     <DashboardHome
       totalStudents={students.length}
+      classCount={classes.length}
       avgMock={agg.schoolAvgMock(exams, results)}
       helpCount={needHelp.length}
       topCount={students.filter((s) => topStudents.has(s.id)).length}

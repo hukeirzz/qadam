@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Card, InfoHint } from '@/components/ui';
+import { Card } from '@/components/ui';
+import { KpiCard } from '@/components/kpi-card';
+import { plural } from '@/components/student-widgets';
 import { LineChart, DonutChart } from '@/components/charts';
 import { UsersIcon, GraduationIcon, WarningIcon, StarIcon } from '@/components/icons';
 import * as agg from '@/lib/aggregate';
@@ -66,11 +68,13 @@ export function AnalyticsView({
   const buckets = agg.scoreBuckets(examTotals);
   const examAvg = examTotals.length ? Math.round(examTotals.reduce((a, b) => a + b, 0) / examTotals.length) : 0;
 
-  const KPI = [
-    { label: 'Кол-во учеников', value: String(students.length), Icon: UsersIcon, chip: 'bg-violet-100 text-violet-600', num: 'text-violet-600' },
-    { label: 'Средний балл ОРТ', value: avgMock ? String(avgMock) : '—', Icon: GraduationIcon, chip: 'bg-teal-100 text-teal-600', num: 'text-teal-600' },
-    { label: 'Нужна поддержка', hint: `Точность ответов ниже ${HELP_BELOW}%`, value: String(needHelp.length), Icon: WarningIcon, chip: 'bg-orange-100 text-orange-500', num: 'text-red-500' },
-    { label: 'Сильные ученики', hint: `Выше ${TOP_ABOVE}% по каждой теме`, value: String(students.filter((s) => topSet.has(s.id)).length), Icon: StarIcon, chip: 'bg-emerald-100 text-emerald-600', num: 'text-emerald-600' },
+  const mockCount = examsWithResults.length;
+  const supportCount = needHelp.length;
+  const kpis = [
+    { Icon: UsersIcon, label: 'Учеников', value: String(students.length), sub: classes.length ? `в ${classes.length} ${plural(classes.length, 'классе', 'классах', 'классах')}` : undefined, tone: 'violet' as const },
+    { Icon: GraduationIcon, label: 'Средний балл ОРТ', value: avgMock ? String(avgMock) : '—', sub: mockCount ? `по ${mockCount} ${plural(mockCount, 'пробному', 'пробным', 'пробным')} · из 245` : 'пробных пока нет', tone: 'teal' as const },
+    { Icon: WarningIcon, label: 'Нужна поддержка', value: String(supportCount), sub: `точность ниже ${HELP_BELOW}%`, tone: 'orange' as const, alert: supportCount > 0 },
+    { Icon: StarIcon, label: 'Сильные ученики', value: String(students.filter((s) => topSet.has(s.id)).length), sub: `выше ${TOP_ABOVE}% по каждой теме`, tone: 'emerald' as const },
   ];
 
   return (
@@ -80,18 +84,7 @@ export function AnalyticsView({
       </header>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        {KPI.map((s, i) => (
-          <div key={s.label} className="flex flex-col gap-2.5 rounded-2xl bg-white p-3.5 shadow-sm shadow-slate-200/50 ring-1 ring-slate-100 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
-            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${s.chip}`}><s.Icon className="h-5 w-5 sm:h-6 sm:w-6" /></span>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold leading-tight text-slate-700 sm:text-sm">
-                {s.label}
-                {s.hint && <> <InfoHint text={s.hint} align={i % 2 === 1 ? 'end' : 'center'} /></>}
-              </p>
-            </div>
-            <p className={`text-xl font-bold tracking-tight sm:text-3xl ${s.num}`}>{s.value}</p>
-          </div>
-        ))}
+        {kpis.map((k) => <KpiCard key={k.label} {...k} />)}
       </div>
 
       <Card>
