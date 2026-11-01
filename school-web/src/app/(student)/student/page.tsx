@@ -9,7 +9,6 @@ export default async function StudentHome() {
 
   const pending = tasks.filter((t) => !t.done);
   const completed = tasks.filter((t) => t.done).sort((a, b) => b.done!.at.localeCompare(a.done!.at));
-  const perfect = completed.filter((t) => { const b = t.best ?? t.done!; return b.score === b.total; }).length;
   const progress = tasks.length ? Math.round((100 * completed.length) / tasks.length) : 0;
   // Oldest assignment first — that's the one to do next.
   const pendingOrdered = [...pending].reverse();
@@ -26,37 +25,23 @@ export default async function StudentHome() {
         </p>
       </section>
 
-      {/* Summary */}
-      <aside className={`${CARD} p-5 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:self-start`} aria-label="Сводка по заданиям">
-        <h2 className="text-sm font-semibold text-slate-900">Задания</h2>
-        <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
-          {[
-            { label: 'Назначено', value: tasks.length },
-            { label: 'К выполнению', value: pending.length },
-            { label: 'Решено', value: completed.length },
-          ].map((s) => (
-            <div key={s.label} className="rounded-lg bg-slate-50 px-1 py-3">
-              <dd className="text-xl font-semibold text-slate-900">{s.value}</dd>
-              <dt className="mt-0.5 text-[11px] leading-tight text-slate-500">{s.label}</dt>
-            </div>
-          ))}
-        </dl>
-        {tasks.length > 0 && (
-          <div className="mt-4">
-            <div className="flex items-center justify-between text-xs text-slate-500">
-              <span>Выполнено</span><span className="font-medium text-slate-700">{progress}%</span>
-            </div>
-            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
-              <div className="h-full rounded-full bg-brand" style={{ width: `${progress}%` }} />
-            </div>
+      {/* Summary: how many tests in total and how many are solved */}
+      <aside className={`${CARD} p-5 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:self-start`} aria-label="Сводка по тестам">
+        <h2 className="text-sm font-semibold text-slate-900">Мои тесты</h2>
+        <dl className="mt-4 grid grid-cols-2 gap-4">
+          <div>
+            <dd className="text-4xl font-semibold leading-none tracking-tight text-slate-900">{tasks.length}</dd>
+            <dt className="mt-2 text-sm text-slate-500">Всего тестов</dt>
           </div>
-        )}
-        {completed.length > 0 && (
-          <p className="mt-4 flex items-center gap-2 text-xs text-slate-500">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden /> без ошибок: {perfect}
-            <span className="ml-2 h-2 w-2 rounded-full bg-orange-500" aria-hidden /> с ошибками: {completed.length - perfect}
-          </p>
-        )}
+          <div className="border-l border-slate-100 pl-4">
+            <dd className="text-4xl font-semibold leading-none tracking-tight text-brand">{completed.length}</dd>
+            <dt className="mt-2 text-sm text-slate-500">Решено</dt>
+          </div>
+        </dl>
+        <div className="mt-5 h-2 overflow-hidden rounded-full bg-violet-100" role="progressbar" aria-label="Решено тестов"
+          aria-valuenow={completed.length} aria-valuemin={0} aria-valuemax={tasks.length}>
+          <div className="h-full rounded-full bg-brand transition-all" style={{ width: `${progress}%` }} />
+        </div>
       </aside>
 
       <section className="lg:col-start-1 lg:row-start-2" aria-labelledby="actual">

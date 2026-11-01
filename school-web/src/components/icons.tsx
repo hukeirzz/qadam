@@ -124,9 +124,9 @@ export const SettingsIcon = (p: IconProps) => (
 
 export const LogoutIcon = (p: IconProps) => (
   <Svg {...p}>
-    <path d="M15 4h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3" />
-    <path d="M10 12h9M16 8l4 4-4 4" transform="translate(-6,0)" />
-    <path d="M10 8l-4 4 4 4M6 12h8" />
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <path d="m16 17 5-5-5-5" />
+    <path d="M21 12H9" />
   </Svg>
 );
 
