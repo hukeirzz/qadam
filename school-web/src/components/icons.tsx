@@ -77,14 +77,6 @@ export const StudentsIcon = (p: IconProps) => (
   </Svg>
 );
 
-export const ClassesIcon = (p: IconProps) => (
-  <Svg {...p}>
-    <path d="M4 5h16v11H4z" />
-    <path d="M2 20h20" />
-    <path d="M8 9h8M8 12h5" />
-  </Svg>
-);
-
 export const TestsIcon = (p: IconProps) => (
   <Svg {...p}>
     <path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
@@ -101,27 +93,6 @@ export const TrophyIcon = (p: IconProps) => (
   </Svg>
 );
 
-export const AccessIcon = (p: IconProps) => (
-  <Svg {...p}>
-    <circle cx="8" cy="15" r="4" />
-    <path d="M10.8 12.2 20 3l1 1M17 6l2 2M14 9l2 2" />
-  </Svg>
-);
-
-export const SubscriptionIcon = (p: IconProps) => (
-  <Svg {...p}>
-    <rect x="3" y="5" width="18" height="14" rx="2" />
-    <path d="M3 10h18M7 15h4" />
-  </Svg>
-);
-
-export const SettingsIcon = (p: IconProps) => (
-  <Svg {...p}>
-    <circle cx="12" cy="12" r="3" />
-    <path d="M12 2v3M12 19v3M5 5l2 2M17 17l2 2M2 12h3M19 12h3M5 19l2-2M17 7l2-2" />
-  </Svg>
-);
-
 export const LogoutIcon = (p: IconProps) => (
   <Svg {...p}>
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -134,21 +105,6 @@ export const BellIcon = (p: IconProps) => (
   <Svg {...p}>
     <path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z" />
     <path d="M10 19a2 2 0 0 0 4 0" />
-  </Svg>
-);
-
-export const UserPlusIcon = (p: IconProps) => (
-  <Svg {...p}>
-    <circle cx="9" cy="8" r="3.2" />
-    <path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" />
-    <path d="M18 8v6M15 11h6" />
-  </Svg>
-);
-
-export const CalendarIcon = (p: IconProps) => (
-  <Svg {...p}>
-    <rect x="3" y="5" width="18" height="16" rx="2" />
-    <path d="M3 9h18M8 3v4M16 3v4" />
   </Svg>
 );
 
@@ -189,13 +145,6 @@ export const UsersIcon = (p: IconProps) => (
     <circle cx="9" cy="8" r="3.2" />
     <path d="M2.5 20c0-3.3 2.9-5.5 6.5-5.5s6.5 2.2 6.5 5.5" />
     <path d="M16 5.3a3.2 3.2 0 0 1 0 5.4M17.5 20c0-2.6-1-4.4-2.7-5.4" />
-  </Svg>
-);
-
-export const AlertIcon = (p: IconProps) => (
-  <Svg {...p}>
-    <circle cx="12" cy="12" r="9" />
-    <path d="M12 8v5M12 16.5v.5" />
   </Svg>
 );
 
@@ -279,28 +228,9 @@ export const ProfileIcon = (p: IconProps) => (
   </Svg>
 );
 
-export const FileIcon = (p: IconProps) => (
-  <Svg {...p}>
-    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" />
-    <path d="M14 3v5h5M9 13h6M9 17h6" />
-  </Svg>
-);
-
 export const CheckIcon = (p: IconProps) => (
   <Svg {...p}>
     <path d="m5 12.5 4.5 4.5L19 7.5" />
   </Svg>
 );
 
-export const ClockIcon = (p: IconProps) => (
-  <Svg {...p}>
-    <circle cx="12" cy="12" r="9" />
-    <path d="M12 7v5l3 2" />
-  </Svg>
-);
-
-export const BoltIcon = (p: IconProps) => (
-  <Svg {...p}>
-    <path d="M13 3 5 13.5h6L10 21l8-10.5h-6Z" fill="currentColor" />
-  </Svg>
-);

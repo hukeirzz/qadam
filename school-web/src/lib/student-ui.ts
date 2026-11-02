@@ -1,7 +1,6 @@
 import { SUBJECT_LABELS } from './aggregate';
 
 export const subjectLabel = (id: string | null) => (id ? SUBJECT_LABELS[id] ?? id : 'Без раздела');
-export const subjectGlyph = (id: string | null) => (id === 'math' ? '√x' : id === 'geometry' ? '△' : '•');
 
 const MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 export function formatDate(iso: string) {

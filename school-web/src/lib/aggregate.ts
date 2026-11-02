@@ -1,23 +1,8 @@
 // Pure aggregation helpers over the school's raw rows (students, mock exams/
 // results, school-test results). Shared by the dashboard and analytics pages.
 
-export type Student = {
-  id: string; name: string; class_id: string | null; xp: number;
-  last_activity: string | null;
-};
+export type Student = { id: string; name: string; class_id: string | null };
 
-/** "Сегодня" / "Вчера" / "N дней назад" from an ISO date (yyyy-mm-dd). */
-export function relDay(iso: string | null): string {
-  if (!iso) return 'нет данных';
-  const d = new Date(iso + 'T00:00:00');
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const days = Math.round((today.getTime() - d.getTime()) / 86400000);
-  if (days <= 0) return 'Сегодня';
-  if (days === 1) return 'Вчера';
-  if (days < 5) return `${days} дня назад`;
-  return `${days} дней назад`;
-}
 export type ClassRow = { id: string; name: string };
 export type Exam = { id: string; name: string; exam_date: string | null };
 export type Result = { exam_id: string; student_id: string; total: number };
@@ -215,37 +200,4 @@ export function levelHeatmap(
     by.get(t.subject_id)!.topics.push({ title: topicWithLevel(t.title, level), acc: v && v.t ? Math.round((100 * v.s) / v.t) : null, tests: v?.n ?? 0 });
   }
   return [...by.values()].sort((a, b) => a.id.localeCompare(b.id));
-}
-
-/**
- * Школьная успеваемость по темам из результатов тестов: общая точность по теме
- * и динамика — точность последнего теста по теме минус предыдущего (пункты %).
- * Динамика null, пока по теме меньше двух тестов.
- */
-export function topicTestProgress(results: TestResultRow[]) {
-  type T = { s: number; t: number; last: string };
-  // `topicId|level` -> test -> sums: each topic at each difficulty level is its own line.
-  const by = new Map<string, Map<string, T>>();
-  for (const r of results) {
-    const topic = r.school_tests.topic_id;
-    if (!topic) continue;
-    const key = `${topic}|${r.school_tests.level ?? ''}`;
-    if (!by.has(key)) by.set(key, new Map());
-    const tests = by.get(key)!;
-    const cur = tests.get(r.test_id) ?? { s: 0, t: 0, last: r.created_at };
-    cur.s += r.score; cur.t += r.total;
-    if (r.created_at > cur.last) cur.last = r.created_at;
-    tests.set(r.test_id, cur);
-  }
-  return new Map(
-    [...by].flatMap(([key, tests]) => {
-      const list = [...tests.values()].filter((x) => x.t > 0).sort((a, b) => a.last.localeCompare(b.last));
-      if (!list.length) return [];
-      const pct = (x: T) => (100 * x.s) / x.t;
-      const all = list.reduce((a, x) => ({ s: a.s + x.s, t: a.t + x.t }), { s: 0, t: 0 });
-      const delta = list.length >= 2 ? round(pct(list[list.length - 1]) - pct(list[list.length - 2])) : null;
-      const [topicId, level] = key.split('|');
-      return [[key, { topicId, level: (level || null) as TestLevelId | null, acc: round((100 * all.s) / all.t), delta, tests: list.length }] as const];
-    }),
-  );
 }

@@ -1,16 +1,11 @@
-// Storage-agnostic Supabase access used by
-// school-web: each app calls Supabase only through this package,
-// never `@supabase/supabase-js` directly, so swapping the backend later
-// (or hardening it, e.g. server-side XP validation via a Postgres RPC
-// instead of trusting the client) doesn't require touching either app's
-// call sites.
+// Единственное место, где Qadam обращается к Supabase: school-web ходит в БД только через этот пакет
+// и никогда не импортирует @supabase/supabase-js напрямую. Так бэкенд можно менять или усиливать
+// (проверки на стороне Postgres/RPC) без правок в страницах.
 //
-// Each app creates its own client via createApiClient(), passing its own
-// env vars and its own storage adapter (AsyncStorage on mobile,
-// @supabase/ssr cookies on web) — this package has no RN/Next.js
-// dependency itself.
+// Клиент для Next.js (@supabase/ssr, с cookie-сессией) создаёт само приложение и передаёт его
+// в wrapSupabaseClient().
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 /** Уровни сложности школьного теста. */
 export type TestLevel = 'basic' | 'medium' | 'high';
@@ -20,65 +15,10 @@ export const TEST_LEVELS: { id: TestLevel; label: string }[] = [
   { id: 'high', label: 'Высокий' },
 ];
 
-export interface AuthStorageAdapter {
-  getItem: (key: string) => Promise<string | null> | string | null;
-  setItem: (key: string, value: string) => Promise<void> | void;
-  removeItem: (key: string) => Promise<void> | void;
-}
-
-export interface ApiClientConfig {
-  url: string;
-  anonKey: string;
-  /** Omit on platforms where the Supabase SDK manages storage itself (e.g. SSR web). */
-  storage?: AuthStorageAdapter;
-  /** Mobile needs manual session persistence/refresh; web (SSR) typically doesn't. */
-  persistSession?: boolean;
-  autoRefreshToken?: boolean;
-  detectSessionInUrl?: boolean;
-}
-
-export interface UserProfile {
-  id: string;
-  name: string;
-  streak: number;
-  gems: number;
-  xp: number;
-  premium_unlocked: boolean;
-  last_activity: string | null;
-  completed_topics: string[];
-  weekly_steps: number[];
-  week_start: string | null;
-  topic_hearts: Record<string, number>;
-  daily_steps: Record<string, number>;
-}
-
-export interface QuizQuestionBase {
-  id: string;
-  text: string;
-  options: { id: string; text: string }[];
-  correctId: string;
-  explanation?: string;
-}
-
-/** Question from the shared topic-scoped bank (`questions`/`options`). */
-export interface QuizQuestionDTO extends QuizQuestionBase {
-  topicId: string;
-  subjectId: string;
-}
-
 /**
- * Question from a school-authored test (`school_test_questions`/
- * `school_test_options`) — no topic/subject: a coordinator types these by
- * hand and they aren't tied to the topic tree.
- */
-export type SchoolTestQuestionDTO = QuizQuestionBase;
-
-/**
- * Wraps an already-constructed SupabaseClient with the auth/profile/theory/
- * topics/questions namespaces. Use this when the platform needs to build
- * the client itself (e.g. school-web's @supabase/ssr browser/server
- * clients, which manage cookie-based storage internally and aren't
- * compatible with the getItem/setItem AuthStorageAdapter shape below).
+ * Оборачивает готовый SupabaseClient в пространства имён: auth (вход/регистрация), profile (роль учителя),
+ * staffData (всё для учителя: классы, ученики, тесты, пробные), studentData (кабинет ученика).
+ * Права доступа всегда решает RLS в БД, а не этот код.
  */
 export function wrapSupabaseClient(supabase: SupabaseClient) {
   const auth = {
@@ -163,49 +103,6 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
 
   };
 
-  const schools = {
-    /** For registration's optional school picker. Empty array, not null, when there are no rows yet. */
-    async list(): Promise<{ id: string; name: string }[]> {
-      const { data, error } = await supabase.from('schools').select('id, name').order('name');
-      if (error || !data) return [];
-      return data as { id: string; name: string }[];
-    },
-
-    /**
-     * Fetches a single class row — used once a student is already linked
-     * to a school (classes_read's RLS allows reading any class in your
-     * own school, so this is a plain select, unlike findClassByCode).
-     */
-    async fetchClassById(classId: string): Promise<{ id: string; name: string } | null> {
-      const { data, error } = await supabase
-        .from('classes')
-        .select('id, name')
-        .eq('id', classId)
-        .single();
-
-      if (error || !data) return null;
-      return data as { id: string; name: string };
-    },
-
-    /**
-     * Looks up a class by its short join code — `classes.promo_code`
-     * (backend_v2_tables) — via the public_find_class_by_code RPC
-     * (supabase/migrations/20260729000001): classes_read's RLS requires
-     * already being linked to the class's school, which a student
-     * entering a code for the first time isn't yet, so a direct table
-     * select would find nothing. Returns school_id too, so entering a
-     * class code alone can link both school and class in one step.
-     */
-    async findClassByCode(code: string): Promise<{ id: string; name: string; school_id: string } | null> {
-      const { data, error } = await supabase
-        .rpc('public_find_class_by_code', { p_code: code.trim() })
-        .maybeSingle();
-
-      if (error || !data) return null;
-      return data as { id: string; name: string; school_id: string };
-    },
-  };
-
   const BASE_SUBJECTS = ['math', 'geometry', 'analogies', 'reading', 'grammar'];
 
 
@@ -237,24 +134,18 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
     async students(schoolId: string) {
       const { data } = await supabase
         .from('students')
-        .select('id, name, class_id, xp, last_activity')
+        .select('id, name, class_id')
         .eq('school_id', schoolId)
-        .order('xp', { ascending: false });
-      return (data ?? []) as {
-        id: string; name: string; class_id: string | null; xp: number;
-        last_activity: string | null;
-      }[];
+        .order('name');
+      return (data ?? []) as { id: string; name: string; class_id: string | null }[];
     },
 
     async student(id: string) {
       const { data } = await supabase
         .from('students')
-        .select('id, name, class_id, xp, last_activity, school_id')
+        .select('id, name, class_id, school_id')
         .eq('id', id).single();
-      return data as {
-        id: string; name: string; class_id: string | null; xp: number;
-        last_activity: string | null; school_id: string | null;
-      } | null;
+      return data as { id: string; name: string; class_id: string | null; school_id: string | null } | null;
     },
 
     async studentMockResults(studentId: string) {
@@ -618,26 +509,8 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
   };
 
   return {
-    supabase, auth, profile, schools, staffData, studentData,
+    supabase, auth, profile, staffData, studentData,
   };
-}
-
-/**
- * Builds a plain @supabase/supabase-js client from a URL/anon key and an
- * injected getItem/setItem storage adapter (e.g. AsyncStorage on mobile),
- * then wraps it. For SSR web, build the client with @supabase/ssr instead
- * and call wrapSupabaseClient() directly.
- */
-export function createApiClient(config: ApiClientConfig) {
-  const supabase: SupabaseClient = createClient(config.url, config.anonKey, {
-    auth: {
-      storage: config.storage,
-      autoRefreshToken: config.autoRefreshToken ?? true,
-      persistSession: config.persistSession ?? true,
-      detectSessionInUrl: config.detectSessionInUrl ?? false,
-    },
-  });
-  return wrapSupabaseClient(supabase);
 }
 
 export type ApiClient = ReturnType<typeof wrapSupabaseClient>;
