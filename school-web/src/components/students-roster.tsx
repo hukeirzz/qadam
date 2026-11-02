@@ -32,6 +32,20 @@ export function StudentsRoster({ students, classes }: { students: Student[]; cla
     return () => { window.removeEventListener('scroll', close, true); window.removeEventListener('resize', close); };
   }, [menu]);
 
+  const [moving, setMoving] = useState<Student | null>(null);
+  const [target, setTarget] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  async function doMove() {
+    if (!moving || !target) return;
+    setSaving(true); setError(null);
+    const { error: err } = await createBrowserApi().staffData.moveStudent(moving.id, target);
+    setSaving(false);
+    if (err) { setError('Не удалось перенести ученика. Попробуйте ещё раз.'); return; }
+    setMoving(null);
+    router.refresh();
+  }
+
   async function doDelete() {
     if (!confirm) return;
     setDeleting(true); setError(null);
@@ -124,12 +138,33 @@ export function StudentsRoster({ students, classes }: { students: Student[]; cla
           <div className="fixed inset-0 z-40" onClick={() => setMenu(null)} aria-hidden />
           <div role="menu" style={{ top: menu.top, right: menu.right }}
             className="fixed z-50 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-lg shadow-slate-200/70">
-            <Link role="menuitem" href={`/students/${menu.student.id}`} onClick={() => setMenu(null)}
-              className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Открыть профиль</Link>
+            <button role="menuitem" type="button" onClick={() => { setMoving(menu.student); setTarget(''); setError(null); setMenu(null); }}
+              className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50">Перенести в другой класс</button>
             <button role="menuitem" type="button" onClick={() => { setConfirm(menu.student); setError(null); setMenu(null); }}
               className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50">Удалить ученика</button>
           </div>
         </>
+      )}
+
+      {moving && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="mv-title">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <h2 id="mv-title" className="text-base font-semibold text-slate-900">Перенести в другой класс</h2>
+            <p className="mt-2 text-sm text-slate-600"><b className="font-semibold">{moving.name}</b> сейчас в классе {clsName(moving.class_id)}.</p>
+            <select value={target} onChange={(e) => setTarget(e.target.value)} aria-label="Новый класс"
+              className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 outline-none transition focus:border-brand">
+              <option value="">Выберите класс</option>
+              {classes.filter((c) => c.id !== moving.class_id).map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+            </select>
+            {error && <p role="alert" className="mt-3 text-sm text-red-500">{error}</p>}
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={() => setMoving(null)} disabled={saving}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Отмена</button>
+              <button type="button" onClick={doMove} disabled={!target || saving}
+                className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? 'Переносим…' : 'Перенести'}</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {confirm && (

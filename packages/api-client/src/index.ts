@@ -477,6 +477,10 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
     },
 
     /** Deletes a student's account and everything tied to it. Only staff of the same school (checked in the DB). */
+    async moveStudent(studentId: string, classId: string) {
+      const { error } = await supabase.rpc('staff_move_student', { p_student: studentId, p_class: classId });
+      return { error };
+    },
     async deleteStudent(studentId: string) {
       const { error } = await supabase.rpc('staff_delete_student', { p_student: studentId });
       return { error };
