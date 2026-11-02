@@ -1,8 +1,7 @@
-import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui';
 import { MockExamsCard, LevelHeatmapCard } from '@/components/analytics-cards';
-import { ArrowRightIcon, ShieldIcon } from '@/components/icons';
+import { ArrowRightIcon } from '@/components/icons';
 import type { LevelHeatmapGroup } from '@/lib/aggregate';
 
 function initials(name: string) {
@@ -19,24 +18,6 @@ export function StudentProfile({
   mockHistory: { name: string; total: number }[];
 }) {
   const mockAvg = mockHistory.length ? Math.round(mockHistory.reduce((a, b) => a + b.total, 0) / mockHistory.length) : null;
-  const latest = mockHistory.at(-1)?.total ?? null;
-  const progress = mockHistory.length >= 2 ? mockHistory.at(-1)!.total - mockHistory[0].total : null;
-
-  const stat = (label: string, value: ReactNode, sub?: string, center = false) => (
-    <div className={`min-w-[58px] ${center ? 'text-center' : ''}`}>
-      <p className="text-xs text-slate-400">{label}</p>
-      <p className="mt-1.5 text-3xl font-bold leading-none text-slate-800">{value}</p>
-      <p className="mt-1.5 h-3.5 text-[11px] leading-none text-slate-400">{sub ?? ''}</p>
-    </div>
-  );
-
-  const tile = (label: string, value: ReactNode, sub?: string) => (
-    <div className="rounded-2xl bg-slate-50 px-4 py-3.5">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{label}</p>
-      <p className="mt-1.5 text-2xl font-bold leading-none text-slate-800">{value}</p>
-      <p className="mt-1.5 h-3.5 text-[11px] leading-none text-slate-400">{sub ?? ''}</p>
-    </div>
-  );
 
   return (
     <div className="mx-auto max-w-[1100px] space-y-6">
@@ -46,22 +27,28 @@ export function StudentProfile({
 
       {/* Header */}
       <Card>
-        <div className="flex items-center gap-4">
-          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-500 text-xl font-bold text-white shadow-sm shadow-violet-500/25">{initials(student.name)}</span>
-          <div className="min-w-0">
-            <h1 className="truncate text-xl font-bold tracking-tight text-slate-800 sm:text-2xl">{student.name}</h1>
-            <span className="mt-1.5 inline-block rounded-md bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">{className}</span>
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 text-xl font-bold text-white shadow-md shadow-violet-500/25">{initials(student.name)}</span>
+            <div className="min-w-0">
+              <h1 className="truncate text-xl font-bold tracking-tight text-slate-800 sm:text-2xl">{student.name}</h1>
+              <span className="mt-1.5 inline-block rounded-md bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">{className}</span>
+            </div>
           </div>
-        </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-2 lg:grid-cols-2">
-          {tile('Ср. балл ОРТ', mockAvg != null ? String(mockAvg) : '—', 'из 245')}
-          {tile('Пробных', (
-            <span className="inline-flex items-center gap-1.5">
-              <ShieldIcon className="h-5 w-5 text-violet-300" />
-              {mockHistory.length}
-            </span>
-          ))}
+          <dl className="grid grid-cols-2 gap-2 sm:gap-3 lg:w-[340px] lg:shrink-0">
+            <div className="rounded-lg bg-slate-50 px-4 py-3">
+              <dt className="text-xs text-slate-500">Ср. балл ОРТ</dt>
+              <dd className="mt-1 flex items-baseline gap-1.5">
+                <span className="text-2xl font-semibold text-slate-900">{mockAvg != null ? mockAvg : '—'}</span>
+                <span className="text-xs text-slate-400">из 245</span>
+              </dd>
+            </div>
+            <div className="rounded-lg bg-slate-50 px-4 py-3">
+              <dt className="text-xs text-slate-500">Пробных</dt>
+              <dd className="mt-1 text-2xl font-semibold text-slate-900">{mockHistory.length}</dd>
+            </div>
+          </dl>
         </div>
       </Card>
 

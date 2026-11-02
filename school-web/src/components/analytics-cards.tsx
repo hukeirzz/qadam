@@ -1,15 +1,6 @@
-import type { ReactNode } from 'react';
 import { Card } from '@/components/ui';
 import { LineChart } from '@/components/charts';
 import { accColor, type LevelHeatmapGroup } from '@/lib/aggregate';
-
-const stat = (label: string, value: ReactNode, sub?: string, center = false) => (
-  <div className={`min-w-[58px] ${center ? 'text-center' : ''}`}>
-    <p className="text-xs text-slate-400">{label}</p>
-    <p className="mt-1.5 text-3xl font-bold leading-none text-slate-800">{value}</p>
-    <p className="mt-1.5 h-3.5 text-[11px] leading-none text-slate-400">{sub ?? ''}</p>
-  </div>
-);
 
 /** «Пробные ОРТ»: средний / последний / прогресс и линия с порогом 110. Одинаков у учителя и у ученика. */
 export function MockExamsCard({ mockHistory }: { mockHistory: { name: string; total: number }[] }) {
@@ -24,16 +15,22 @@ export function MockExamsCard({ mockHistory }: { mockHistory: { name: string; to
         <p className="py-10 text-center text-sm text-slate-400">Пробных пока нет.</p>
       ) : (
         <>
-          <div className="mt-3 flex gap-6 text-sm">
-            {stat('Средний', String(mockAvg))}
-            {stat('Последний', String(latest))}
+          <dl className={`mt-4 grid gap-2 sm:gap-3 ${progress != null ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            <div className="rounded-lg bg-slate-50 px-3 py-3 sm:px-4">
+              <dt className="text-xs text-slate-500">Средний</dt>
+              <dd className="mt-1 text-xl font-semibold text-slate-900 sm:text-2xl">{mockAvg}</dd>
+            </div>
+            <div className="rounded-lg bg-slate-50 px-3 py-3 sm:px-4">
+              <dt className="text-xs text-slate-500">Последний</dt>
+              <dd className="mt-1 text-xl font-semibold text-slate-900 sm:text-2xl">{latest}</dd>
+            </div>
             {progress != null && (
-              <div>
-                <p className="text-xs text-slate-400">Прогресс</p>
-                <p className={`mt-0.5 text-lg font-bold ${progress > 0 ? 'text-emerald-600' : progress < 0 ? 'text-red-500' : 'text-slate-500'}`}>{progress > 0 ? '+' : ''}{progress}</p>
+              <div className="rounded-lg bg-slate-50 px-3 py-3 sm:px-4">
+                <dt className="text-xs text-slate-500">Прогресс</dt>
+                <dd className={`mt-1 text-xl font-semibold sm:text-2xl ${progress > 0 ? 'text-emerald-600' : progress < 0 ? 'text-red-500' : 'text-slate-500'}`}>{progress > 0 ? '+' : ''}{progress}</dd>
               </div>
             )}
-          </div>
+          </dl>
           {mockHistory.length >= 2 ? (
             <LineChart labels={mockHistory.map((m) => m.name)} values={mockHistory.map((m) => m.total)} max={245} threshold={110} thresholdLabel="Порог 110" />
           ) : (
@@ -47,19 +44,10 @@ export function MockExamsCard({ mockHistory }: { mockHistory: { name: string; to
 
 /** Тепловая карта точности по темам одного уровня (по результатам школьных тестов). */
 export function LevelHeatmapCard({ label, groups }: { label: string; groups: LevelHeatmapGroup[] }) {
-  const hasData = groups.some((g) => g.topics.some((t) => t.acc != null));
   return (
-    <Card className="!p-0">
-      <details open={hasData} className="group">
-      <summary className="flex cursor-pointer list-none items-start justify-between gap-3 p-4 outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:p-6 [&::-webkit-details-marker]:hidden">
-        <div className="min-w-0">
-          <h2 className="font-semibold text-slate-800">Тепловая карта · {label} уровень</h2>
-          <p className="mt-1 text-xs text-slate-400">Точность по темам этого уровня — по результатам школьных тестов. Серые темы ещё не проходились.</p>
-        </div>
-        <span className="mt-0.5 shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500 group-open:hidden">{hasData ? 'Показать' : 'Нет данных · показать'}</span>
-        <span className="mt-0.5 hidden shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500 group-open:inline">Свернуть</span>
-      </summary>
-      <div className="px-4 pb-4 sm:px-6 sm:pb-6">
+    <Card className="!p-4 sm:!p-6">
+      <h2 className="font-semibold text-slate-800">Тепловая карта · {label} уровень</h2>
+      <p className="mt-1 text-xs text-slate-400">Точность по темам этого уровня — по результатам школьных тестов. Серые темы ещё не проходились.</p>
       {groups.length === 0 ? (
         <p className="py-10 text-center text-sm text-slate-400">В этом уровне пока нет тем.</p>
       ) : (
@@ -86,8 +74,6 @@ export function LevelHeatmapCard({ label, groups }: { label: string; groups: Lev
           })}
         </div>
       )}
-      </div>
-      </details>
     </Card>
   );
 }
