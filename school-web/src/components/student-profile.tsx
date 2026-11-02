@@ -29,7 +29,7 @@ export function StudentProfile({
       <Card>
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-center gap-4">
-            <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 text-xl font-bold text-white shadow-md shadow-violet-500/25">{initials(student.name)}</span>
+            <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xl font-semibold text-violet-700">{initials(student.name)}</span>
             <div className="min-w-0">
               <h1 className="truncate text-xl font-bold tracking-tight text-slate-800 sm:text-2xl">{student.name}</h1>
               <span className="mt-1.5 inline-block rounded-md bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">{className}</span>
