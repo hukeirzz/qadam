@@ -11,7 +11,19 @@ import { topicWithLevel } from '@/lib/levels';
 type Topic = { id: string; subject_id: string; title: string; order_num: number };
 type ClassRow = { id: string; name: string };
 type Student = { id: string; name: string; class_id: string | null };
-type Question = { id: string; text: string; options: string[]; correct: number };
+type Question = { id: string; text: string; options: string[]; correct: number; imageUrl?: string | null };
+
+// Phone photos are several MB: shrink to ≤1280px JPEG before uploading.
+async function shrinkImage(file: File): Promise<Blob> {
+  const bmp = await createImageBitmap(file);
+  const k = Math.min(1, 1280 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(bmp, 0, 0, c.width, c.height);
+  return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('encode'))), 'image/jpeg', 0.85));
+}
 
 const COUNTS = [5, 10, 15, 20];
 function sectionName(id: string) {
@@ -92,6 +104,19 @@ export function TestBuilder({
     setQuestions((qs) => qs.map((q, qi) => (qi === i ? { ...q, ...patch } : q)));
   const updateOpt = (i: number, oi: number, val: string) =>
     setQuestions((qs) => qs.map((q, qi) => (qi === i ? { ...q, options: q.options.map((o, k) => (k === oi ? val : o)) } : q)));
+  const [uploading, setUploading] = useState<string | null>(null);
+  async function attachImage(i: number, file: File | undefined) {
+    if (!file) return;
+    setUploading(questions[i].id); setError(null);
+    try {
+      const { url, error: upErr } = await createBrowserApi().staffData.uploadQuestionImage(schoolId, await shrinkImage(file));
+      if (upErr || !url) throw new Error(upErr?.message ?? 'upload');
+      updateQ(i, { imageUrl: url });
+    } catch {
+      setError('Не удалось загрузить фото. Попробуйте другой файл.');
+    }
+    setUploading(null);
+  }
   const delQ = (i: number) => setQuestions((qs) => qs.filter((_, qi) => qi !== i));
   const addQ = () => setQuestions((qs) => [...qs, { id: `q-${Date.now()}`, text: '', options: ['', '', '', ''], correct: 0 }]);
 
@@ -123,6 +148,7 @@ export function TestBuilder({
     // пометится неверно.
     const payload = questions.map((q) => ({
       text: q.text.trim(),
+      imageUrl: q.imageUrl ?? null,
       options: q.options
         .map((text, i) => ({ text: text.trim(), isCorrect: i === q.correct }))
         .filter((o) => o.text),
@@ -239,6 +265,20 @@ export function TestBuilder({
               </div>
               <input value={q.text} onChange={(e) => updateQ(i, { text: e.target.value })} placeholder="Текст вопроса"
                 className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-brand" />
+              {q.imageUrl ? (
+                <div className="relative w-fit max-w-full">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={q.imageUrl} alt="Фото к вопросу" className="max-h-64 max-w-full rounded-lg border border-slate-200" />
+                  <button type="button" onClick={() => updateQ(i, { imageUrl: null })} aria-label="Убрать фото"
+                    className="absolute right-2 top-2 rounded-md bg-white/90 px-2 py-1 text-xs font-medium text-red-500 shadow hover:bg-white">Убрать</button>
+                </div>
+              ) : (
+                <label className="flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                  {uploading === q.id ? 'Загружаем…' : '+ Добавить фото'}
+                  <input type="file" accept="image/*" className="hidden" disabled={uploading !== null}
+                    onChange={(e) => { attachImage(i, e.target.files?.[0]); e.target.value = ''; }} />
+                </label>
+              )}
               <div className="grid gap-2 sm:grid-cols-2">
                 {q.options.map((opt, oi) => (
                   <label key={oi} className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${q.correct === oi ? 'border-emerald-300 bg-emerald-50/50' : 'border-slate-200'}`}>
@@ -252,6 +292,7 @@ export function TestBuilder({
             </Card>
           ))}
 
+          {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
           <div className="flex justify-between">
             <button onClick={() => setStep(1)} className="rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100">Назад</button>
             <button onClick={() => setStep(3)} disabled={!questionsValid}

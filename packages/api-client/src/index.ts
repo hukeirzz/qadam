@@ -371,7 +371,7 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
         .select(
           'id, title, description, level, subject_id, topic_id, published, created_at, ' +
             'school_test_students(student_id), ' +
-            'school_test_questions(id, order_num, text, explanation, school_test_options(id, order_num, text, is_correct))',
+            'school_test_questions(id, order_num, text, explanation, image_url, school_test_options(id, order_num, text, is_correct))',
         )
         .eq('id', testId)
         .single();
@@ -381,7 +381,7 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
         published: boolean; created_at: string;
         school_test_students: { student_id: string }[];
         school_test_questions: {
-          id: string; order_num: number; text: string; explanation: string | null;
+          id: string; order_num: number; text: string; explanation: string | null; image_url: string | null;
           school_test_options: { id: string; order_num: number; text: string; is_correct: boolean }[];
         }[];
       } | null;
@@ -421,6 +421,7 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       questions: {
         text: string;
         explanation?: string | null;
+        imageUrl?: string | null;
         options: { text: string; isCorrect: boolean }[];
       }[],
     ): Promise<{ id: string | null; error: { message: string } | null }> {
@@ -455,7 +456,7 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       const { data: qRows, error: qErr } = await supabase
         .from('school_test_questions')
         .insert(questions.map((q, i) => ({
-          test_id: testId, order_num: i, text: q.text, explanation: q.explanation ?? null,
+          test_id: testId, order_num: i, text: q.text, explanation: q.explanation ?? null, image_url: q.imageUrl ?? null,
         })))
         .select('id, order_num');
       if (qErr || !qRows) return fail(qErr ?? { message: 'no questions inserted' }, 'questions');
@@ -477,6 +478,14 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
     },
 
     /** Deletes a student's account and everything tied to it. Only staff of the same school (checked in the DB). */
+    /** Uploads a question photo (figure, diagram) to the public `question-images` bucket; returns its URL. */
+    async uploadQuestionImage(schoolId: string, file: Blob): Promise<{ url: string | null; error: { message: string } | null }> {
+      const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+      const path = `${schoolId}/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from('question-images').upload(path, file, { contentType: file.type });
+      if (error) return { url: null, error };
+      return { url: supabase.storage.from('question-images').getPublicUrl(path).data.publicUrl, error: null };
+    },
     async moveStudent(studentId: string, classId: string) {
       const { error } = await supabase.rpc('staff_move_student', { p_student: studentId, p_class: classId });
       return { error };
@@ -567,14 +576,14 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
         .from('school_tests')
         .select(
           'id, title, description, level, subject_id, topic_id, ' +
-            'school_test_questions(id, order_num, text, explanation, school_test_options(id, order_num, text, is_correct))',
+            'school_test_questions(id, order_num, text, explanation, image_url, school_test_options(id, order_num, text, is_correct))',
         )
         .eq('id', testId)
         .single();
       return (data ?? null) as unknown as {
         id: string; title: string; description: string | null; level: TestLevel; subject_id: string | null; topic_id: string | null;
         school_test_questions: {
-          id: string; order_num: number; text: string; explanation: string | null;
+          id: string; order_num: number; text: string; explanation: string | null; image_url: string | null;
           school_test_options: { id: string; order_num: number; text: string; is_correct: boolean }[];
         }[];
       } | null;
