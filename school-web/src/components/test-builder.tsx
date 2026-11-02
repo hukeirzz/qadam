@@ -7,11 +7,12 @@ import { createBrowserApi } from '@/lib/supabase/client';
 import * as agg from '@/lib/aggregate';
 import { TEST_LEVELS, type TestLevel } from '@qadam/api-client';
 import { topicWithLevel } from '@/lib/levels';
+import { Figure, type FigureSpec } from '@/components/figure';
 
 type Topic = { id: string; subject_id: string; title: string; order_num: number };
 type ClassRow = { id: string; name: string };
 type Student = { id: string; name: string; class_id: string | null };
-type Question = { id: string; text: string; options: string[]; correct: number; imageUrl?: string | null };
+type Question = { id: string; text: string; options: string[]; correct: number; imageUrl?: string | null; figure?: FigureSpec | null };
 
 // Phone photos are several MB: shrink to ≤1280px JPEG before uploading.
 async function shrinkImage(file: File): Promise<Blob> {
@@ -149,6 +150,7 @@ export function TestBuilder({
     const payload = questions.map((q) => ({
       text: q.text.trim(),
       imageUrl: q.imageUrl ?? null,
+      figure: q.figure ?? null,
       options: q.options
         .map((text, i) => ({ text: text.trim(), isCorrect: i === q.correct }))
         .filter((o) => o.text),
@@ -265,6 +267,7 @@ export function TestBuilder({
               </div>
               <input value={q.text} onChange={(e) => updateQ(i, { text: e.target.value })} placeholder="Текст вопроса"
                 className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-brand" />
+              {q.figure && <Figure spec={q.figure} />}
               {q.imageUrl ? (
                 <div className="relative w-fit max-w-full">
                   {/* eslint-disable-next-line @next/next/no-img-element */}

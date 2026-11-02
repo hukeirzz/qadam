@@ -7,9 +7,10 @@ import { createBrowserApi } from '@/lib/supabase/client';
 import { CheckIcon } from './icons';
 import { pct } from '@/lib/student-ui';
 import { outcome } from './student-tasks';
+import { Figure, type FigureSpec } from './figure';
 
 type Option = { id: string; order_num: number; text: string; is_correct: boolean };
-type Question = { id: string; order_num: number; text: string; explanation: string | null; image_url?: string | null; school_test_options: Option[] };
+type Question = { id: string; order_num: number; text: string; explanation: string | null; image_url?: string | null; figure?: unknown; school_test_options: Option[] };
 
 export function TestRunner({
   testId, studentId, title, subtitle, questions, retake = false,
@@ -82,6 +83,7 @@ export function TestRunner({
 
       <div className="rounded-xl bg-white p-6 ring-1 ring-slate-200/70">
         <p className="text-lg font-semibold leading-snug text-slate-800">{q.text}</p>
+        {q.figure != null && <Figure spec={q.figure as FigureSpec} className="mt-4" />}
         {q.image_url && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={q.image_url} alt="Рисунок к вопросу" className="mt-4 max-h-80 max-w-full rounded-lg border border-slate-200" />

@@ -371,7 +371,7 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
         .select(
           'id, title, description, level, subject_id, topic_id, published, created_at, ' +
             'school_test_students(student_id), ' +
-            'school_test_questions(id, order_num, text, explanation, image_url, school_test_options(id, order_num, text, is_correct))',
+            'school_test_questions(id, order_num, text, explanation, image_url, figure, school_test_options(id, order_num, text, is_correct))',
         )
         .eq('id', testId)
         .single();
@@ -381,7 +381,7 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
         published: boolean; created_at: string;
         school_test_students: { student_id: string }[];
         school_test_questions: {
-          id: string; order_num: number; text: string; explanation: string | null; image_url: string | null;
+          id: string; order_num: number; text: string; explanation: string | null; image_url: string | null; figure: unknown | null;
           school_test_options: { id: string; order_num: number; text: string; is_correct: boolean }[];
         }[];
       } | null;
@@ -422,6 +422,7 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
         text: string;
         explanation?: string | null;
         imageUrl?: string | null;
+        figure?: unknown | null; // JSON-описание чертежа, рисуется Figure в school-web
         options: { text: string; isCorrect: boolean }[];
       }[],
     ): Promise<{ id: string | null; error: { message: string } | null }> {
@@ -456,7 +457,7 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       const { data: qRows, error: qErr } = await supabase
         .from('school_test_questions')
         .insert(questions.map((q, i) => ({
-          test_id: testId, order_num: i, text: q.text, explanation: q.explanation ?? null, image_url: q.imageUrl ?? null,
+          test_id: testId, order_num: i, text: q.text, explanation: q.explanation ?? null, image_url: q.imageUrl ?? null, figure: q.figure ?? null,
         })))
         .select('id, order_num');
       if (qErr || !qRows) return fail(qErr ?? { message: 'no questions inserted' }, 'questions');
@@ -576,14 +577,14 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
         .from('school_tests')
         .select(
           'id, title, description, level, subject_id, topic_id, ' +
-            'school_test_questions(id, order_num, text, explanation, image_url, school_test_options(id, order_num, text, is_correct))',
+            'school_test_questions(id, order_num, text, explanation, image_url, figure, school_test_options(id, order_num, text, is_correct))',
         )
         .eq('id', testId)
         .single();
       return (data ?? null) as unknown as {
         id: string; title: string; description: string | null; level: TestLevel; subject_id: string | null; topic_id: string | null;
         school_test_questions: {
-          id: string; order_num: number; text: string; explanation: string | null; image_url: string | null;
+          id: string; order_num: number; text: string; explanation: string | null; image_url: string | null; figure: unknown | null;
           school_test_options: { id: string; order_num: number; text: string; is_correct: boolean }[];
         }[];
       } | null;
