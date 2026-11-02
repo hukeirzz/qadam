@@ -97,6 +97,14 @@ export function TestBuilder({
 
   const toggleStudent = (id: string) => setSelStudents((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const addRecommended = () => setSelStudents((s) => new Set([...s, ...recommended]));
+  // «Выбрать всех» works on the students currently listed (the chosen class, or the whole school).
+  const allSelected = classStudents.length > 0 && classStudents.every((s) => selStudents.has(s.id));
+  const toggleAll = () => setSelStudents((cur) => {
+    const n = new Set(cur);
+    if (allSelected) classStudents.forEach((s) => n.delete(s.id));
+    else classStudents.forEach((s) => n.add(s.id));
+    return n;
+  });
 
   const questionsValid = questions.length > 0 && questions.every((q) => {
     const filled = q.options.filter((o) => o.trim());
@@ -258,7 +266,12 @@ export function TestBuilder({
           <Card className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-semibold text-slate-800">Кому отправить</h2>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {classStudents.length > 0 && (
+                  <button onClick={toggleAll} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                    {allSelected ? 'Снять выбор' : `Выбрать всех (${classStudents.length})`}
+                  </button>
+                )}
                 {recommended.size > 0 && (
                   <button onClick={addRecommended} className="rounded-lg bg-violet-50 px-3 py-1.5 text-xs font-semibold text-brand hover:bg-violet-100">
                     + Добавить рекомендованных ({recommended.size})
