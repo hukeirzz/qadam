@@ -3,10 +3,15 @@
 //
 // Плоскость: точки [x, y]. Стереометрия: точки [x, y, z] — тогда фигура проецируется на плоскость
 // (x — к зрителю, y — вправо, z — вверх); невидимые рёбра помечаются `dashed`.
+//
+// Кроме чертежа Figure рисует данные к задаче (figure-data.tsx): числовую прямую, круговую диаграмму,
+// столбики/гистограмму и таблицу — по ключу в описании: numberLine, pie, bars, table.
+import { DataFigure, type DataSpec } from './figure-data';
+
 type Pt = [number, number] | [number, number, number];
 type Seg = { from: string; to: string; label?: string; dashed?: boolean; ticks?: number; color?: string; at?: number };
 
-export type FigureSpec = {
+type GeoSpec = {
   points: Record<string, Pt>;
   /** "AB" или { from, to, label?, dashed?, ticks?, color?, at? } (at — где на отрезке подпись, 0…1) */
   segments?: (string | Seg)[];
@@ -30,10 +35,16 @@ export type FigureSpec = {
   view?: 'oblique' | 'above';
 };
 
+export type FigureSpec = GeoSpec | DataSpec;
+
 type P = [number, number];
 const W = 320, PAD = 34;
 
 export function Figure({ spec, className = '' }: { spec: FigureSpec; className?: string }) {
+  return 'points' in spec ? <GeoFigure spec={spec} className={className} /> : <DataFigure spec={spec} className={className} />;
+}
+
+function GeoFigure({ spec, className }: { spec: GeoSpec; className: string }) {
   const names = Object.keys(spec.points);
   if (names.length === 0) return null;
   const is3d = names.some((n) => spec.points[n].length === 3);
@@ -48,7 +59,7 @@ export function Figure({ spec, className = '' }: { spec: FigureSpec; className?:
   };
 
   // Окружности в пространстве — ломаные из 72 точек.
-  const ring = (c: NonNullable<FigureSpec['circles3d']>[number]): P[] => {
+  const ring = (c: NonNullable<GeoSpec['circles3d']>[number]): P[] => {
     const o = spec.points[c.center] as [number, number, number];
     return Array.from({ length: 73 }, (_, i) => {
       const t = (i / 72) * 2 * Math.PI, a = c.r * Math.cos(t), b = c.r * Math.sin(t);

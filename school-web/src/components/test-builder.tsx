@@ -5,14 +5,16 @@ import { Card } from '@/components/ui';
 import { SparkleIcon } from '@/components/icons';
 import { createBrowserApi } from '@/lib/supabase/client';
 import * as agg from '@/lib/aggregate';
-import { TEST_LEVELS, type TestLevel } from '@qadam/api-client';
+import { TEST_LEVELS, type TestKind, type TestLevel } from '@qadam/api-client';
 import { topicWithLevel } from '@/lib/levels';
 import { Figure, type FigureSpec } from '@/components/figure';
+import { MathText, hasMath } from '@/components/math-text';
+import { COMPARE_OPTIONS, KIND_LABELS, LETTERS, hasKinds, optionCount } from '@/lib/test-kinds';
 
 type Topic = { id: string; subject_id: string; title: string; order_num: number };
 type ClassRow = { id: string; name: string };
 type Student = { id: string; name: string; class_id: string | null };
-type Question = { id: string; text: string; options: string[]; correct: number; imageUrl?: string | null; figure?: FigureSpec | null };
+type Question = { id: string; text: string; colA?: string; colB?: string; options: string[]; correct: number; imageUrl?: string | null; figure?: FigureSpec | null };
 
 // Phone photos are several MB: shrink to ≤1280px JPEG before uploading.
 async function shrinkImage(file: File): Promise<Blob> {
@@ -26,7 +28,7 @@ async function shrinkImage(file: File): Promise<Blob> {
   return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('encode'))), 'image/jpeg', 0.85));
 }
 
-const COUNTS = [5, 10, 15, 20];
+const COUNTS = [10, 15, 20, 30];
 function sectionName(id: string) {
   return agg.SUBJECT_LABELS[id] ?? id;
 }
@@ -57,6 +59,7 @@ export function TestBuilder({
     [...new Set(topicsFor(lvl).map((t) => t.subject_id))].sort().map((id) => ({ id, name: sectionName(id) }));
   const [subjectId, setSubjectId] = useState(sectionsFor('medium')[0]?.id ?? '');
   const [topicId, setTopicId] = useState(firstTopic(sectionsFor('medium')[0]?.id ?? '', 'medium'));
+  const [kind, setKind] = useState<TestKind>('choice');
   const [count, setCount] = useState(10);
   const [generating, setGenerating] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -69,6 +72,9 @@ export function TestBuilder({
   const topicTitle = topicWithLevel(topics.find((t) => t.id === topicId)?.title ?? '', level);
   const sections = sectionsFor(level);
   const subjectName = sections.find((s) => s.id === subjectId)?.name ?? '';
+  // «Сравнение» есть только в математике и геометрии; в остальных разделах всегда вопросы с вариантами.
+  const effKind: TestKind = hasKinds(subjectId) ? kind : 'choice';
+  const optN = optionCount(subjectId, effKind);
 
   // Точность ученика по выбранной теме — по его прошлым школьным тестам на эту тему.
   const topicAcc = (studentId: string): number | null => {
@@ -89,12 +95,14 @@ export function TestBuilder({
   function generate() {
     setGenerating(true);
     setTimeout(() => {
-      const qs: Question[] = Array.from({ length: count }, (_, i) => ({
-        id: `q-${Date.now()}-${i}`,
-        text: `${topicTitle}: вопрос ${i + 1}`,
-        options: ['Вариант 1', 'Вариант 2', 'Вариант 3', 'Вариант 4'],
-        correct: 0,
-      }));
+      const qs: Question[] = Array.from({ length: count }, (_, i) => effKind === 'compare'
+        ? { id: `q-${Date.now()}-${i}`, text: '', colA: '', colB: '', options: COMPARE_OPTIONS, correct: 0 }
+        : {
+          id: `q-${Date.now()}-${i}`,
+          text: `${topicTitle}: вопрос ${i + 1}`,
+          options: Array.from({ length: optN }, (_, k) => `Вариант ${k + 1}`),
+          correct: 0,
+        });
       setQuestions(qs);
       setGenerating(false);
       setStep(2);
@@ -119,7 +127,9 @@ export function TestBuilder({
     setUploading(null);
   }
   const delQ = (i: number) => setQuestions((qs) => qs.filter((_, qi) => qi !== i));
-  const addQ = () => setQuestions((qs) => [...qs, { id: `q-${Date.now()}`, text: '', options: ['', '', '', ''], correct: 0 }]);
+  const addQ = () => setQuestions((qs) => [...qs, effKind === 'compare'
+    ? { id: `q-${Date.now()}`, text: '', colA: '', colB: '', options: COMPARE_OPTIONS, correct: 0 }
+    : { id: `q-${Date.now()}`, text: '', options: Array.from({ length: optN }, () => ''), correct: 0 }]);
 
   const toggleStudent = (id: string) => setSelStudents((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const addRecommended = () => setSelStudents((s) => new Set([...s, ...recommended]));
@@ -133,6 +143,7 @@ export function TestBuilder({
   });
 
   const questionsValid = questions.length > 0 && questions.every((q) => {
+    if (effKind === 'compare') return !!q.colA?.trim() && !!q.colB?.trim();
     const filled = q.options.filter((o) => o.trim());
     return q.text.trim() && filled.length >= 2 && q.options[q.correct]?.trim();
   });
@@ -149,6 +160,8 @@ export function TestBuilder({
     // пометится неверно.
     const payload = questions.map((q) => ({
       text: q.text.trim(),
+      colA: effKind === 'compare' ? q.colA?.trim() ?? '' : null,
+      colB: effKind === 'compare' ? q.colB?.trim() ?? '' : null,
       imageUrl: q.imageUrl ?? null,
       figure: q.figure ?? null,
       options: q.options
@@ -160,8 +173,9 @@ export function TestBuilder({
       schoolId,
       sess.user?.id ?? '',
       {
-        title: subjectName ? `${subjectName}: ${topicTitle}` : topicTitle,
+        title: (subjectName ? `${subjectName}: ${topicTitle}` : topicTitle) + (effKind === 'compare' ? ' · сравнение' : ''),
         level,
+        kind: effKind,
         subjectId: subjectId || null,
         topicId: topicId || null,
         studentIds: [...selStudents],
@@ -227,6 +241,21 @@ export function TestBuilder({
             </div>
           </div>
 
+          {hasKinds(subjectId) && (
+            <div>
+              <label className="text-sm font-medium text-slate-600">Тип заданий</label>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {([['compare', 'Часть I ОРТ: две величины в колонках А и Б, ответы всегда одни и те же'], ['choice', 'Часть II ОРТ: вопрос и пять вариантов ответа А–Д']] as [TestKind, string][]).map(([k, hint]) => (
+                  <button key={k} type="button" onClick={() => setKind(k)}
+                    className={`rounded-xl border px-4 py-3 text-left transition ${effKind === k ? 'border-brand bg-violet-50/60' : 'border-slate-200 hover:bg-slate-50'}`}>
+                    <span className={`block text-sm font-semibold ${effKind === k ? 'text-brand' : 'text-slate-700'}`}>{KIND_LABELS[k]}</span>
+                    <span className="mt-0.5 block text-xs text-slate-400">{hint}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="text-sm font-medium text-slate-600">Количество вопросов</label>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -265,8 +294,10 @@ export function TestBuilder({
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Вопрос {i + 1}</span>
                 <button onClick={() => delQ(i)} className="text-xs font-medium text-red-500 hover:text-red-600">Удалить</button>
               </div>
-              <input value={q.text} onChange={(e) => updateQ(i, { text: e.target.value })} placeholder="Текст вопроса"
+              <input value={q.text} onChange={(e) => updateQ(i, { text: e.target.value })}
+                placeholder={effKind === 'compare' ? 'Дано (необязательно), например $0<a<1$' : 'Текст вопроса'}
                 className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-brand" />
+              {hasMath(q.text) && <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700"><MathText>{q.text}</MathText></p>}
               {q.figure && <Figure spec={q.figure} />}
               {q.imageUrl ? (
                 <div className="relative w-fit max-w-full">
@@ -282,22 +313,48 @@ export function TestBuilder({
                     onChange={(e) => { attachImage(i, e.target.files?.[0]); e.target.value = ''; }} />
                 </label>
               )}
-              <div className="grid gap-2 sm:grid-cols-2">
-                {q.options.map((opt, oi) => (
-                  <label key={oi} className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${q.correct === oi ? 'border-emerald-300 bg-emerald-50/50' : 'border-slate-200'}`}>
-                    <input type="radio" name={`c-${q.id}`} checked={q.correct === oi} onChange={() => updateQ(i, { correct: oi })} className="accent-emerald-500" />
-                    <input value={opt} onChange={(e) => updateOpt(i, oi, e.target.value)} placeholder={`Вариант ${oi + 1}`}
-                      className="w-full bg-transparent text-sm outline-none" />
-                  </label>
-                ))}
-              </div>
-              <p className="text-xs text-slate-400">Отметьте зелёным верный вариант.</p>
+              {effKind === 'compare' ? (
+                <>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {([['colA', 'Колонка А'], ['colB', 'Колонка Б']] as const).map(([key, label]) => (
+                      <div key={key} className="rounded-lg border border-slate-200 p-2.5">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
+                        <input value={q[key] ?? ''} onChange={(e) => updateQ(i, { [key]: e.target.value })} placeholder={'Например $\\frac{3}{4}$ или 0,75'}
+                          className="mt-1 w-full bg-transparent text-sm outline-none" />
+                        {hasMath(q[key] ?? '') && <p className="mt-1 text-sm text-slate-700"><MathText>{q[key] ?? ''}</MathText></p>}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {COMPARE_OPTIONS.map((opt, oi) => (
+                      <label key={oi} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${q.correct === oi ? 'border-emerald-300 bg-emerald-50/50' : 'border-slate-200'}`}>
+                        <input type="radio" name={`c-${q.id}`} checked={q.correct === oi} onChange={() => updateQ(i, { correct: oi })} className="accent-emerald-500" />
+                        <span className="text-xs font-semibold text-slate-400">{LETTERS[oi]}</span>
+                        <span className="text-slate-700">{opt}</span>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {q.options.map((opt, oi) => (
+                    <label key={oi} className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${q.correct === oi ? 'border-emerald-300 bg-emerald-50/50' : 'border-slate-200'}`}>
+                      <input type="radio" name={`c-${q.id}`} checked={q.correct === oi} onChange={() => updateQ(i, { correct: oi })} className="accent-emerald-500" />
+                      <span className="text-xs font-semibold text-slate-400">{LETTERS[oi]}</span>
+                      <input value={opt} onChange={(e) => updateOpt(i, oi, e.target.value)} placeholder={`Вариант ${LETTERS[oi]}`}
+                        className="w-full bg-transparent text-sm outline-none" />
+                    </label>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-slate-400">{'Отметьте зелёным верный ответ. Формулы пишите между знаками доллара: $\\frac{1}{2}$, $\\sqrt{3}$, $x^2$.'}</p>
             </Card>
           ))}
 
           {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
           <div className="flex justify-between">
             <button onClick={() => setStep(1)} className="rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100">Назад</button>
+            {!questionsValid && effKind === 'compare' && <p className="self-center text-xs text-slate-400">Заполните колонки А и Б в каждом вопросе или удалите лишние.</p>}
             <button onClick={() => setStep(3)} disabled={!questionsValid}
               className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-60">Далее — назначить</button>
           </div>

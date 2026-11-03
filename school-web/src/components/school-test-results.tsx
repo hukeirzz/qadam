@@ -3,13 +3,15 @@ import { Card } from '@/components/ui';
 import { ArrowRightIcon } from '@/components/icons';
 import { TEST_LEVELS, type TestLevel } from '@qadam/api-client';
 import { Figure, type FigureSpec } from '@/components/figure';
+import { MathText } from '@/components/math-text';
+import { LETTERS } from '@/lib/test-kinds';
 
 type TestDetail = {
   id: string; title: string; description: string | null; level: TestLevel;
   subject_id: string | null;
   school_test_students: { student_id: string }[];
   school_test_questions: {
-    id: string; order_num: number; text: string; image_url: string | null; figure: unknown | null;
+    id: string; order_num: number; text: string; col_a?: string | null; col_b?: string | null; image_url: string | null; figure: unknown | null;
     school_test_options: { id: string; order_num: number; text: string; is_correct: boolean }[];
   }[];
 };
@@ -141,15 +143,25 @@ export function SchoolTestResults({
         <ol className="mt-4 space-y-6">
           {[...test.school_test_questions].sort((a, b) => a.order_num - b.order_num).map((q, i) => (
             <li key={q.id}>
-              <p className="text-sm font-medium text-slate-800"><span className="text-slate-400">{i + 1}.</span> {q.text}</p>
+              <p className="text-sm font-medium text-slate-800"><span className="text-slate-400">{i + 1}.</span> <MathText className="whitespace-pre-line">{q.text}</MathText></p>
               {q.figure != null && <Figure spec={q.figure as FigureSpec} className="mt-3" />}
               {q.image_url && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={q.image_url} alt="Фото к вопросу" className="mt-3 max-h-64 max-w-full rounded-lg border border-slate-200" />
               )}
+              {q.col_a != null && q.col_b != null && (
+                <div className="mt-3 grid max-w-md grid-cols-2 gap-2">
+                  {[['А', q.col_a], ['Б', q.col_b]].map(([l, v]) => (
+                    <div key={l} className="rounded-lg border border-slate-300 px-3 py-2 text-center text-sm text-slate-800">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Колонка {l}</p>
+                      <MathText className="block break-words">{v}</MathText>
+                    </div>
+                  ))}
+                </div>
+              )}
               <ul className="mt-3 grid gap-1.5 sm:grid-cols-2">
-                {[...q.school_test_options].sort((a, b) => a.order_num - b.order_num).map((o) => (
-                  <li key={o.id} className={`rounded-lg border px-3 py-2 text-sm ${o.is_correct ? 'border-emerald-300 bg-emerald-50 font-medium text-emerald-800' : 'border-slate-200 text-slate-600'}`}>{o.text}</li>
+                {[...q.school_test_options].sort((a, b) => a.order_num - b.order_num).map((o, oi) => (
+                  <li key={o.id} className={`rounded-lg border px-3 py-2 text-sm ${o.is_correct ? 'border-emerald-300 bg-emerald-50 font-medium text-emerald-800' : 'border-slate-200 text-slate-600'}`}><span className="mr-1.5 text-xs font-semibold opacity-60">{LETTERS[oi]}</span><MathText>{o.text}</MathText></li>
                 ))}
               </ul>
             </li>

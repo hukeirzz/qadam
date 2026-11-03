@@ -15,6 +15,9 @@ export const TEST_LEVELS: { id: TestLevel; label: string }[] = [
   { id: 'high', label: 'Высокий' },
 ];
 
+/** Тип заданий: choice — вопрос с вариантами; compare — сравнение величин в колонках А и Б (часть I ОРТ по математике). */
+export type TestKind = 'choice' | 'compare';
+
 /**
  * Оборачивает готовый SupabaseClient в пространства имён: auth (вход/регистрация), profile (роль учителя),
  * staffData (всё для учителя: классы, ученики, тесты, пробные), studentData (кабинет ученика).
@@ -240,13 +243,13 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       const { data } = await supabase
         .from('school_tests')
         .select(
-          'id, title, description, level, subject_id, topic_id, published, created_at, ' +
+          'id, title, description, level, kind, subject_id, topic_id, published, created_at, ' +
             'school_test_students(student_id), school_test_questions(id), school_test_results(id)',
         )
         .eq('school_id', schoolId)
         .order('created_at', { ascending: false });
       return (data ?? []) as unknown as {
-        id: string; title: string; description: string | null; level: TestLevel;
+        id: string; title: string; description: string | null; level: TestLevel; kind: TestKind;
         subject_id: string | null; topic_id: string | null;
         published: boolean; created_at: string;
         school_test_students: { student_id: string }[];
@@ -260,19 +263,19 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       const { data } = await supabase
         .from('school_tests')
         .select(
-          'id, title, description, level, subject_id, topic_id, published, created_at, ' +
+          'id, title, description, level, kind, subject_id, topic_id, published, created_at, ' +
             'school_test_students(student_id), ' +
-            'school_test_questions(id, order_num, text, explanation, image_url, figure, school_test_options(id, order_num, text, is_correct))',
+            'school_test_questions(id, order_num, text, col_a, col_b, explanation, image_url, figure, school_test_options(id, order_num, text, is_correct))',
         )
         .eq('id', testId)
         .single();
       return (data ?? null) as unknown as {
-        id: string; title: string; description: string | null; level: TestLevel;
+        id: string; title: string; description: string | null; level: TestLevel; kind: TestKind;
         subject_id: string | null; topic_id: string | null;
         published: boolean; created_at: string;
         school_test_students: { student_id: string }[];
         school_test_questions: {
-          id: string; order_num: number; text: string; explanation: string | null; image_url: string | null; figure: unknown | null;
+          id: string; order_num: number; text: string; col_a: string | null; col_b: string | null; explanation: string | null; image_url: string | null; figure: unknown | null;
           school_test_options: { id: string; order_num: number; text: string; is_correct: boolean }[];
         }[];
       } | null;
@@ -305,12 +308,15 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
         title: string;
         description?: string | null;
         level: TestLevel;
+        kind?: TestKind; // choice по умолчанию
         subjectId: string | null;
         topicId?: string | null;
         studentIds: string[]; // видимость решает только это — назначенные ученики
       },
       questions: {
-        text: string;
+        text: string; // для сравнения — «дано» (может быть пустым)
+        colA?: string | null; // колонки сравнения (kind = compare)
+        colB?: string | null;
         explanation?: string | null;
         imageUrl?: string | null;
         figure?: unknown | null; // JSON-описание чертежа, рисуется Figure в school-web
@@ -321,7 +327,7 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
         .from('school_tests')
         .insert({
           school_id: schoolId, title: test.title, description: test.description ?? null,
-          level: test.level, subject_id: test.subjectId, topic_id: test.topicId ?? null,
+          level: test.level, kind: test.kind ?? 'choice', subject_id: test.subjectId, topic_id: test.topicId ?? null,
           created_by: createdBy, published: false,
         })
         .select('id').single();
@@ -348,7 +354,7 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       const { data: qRows, error: qErr } = await supabase
         .from('school_test_questions')
         .insert(questions.map((q, i) => ({
-          test_id: testId, order_num: i, text: q.text, explanation: q.explanation ?? null, image_url: q.imageUrl ?? null, figure: q.figure ?? null,
+          test_id: testId, order_num: i, text: q.text, col_a: q.colA ?? null, col_b: q.colB ?? null, explanation: q.explanation ?? null, image_url: q.imageUrl ?? null, figure: q.figure ?? null,
         })))
         .select('id, order_num');
       if (qErr || !qRows) return fail(qErr ?? { message: 'no questions inserted' }, 'questions');
@@ -467,15 +473,15 @@ export function wrapSupabaseClient(supabase: SupabaseClient) {
       const { data } = await supabase
         .from('school_tests')
         .select(
-          'id, title, description, level, subject_id, topic_id, ' +
-            'school_test_questions(id, order_num, text, explanation, image_url, figure, school_test_options(id, order_num, text, is_correct))',
+          'id, title, description, level, kind, subject_id, topic_id, ' +
+            'school_test_questions(id, order_num, text, col_a, col_b, explanation, image_url, figure, school_test_options(id, order_num, text, is_correct))',
         )
         .eq('id', testId)
         .single();
       return (data ?? null) as unknown as {
-        id: string; title: string; description: string | null; level: TestLevel; subject_id: string | null; topic_id: string | null;
+        id: string; title: string; description: string | null; level: TestLevel; kind: TestKind; subject_id: string | null; topic_id: string | null;
         school_test_questions: {
-          id: string; order_num: number; text: string; explanation: string | null; image_url: string | null; figure: unknown | null;
+          id: string; order_num: number; text: string; col_a: string | null; col_b: string | null; explanation: string | null; image_url: string | null; figure: unknown | null;
           school_test_options: { id: string; order_num: number; text: string; is_correct: boolean }[];
         }[];
       } | null;

@@ -8,9 +8,11 @@ import { CheckIcon } from './icons';
 import { pct } from '@/lib/student-ui';
 import { outcome } from './student-tasks';
 import { Figure, type FigureSpec } from './figure';
+import { MathText } from './math-text';
+import { LETTERS } from '@/lib/test-kinds';
 
 type Option = { id: string; order_num: number; text: string; is_correct: boolean };
-type Question = { id: string; order_num: number; text: string; explanation: string | null; image_url?: string | null; figure?: unknown; school_test_options: Option[] };
+type Question = { id: string; order_num: number; text: string; col_a?: string | null; col_b?: string | null; explanation: string | null; image_url?: string | null; figure?: unknown; school_test_options: Option[] };
 
 export function TestRunner({
   testId, studentId, title, subtitle, questions, retake = false,
@@ -82,15 +84,25 @@ export function TestRunner({
       </div>
 
       <div className="rounded-xl bg-white p-6 ring-1 ring-slate-200/70">
-        <p className="text-lg font-semibold leading-snug text-slate-800">{q.text}</p>
+        {q.text.trim() && <MathText className="block whitespace-pre-line text-lg font-semibold leading-snug text-slate-800">{q.text}</MathText>}
         {q.figure != null && <Figure spec={q.figure as FigureSpec} className="mt-4" />}
         {q.image_url && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={q.image_url} alt="Рисунок к вопросу" className="mt-4 max-h-80 max-w-full rounded-lg border border-slate-200" />
         )}
+        {q.col_a != null && q.col_b != null && (
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {[['А', q.col_a], ['Б', q.col_b]].map(([l, v]) => (
+              <div key={l} className="rounded-lg border border-slate-300 px-3 py-3 text-center">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Колонка {l}</p>
+                <MathText className="mt-1.5 block break-words text-lg text-slate-800">{v}</MathText>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="mt-5 space-y-2.5">
-          {q.options.map((o) => {
+          {q.options.map((o, oi) => {
             const chosen = picked === o.id;
             const show = answered;
             const tone = !show
@@ -100,7 +112,8 @@ export function TestRunner({
             return (
               <button key={o.id} onClick={() => pick(o)} disabled={answered}
                 className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3.5 text-left text-sm font-medium text-slate-700 transition ${tone}`}>
-                <span className="flex-1">{o.text}</span>
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500">{LETTERS[oi]}</span>
+                <MathText className="flex-1">{o.text}</MathText>
                 {show && o.is_correct && <CheckIcon className="h-5 w-5 text-emerald-600" />}
               </button>
             );
@@ -109,7 +122,7 @@ export function TestRunner({
 
         {answered && q.explanation && (
           <p className="mt-5 rounded-xl bg-violet-50 px-4 py-3 text-sm leading-relaxed text-slate-600">
-            <span className="font-semibold text-violet-700">Пояснение: </span>{q.explanation}
+            <span className="font-semibold text-violet-700">Пояснение: </span><MathText>{q.explanation}</MathText>
           </p>
         )}
       </div>
