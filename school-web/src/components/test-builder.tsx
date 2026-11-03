@@ -12,9 +12,10 @@ import { MathText, hasMath } from '@/components/math-text';
 import { COMPARE_OPTIONS, KIND_LABELS, LETTERS, hasKinds, optionCount } from '@/lib/test-kinds';
 
 type Topic = { id: string; subject_id: string; title: string; order_num: number };
+type GeneratedQ = { text: string; colA?: string; colB?: string; options: string[]; correct: number; figure: unknown | null; explanation: string };
 type ClassRow = { id: string; name: string };
 type Student = { id: string; name: string; class_id: string | null };
-type Question = { id: string; text: string; colA?: string; colB?: string; options: string[]; correct: number; imageUrl?: string | null; figure?: FigureSpec | null };
+type Question = { id: string; text: string; colA?: string; colB?: string; options: string[]; correct: number; imageUrl?: string | null; figure?: FigureSpec | null; explanation?: string };
 
 // Phone photos are several MB: shrink to ≤1280px JPEG before uploading.
 async function shrinkImage(file: File): Promise<Blob> {
@@ -62,6 +63,7 @@ export function TestBuilder({
   const [kind, setKind] = useState<TestKind>('choice');
   const [count, setCount] = useState(10);
   const [generating, setGenerating] = useState(false);
+  const [aiNote, setAiNote] = useState<string | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [selClass, setSelClass] = useState(ALL_CLASSES);
   const [selStudents, setSelStudents] = useState<Set<string>>(new Set());
@@ -92,21 +94,39 @@ export function TestBuilder({
     setLevel(l); setSubjectId(subj); setTopicId(firstTopic(subj, l));
   }
 
-  function generate() {
-    setGenerating(true);
-    setTimeout(() => {
-      const qs: Question[] = Array.from({ length: count }, (_, i) => effKind === 'compare'
-        ? { id: `q-${Date.now()}-${i}`, text: '', colA: '', colB: '', options: COMPARE_OPTIONS, correct: 0 }
-        : {
-          id: `q-${Date.now()}-${i}`,
-          text: `${topicTitle}: вопрос ${i + 1}`,
-          options: Array.from({ length: optN }, (_, k) => `Вариант ${k + 1}`),
-          correct: 0,
-        });
-      setQuestions(qs);
-      setGenerating(false);
+  /** Пустые заготовки — для ручного ввода, если ИИ недоступен или учитель хочет свои вопросы. */
+  function makeBlank() {
+    const qs: Question[] = Array.from({ length: count }, (_, i) => effKind === 'compare'
+      ? { id: `q-${Date.now()}-${i}`, text: '', colA: '', colB: '', options: COMPARE_OPTIONS, correct: 0 }
+      : {
+        id: `q-${Date.now()}-${i}`,
+        text: `${topicTitle}: вопрос ${i + 1}`,
+        options: Array.from({ length: optN }, (_, k) => `Вариант ${k + 1}`),
+        correct: 0,
+      });
+    setQuestions(qs); setAiNote(null); setError(null); setStep(2);
+  }
+
+  /** ИИ составляет вопросы по теме и уровню (сервер проверяет ответы, см. lib/ai/generate.ts). */
+  async function generate() {
+    setGenerating(true); setError(null);
+    try {
+      const res = await fetch('/api/ai/questions', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ kind: effKind, level, count, subjectId, subjectName, topicTitle }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? 'Не удалось сгенерировать вопросы.');
+      setQuestions((data.questions as GeneratedQ[]).map((q) => ({
+        id: `q-${crypto.randomUUID()}`, text: q.text, colA: q.colA, colB: q.colB, options: q.options, correct: q.correct,
+        figure: (q.figure as FigureSpec | null) ?? null, explanation: q.explanation,
+      })));
+      setAiNote(data.produced < data.requested ? `ИИ составил ${data.produced} из ${data.requested} вопросов — остальные добавьте вручную.` : null);
       setStep(2);
-    }, 900);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось сгенерировать вопросы.');
+    }
+    setGenerating(false);
   }
 
   const updateQ = (i: number, patch: Partial<Question>) =>
@@ -160,6 +180,7 @@ export function TestBuilder({
     // пометится неверно.
     const payload = questions.map((q) => ({
       text: q.text.trim(),
+      explanation: q.explanation?.trim() || null,
       colA: effKind === 'compare' ? q.colA?.trim() ?? '' : null,
       colB: effKind === 'compare' ? q.colB?.trim() ?? '' : null,
       imageUrl: q.imageUrl ?? null,
@@ -266,15 +287,24 @@ export function TestBuilder({
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
+          {error && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+          )}
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <button onClick={onCancel} className="rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100">Отмена</button>
-            <button onClick={generate} disabled={generating || !topicId}
-              className="flex items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60">
-              <SparkleIcon className="h-5 w-5" />
-              {generating ? 'Генерируем тест…' : 'Сгенерировать тест'}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button onClick={makeBlank} disabled={generating || !topicId}
+                className="rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-60">Ввести вопросы вручную</button>
+              <button onClick={generate} disabled={generating || !topicId}
+                className="flex items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60">
+                <SparkleIcon className="h-5 w-5" />
+                {generating ? 'ИИ составляет вопросы…' : 'Сгенерировать с ИИ'}
+              </button>
+            </div>
           </div>
-          <p className="text-center text-xs text-slate-400">Создаются заготовки вопросов, которые нужно отредактировать на следующем шаге.</p>
+          <p className="text-center text-xs text-slate-400">
+            {generating ? 'Это занимает от 30 секунд до 2–3 минут: ИИ пишет вопросы и сам проверяет ответы.' : 'ИИ составит вопросы по теме и уровню, ответы проверяются автоматически. Всё можно отредактировать на следующем шаге.'}
+          </p>
         </Card>
       )}
 
@@ -287,6 +317,8 @@ export function TestBuilder({
             </p>
             <button onClick={addQ} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">+ Добавить вопрос</button>
           </Card>
+
+          {aiNote && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">{aiNote}</p>}
 
           {questions.map((q, i) => (
             <Card key={q.id} className="space-y-3">
@@ -347,6 +379,8 @@ export function TestBuilder({
                   ))}
                 </div>
               )}
+              <input value={q.explanation ?? ''} onChange={(e) => updateQ(i, { explanation: e.target.value })} placeholder="Пояснение к решению (его увидит ученик после ответа)"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand" />
               <p className="text-xs text-slate-400">{'Отметьте зелёным верный ответ. Формулы пишите между знаками доллара: $\\frac{1}{2}$, $\\sqrt{3}$, $x^2$.'}</p>
             </Card>
           ))}
