@@ -21,7 +21,7 @@ export type Tokens = { input: number; output: number; cacheRead: number; cacheWr
 export type GenerateResult = {
   questions: GeneratedQuestion[];
   requested: number; produced: number;
-  dropped: { invalid: number; mismatch: number; unsolved: number };
+  dropped: { invalid: number; mismatch: number; unsolved: number; duplicate: number };
   models: string[]; tokens: Tokens;
 };
 
@@ -153,6 +153,14 @@ function parseFigure(raw: string): unknown | null {
   return null;
 }
 
+/** Слова задачи (без формул-разметки), чтобы находить почти одинаковые вопросы из разных пачек. */
+const words = (q: GeneratedQuestion) => new Set([q.text, q.colA ?? '', q.colB ?? ''].join(' ').toLowerCase().match(/[a-zа-яё0-9]+/g) ?? []);
+const similar = (a: Set<string>, b: Set<string>) => {
+  let common = 0;
+  for (const w of a) if (b.has(w)) common++;
+  return common / Math.max(1, a.size + b.size - common) >= 0.5; // порог подобран по реальным наборам: ловит «ту же задачу с другими числами»
+};
+
 const norm = (s: string) => s.replace(/[$\s{}\\]/g, '').toLowerCase();
 const LETTERS = ['А', 'Б', 'В', 'Г'];
 
@@ -191,15 +199,18 @@ async function solve(acc: Acc, kind: TestKind, items: Candidate[], stats: Genera
     ? { i, given: c.q.text, columnA: c.q.colA, columnB: c.q.colB, figure: c.promptFigure || undefined }
     : { i, task: c.q.text, options: c.q.options, figure: c.promptFigure || undefined });
   const system = kind === 'compare'
-    ? 'Решай задачи ОРТ по математике «Сравнение величин». Для каждой верни choice: 0 — больше величина колонки А, 1 — больше В, 2 — равны, 3 — по данным определить нельзя (значения зависят от допустимых значений переменных или данных не хватает), -1 — не удалось решить. Решай сам, ничего не подгоняй.'
+    ? 'Решай задачи ОРТ по математике «Сравнение величин». Для каждой верни choice: 0 — больше величина колонки А, 1 — больше В, 2 — равны, 3 — по данным определить нельзя, -1 — не удалось решить. Решай сам, ничего не подгоняй. Правила: (1) учитывай ВСЕ условия в «дано», включая неравенства вроде x>0 или 0<x<100; (2) величины, которые по смыслу задачи не бывают отрицательными (цена, масса, число людей, длина, площадь), считай положительными, даже если об этом не сказано; (3) выбирай 3 только если ты нашёл ДВА допустимых набора значений с разным результатом (покажи их себе), а если результат при всех допустимых значениях один и тот же — это А, Б или В.'
     : 'Решай задачи ОРТ по математике. Для каждой верни choice — индекс верного варианта с нуля (-1 — ни один не подходит или решить не удалось). Решай сам, ничего не подгоняй.';
   const res = await ask<{ answers: { i: number; choice: number }[] }>(acc, {
-    model: SOLVER, system, user: JSON.stringify(payload), schema: SOLVER_SCHEMA, effort: 'medium', maxTokens: 32000,
+    model: SOLVER, system, user: JSON.stringify(payload), schema: SOLVER_SCHEMA, effort: 'high', maxTokens: 32000,
   });
   const got = new Map(res.answers.map((a) => [a.i, a.choice]));
   return items.filter((c, i) => {
     const ok = got.get(i) === c.q.correct;
-    if (!ok) stats.unsolved++;
+    if (!ok) {
+      stats.unsolved++;
+      console.info('ai rejected', JSON.stringify({ text: c.q.text, a: c.q.colA, b: c.q.colB, options: kind === 'choice' ? c.q.options : undefined, writer: c.q.correct, solver: got.get(i) ?? null }));
+    }
     return ok;
   });
 }
@@ -232,7 +243,7 @@ async function oneChunk(acc: Acc, stats: GenerateResult['dropped'], inp: Generat
 export async function generateQuestions(inp: GenerateInput): Promise<GenerateResult> {
   const optN = inp.kind === 'compare' ? 4 : (inp.subjectId === 'math' || inp.subjectId === 'geometry' ? 5 : 4);
   const acc: Acc = { tokens: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, models: new Set() };
-  const stats = { invalid: 0, mismatch: 0, unsolved: 0 };
+  const stats = { invalid: 0, mismatch: 0, unsolved: 0, duplicate: 0 };
 
   const round = async (need: number) => {
     const asked = Math.ceil(need * 1.2);
@@ -245,8 +256,17 @@ export async function generateQuestions(inp: GenerateInput): Promise<GenerateRes
     return ok;
   };
 
-  let out = await round(inp.count);
-  if (out.length < inp.count) out = [...out, ...(await round(inp.count - out.length))];
+  const out: GeneratedQuestion[] = [];
+  const seen: Set<string>[] = [];
+  const add = (list: GeneratedQuestion[]) => {
+    for (const q of list) {
+      const w = words(q);
+      if (seen.some((x) => similar(x, w))) { stats.duplicate++; continue; }
+      seen.push(w); out.push(q);
+    }
+  };
+  add(await round(inp.count));
+  if (out.length < inp.count) add(await round(inp.count - out.length));
   const questions = out.slice(0, inp.count);
   return { questions, requested: inp.count, produced: questions.length, dropped: stats, models: [...acc.models], tokens: acc.tokens };
 }
