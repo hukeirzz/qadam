@@ -116,13 +116,20 @@ const addUsage = (acc: Acc, model: string, u: Anthropic.Usage) => {
 async function ask<T>(acc: Acc, o: {
   model: string; system?: string; user: string; schema: object; effort: 'low' | 'medium' | 'high'; maxTokens: number;
 }): Promise<T> {
-  const msg = await client().messages.stream({
+  const send = () => client().messages.stream({
     model: o.model,
     max_tokens: o.maxTokens,
     ...(o.system ? { system: [{ type: 'text' as const, text: o.system, cache_control: { type: 'ephemeral' as const } }] } : {}),
     messages: [{ role: 'user', content: o.user }],
     output_config: { effort: o.effort, format: { type: 'json_schema', schema: o.schema as { [k: string]: unknown } } },
   }).finalMessage();
+  // Соединение с API иногда рвётся посреди ответа («terminated», «other side closed») — SDK такое сам не повторяет.
+  let msg: Awaited<ReturnType<typeof send>>;
+  try { msg = await send(); } catch (e) {
+    if (!/terminated|socket|closed|ECONNRESET|timeout|timed out|connection/i.test(e instanceof Error ? `${e.message} ${String(e.cause ?? '')}` : '')) throw e;
+    console.warn('ai stream interrupted, retrying once:', e instanceof Error ? e.message : e);
+    msg = await send();
+  }
   addUsage(acc, o.model, msg.usage);
   if (msg.stop_reason === 'refusal') throw new Error('Модель отказалась отвечать на этот запрос');
   const text = msg.content.map((b) => (b.type === 'text' ? b.text : '')).join('');
@@ -203,6 +210,7 @@ async function oneChunk(acc: Acc, stats: GenerateResult['dropped'], inp: Generat
   const hard = inp.subjectId === 'geometry' || inp.level === 'high';
   const user = `Раздел: ${inp.subjectName}. Тема: «${inp.topicTitle}». Уровень: ${LEVEL_NAME[inp.level]}. Составь ровно ${want} задач.`
     + (parts > 1 ? ` Это набор ${part} из ${parts}: сюжеты и числа должны отличаться от других наборов.` : '');
+  const t0 = Date.now();
   const raw = await ask<{ questions: (RawCompare | RawChoice)[] }>(acc, {
     model: hard ? GENERATOR_HARD : GENERATOR,
     system: systemPrompt(inp.kind, optN), user,
@@ -213,9 +221,12 @@ async function oneChunk(acc: Acc, stats: GenerateResult['dropped'], inp: Generat
   const cands = raw.questions
     .map((r) => (inp.kind === 'compare' ? toCompare(r as RawCompare, stats) : toChoice(r as RawChoice, optN, stats)))
     .filter((c): c is Candidate => c !== null);
-  const sure = cands.filter((c) => c.verified);
-  const checked = await solve(acc, inp.kind, cands.filter((c) => !c.verified), stats);
-  return [...sure, ...checked].map((c) => c.q);
+  // check пишет та же модель, что и текст задачи, и ничто не гарантирует, что он описывает ровно то, что видит ученик.
+  // Поэтому независимый решатель проверяет ВСЕ вопросы (по тексту, не видя ответа); совпадение с check — дополнительная страховка.
+  const t1 = Date.now();
+  const checked = await solve(acc, inp.kind, cands, stats);
+  console.info('ai chunk', JSON.stringify({ kind: inp.kind, want, wrote: cands.length, kept: checked.length, writeSec: Math.round((t1 - t0) / 1000), solveSec: Math.round((Date.now() - t1) / 1000) }));
+  return checked.map((c) => c.q);
 }
 
 export async function generateQuestions(inp: GenerateInput): Promise<GenerateResult> {

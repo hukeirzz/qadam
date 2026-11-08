@@ -1,6 +1,8 @@
 // Образцы вопросов для ИИ — настоящий стиль ОРТ (пособия ЦООМО и School Club), ответы проверены вручную.
 // Они лежат в системном промпте и кэшируются (prompt caching): платим за них один раз, дальше читаем
 // из кэша за малую долю цены. Формат — ровно тот, который ИИ должен вернуть.
+import { ORT19_CHOICE, ORT19_COMPARE } from './examples-ort19';
+
 type Check = { a: string; b: string; vars: { name: string; lo: number; hi: number; integer: boolean }[]; where: string };
 
 export type CompareExample = { given: string; a: string; b: string; figure: string; check: Check; answer: 'А' | 'Б' | 'В' | 'Г'; explanation: string };
@@ -8,7 +10,7 @@ export type ChoiceExample = { text: string; options: string[]; answer: number; f
 
 const none: Check['vars'] = [];
 
-export const COMPARE_EXAMPLES: CompareExample[] = [
+const BASE_COMPARE: CompareExample[] = [
   { given: '', a: '$\\frac{-5+123}{-123+5}$', b: '$-1$', figure: '', answer: 'В',
     check: { a: '(-5+123)/(-123+5)', b: '-1', vars: none, where: '' },
     explanation: 'Числитель 118, знаменатель −118, дробь равна −1.' },
@@ -36,7 +38,7 @@ export const COMPARE_EXAMPLES: CompareExample[] = [
     explanation: 'Обе величины равны 276,75: 1,23·225 = 2,25·123.' },
 ];
 
-export const CHOICE_EXAMPLES: ChoiceExample[] = [
+const BASE_CHOICE: ChoiceExample[] = [
   { text: 'Если $\\frac{1}{5}$ числа равна $4$, то чему равна $\\frac{1}{3}$ данного числа?', options: ['12', '3', '$6\\frac{2}{3}$', '5', '15'], answer: 2, figure: '',
     explanation: 'Число равно 20, а 20 : 3 = 6⅔.' },
   { text: 'Сумма корней уравнения $(2x+3)(4x-1)=0$ равна', options: ['$1{,}25$', '$-1{,}25$', '$-0{,}8$', '$0{,}8$', '$0$'], answer: 1, figure: '',
@@ -54,3 +56,7 @@ export const CHOICE_EXAMPLES: ChoiceExample[] = [
     figure: '{"pie":{"slices":[{"label":"Июль","value":50},{"label":"Август","value":30},{"label":"Июнь","value":20}],"unit":"%"}}',
     explanation: '30 : 50 = 0,6, то есть 60%.' },
 ];
+
+// Свои образцы + пробное ОРТ №19 (examples-ort19.ts).
+export const COMPARE_EXAMPLES: CompareExample[] = [...BASE_COMPARE, ...ORT19_COMPARE];
+export const CHOICE_EXAMPLES: ChoiceExample[] = [...BASE_CHOICE, ...ORT19_CHOICE];
