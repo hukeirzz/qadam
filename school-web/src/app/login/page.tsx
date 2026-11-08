@@ -14,6 +14,8 @@ import {
   StarIcon,
   ShieldIcon,
   LockIcon,
+  EyeIcon,
+  EyeOffIcon,
 } from '@/components/icons';
 
 const FEATURES = [
@@ -151,9 +153,14 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label htmlFor="password" className="text-sm font-medium text-slate-600">
-                    Пароль
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="password" className="text-sm font-medium text-slate-600">
+                      Пароль
+                    </label>
+                    <Link href="/forgot-password" className="text-sm font-medium text-brand hover:text-brand-hover">
+                      Забыли пароль?
+                    </Link>
+                  </div>
                   <div className="relative">
                     <LockIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                     <input
@@ -208,7 +215,7 @@ export default function LoginPage() {
                   </Link>
                 </p>
                 <p className="text-center text-xs text-slate-400">
-                  Учителям: если забыли логин или пароль, обратитесь к вашему представителю Qadam.
+                  Не помните, на какую почту регистрировались? Обратитесь к вашему представителю Qadam.
                 </p>
               </form>
             </div>
@@ -232,21 +239,3 @@ function UserIcon({ className = '' }: { className?: string }) {
   );
 }
 
-function EyeIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function EyeOffIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9.9 4.24A9.1 9.1 0 0 1 12 4c6.5 0 10 7 10 7a13.2 13.2 0 0 1-1.67 2.68M6.6 6.6C3.6 8.3 2 12 2 12s3.5 7 10 7a9.3 9.3 0 0 0 5.4-1.6" />
-      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
-      <path d="m2 2 20 20" />
-    </svg>
-  );
-}
