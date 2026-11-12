@@ -1,6 +1,5 @@
 import { getStaff, getServerApi } from '@/lib/auth';
 import { DashboardHome, type Attention } from '@/components/dashboard-home';
-import { FeedbackFooter } from '@/components/feedback-footer';
 import * as agg from '@/lib/aggregate';
 
 const HELP_BELOW = 40; // точность по школьным тестам, % — ниже нужна помощь
@@ -43,7 +42,6 @@ export default async function DashboardHomePage() {
   const topStudents = agg.allTopicsAbove(testResults, TOP_ABOVE);
 
   return (
-    <>
     <DashboardHome
       totalStudents={students.length}
       classCount={classes.length}
@@ -55,7 +53,5 @@ export default async function DashboardHomePage() {
       needHelp={needHelp}
       dynamics={agg.mockDynamics(exams, results)}
     />
-    <FeedbackFooter />
-    </>
   );
 }

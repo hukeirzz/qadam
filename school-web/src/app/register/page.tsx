@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createBrowserApi } from '@/lib/supabase/client';
 import { CheckIcon, GraduationIcon, LockIcon, MailIcon } from '@/components/icons';
+import { FeedbackFooter } from '@/components/feedback-footer';
 
 type ClassInfo = { class_name: string; school_name: string };
 
@@ -173,6 +174,8 @@ export default function RegisterPage() {
         <p className="mt-6 text-center text-sm text-slate-500">
           Уже есть аккаунт? <Link href="/login" className="font-semibold text-brand hover:text-brand-hover">Войти</Link>
         </p>
+
+        <FeedbackFooter />
       </div>
     </main>
   );

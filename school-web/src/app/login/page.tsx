@@ -17,6 +17,7 @@ import {
   EyeIcon,
   EyeOffIcon,
 } from '@/components/icons';
+import { FeedbackFooter } from '@/components/feedback-footer';
 
 const FEATURES = [
   { Icon: AnalyticsIcon, title: 'Аналитика по школе', text: 'Прогресс учеников и классов в реальном времени' },
@@ -220,6 +221,8 @@ export default function LoginPage() {
               </form>
             </div>
           </div>
+
+          <FeedbackFooter />
 
           <p className="text-right text-xs text-slate-400">
             © 2026 Qadam Platform. Все права защищены.
