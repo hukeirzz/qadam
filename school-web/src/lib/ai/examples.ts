@@ -1,6 +1,7 @@
 // Образцы вопросов для ИИ — настоящий стиль ОРТ (пособия ЦООМО и School Club), ответы проверены вручную.
 // Они лежат в системном промпте и кэшируются (prompt caching): платим за них один раз, дальше читаем
 // из кэша за малую долю цены. Формат — ровно тот, который ИИ должен вернуть.
+import { ORT16_CHOICE, ORT16_COMPARE } from './examples-ort16';
 import { ORT19_CHOICE, ORT19_COMPARE } from './examples-ort19';
 
 type Check = { a: string; b: string; vars: { name: string; lo: number; hi: number; integer: boolean }[]; where: string };
@@ -57,6 +58,6 @@ const BASE_CHOICE: ChoiceExample[] = [
     explanation: '30 : 50 = 0,6, то есть 60%.' },
 ];
 
-// Свои образцы + пробное ОРТ №19 (examples-ort19.ts).
-export const COMPARE_EXAMPLES: CompareExample[] = [...BASE_COMPARE, ...ORT19_COMPARE];
-export const CHOICE_EXAMPLES: ChoiceExample[] = [...BASE_CHOICE, ...ORT19_CHOICE];
+// Свои образцы + пробные ОРТ №19 и №16 (examples-ort19.ts, examples-ort16.ts).
+export const COMPARE_EXAMPLES: CompareExample[] = [...BASE_COMPARE, ...ORT19_COMPARE, ...ORT16_COMPARE];
+export const CHOICE_EXAMPLES: ChoiceExample[] = [...BASE_CHOICE, ...ORT19_CHOICE, ...ORT16_CHOICE];

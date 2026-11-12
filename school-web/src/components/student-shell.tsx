@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createBrowserApi } from '@/lib/supabase/client';
+import { FeedbackFooter } from './feedback-footer';
 import { AnalyticsIcon, ChevronDownIcon, HomeIcon, LogoutIcon, ProfileIcon } from './icons';
 
 const TABS = [
@@ -89,7 +90,10 @@ export function StudentShell({
         </div>
       </header>
 
-      <main className="relative mx-auto max-w-7xl px-5 pb-28 pt-6 sm:px-8 sm:pb-12 sm:pt-8">{children}</main>
+      <main className="relative mx-auto max-w-7xl px-5 pb-28 pt-6 sm:px-8 sm:pb-12 sm:pt-8">
+        {children}
+        <FeedbackFooter />
+      </main>
 
       {/* Bottom tab bar — mobile only */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom,0px)] backdrop-blur sm:hidden">

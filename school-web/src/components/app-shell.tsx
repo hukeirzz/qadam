@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { Sidebar } from './sidebar';
 import { MenuIcon } from './icons';
+import { FeedbackFooter } from './feedback-footer';
 
 export function AppShell({
   schoolName,
@@ -42,7 +43,10 @@ export function AppShell({
           <span className="font-bold tracking-tight text-slate-800">Qadam</span>
         </header>
 
-        <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8 lg:py-6">{children}</main>
+        <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
+          {children}
+          <FeedbackFooter />
+        </main>
       </div>
     </div>
   );
