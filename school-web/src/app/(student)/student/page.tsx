@@ -2,6 +2,7 @@ import { getStudent } from '@/lib/auth';
 import { loadStudentData } from '@/lib/student-data';
 import { CARD, plural } from '@/components/student-widgets';
 import { EmptyState, TaskList } from '@/components/student-tasks';
+import { FeedbackFooter } from '@/components/feedback-footer';
 
 export default async function StudentHome() {
   const { student } = await getStudent();
@@ -15,6 +16,7 @@ export default async function StudentHome() {
   const firstName = student!.name.split(/\s+/)[0];
 
   return (
+    <>
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-x-8">
       <section className="lg:col-start-1 lg:row-start-1">
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Привет, {firstName}! 👋</h1>
@@ -63,5 +65,7 @@ export default async function StudentHome() {
         <TaskList tasks={completed} empty={<EmptyState title="Решённых тестов пока нет" text="После первого решённого теста он появится здесь." />} />
       </section>
     </div>
+    <FeedbackFooter />
+    </>
   );
 }
