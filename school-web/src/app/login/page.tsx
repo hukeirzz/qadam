@@ -224,7 +224,7 @@ export default function LoginPage() {
 
           <FeedbackFooter />
 
-          <p className="text-right text-xs text-slate-400">
+          <p className="mt-3 text-center text-xs text-slate-400">
             © 2026 Qadam Platform. Все права защищены.
           </p>
         </section>
